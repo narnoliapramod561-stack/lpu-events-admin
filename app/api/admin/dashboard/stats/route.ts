@@ -159,35 +159,17 @@ export async function GET(request: NextRequest) {
 
                 supabase
                     .from('registrations')
-                    .select('id', { count: 'exact', head: true })
+                    .select('id, events!inner(organizer_id, deleted_at)', { count: 'exact', head: true })
                     .eq('status', 'confirmed')
-                    .in(
-                        'event_id',
-                        supabase
-                            .from('events')
-                            .select('id')
-                            .eq('organizer_id', user.id)
-                            .is('deleted_at', null)
-                    ),
+                    .eq('events.organizer_id', user.id)
+                    .is('events.deleted_at', null),
 
                 supabase
                     .from('payments')
-                    .select('amount')
+                    .select('amount, registrations!inner(events!inner(organizer_id, deleted_at))')
                     .eq('status', 'captured')
-                    .in(
-                        'registration_id',
-                        supabase
-                            .from('registrations')
-                            .select('id')
-                            .in(
-                                'event_id',
-                                supabase
-                                    .from('events')
-                                    .select('id')
-                                    .eq('organizer_id', user.id)
-                                    .is('deleted_at', null)
-                            )
-                    ),
+                    .eq('registrations.events.organizer_id', user.id)
+                    .is('registrations.events.deleted_at', null),
             ]);
 
             const myRevenue = myRevenueResult.data?.reduce(

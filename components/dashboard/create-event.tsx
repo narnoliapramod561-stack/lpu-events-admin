@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 // Taxonomy data mapped directly from database seed records and frontend categories
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -66,6 +67,11 @@ const CATEGORY_MAP: Record<string, string[]> = {
   Others: ['Miscellaneous Events'],
 };
 
+interface CategoryOption {
+  id: string;
+  name: string;
+}
+
 const STUDENT_FIELD_OPTIONS = [
   { id: 'regNo', label: 'Registration No.' },
   { id: 'branch', label: 'Branch' },
@@ -76,9 +82,11 @@ const STUDENT_FIELD_OPTIONS = [
 ];
 
 export function CreateEvent() {
-  const [activeSection, setActiveSection] = useState<number>(2); // Starts with Section 2 open
+  const [activeSection, setActiveSection] = useState<number>(2);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  // Form fields states (Completely empty default values)
+  // Form fields states
   const [eventName, setEventName] = useState('');
   const [shortDesc, setShortDesc] = useState('');
   const [category, setCategory] = useState('');
@@ -185,6 +193,60 @@ export function CreateEvent() {
     setSubcategory(''); // Reset subcategory when category changes
   };
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      try {
+        const response = await fetch('/api/admin/categories');
+        if (response.ok) {
+          const data = await response.json();
+          const cats = (data.data || []).map((cat: any) => ({ id: cat.id, name: cat.name }));
+          setCategories(cats);
+        }
+      } catch {
+        // Keep empty categories on error
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+  const handleBannerUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be under 10MB.');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `event-banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('event-media')
+        .upload(fileName, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('event-media')
+        .getPublicUrl(fileName);
+
+      if (urlData?.publicUrl) {
+        setBannerPreview(urlData.publicUrl);
+      }
+    } catch {
+      alert('Failed to upload banner. Please try again.');
+    }
+  };
+
   const handleRegTypeChange = (type: string) => {
     setRegType(type);
     if (type === 'free') {
@@ -205,23 +267,47 @@ export function CreateEvent() {
       return;
     }
 
+    const categoryRecord = categories.find((c) => c.name === category);
+    if (!categoryRecord) {
+      setSubmitError('Selected category is not valid. Please refresh and try again.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const startsAt = eventStartDate && startTime ? new Date(`${eventStartDate}T${startTime}`).toISOString() : null;
+    const endsAt = eventEndDate && endTime ? new Date(`${eventEndDate}T${endTime}`).toISOString() : null;
+
+    if (!startsAt || !endsAt) {
+      setSubmitError('Please provide start and end dates with times.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setSubmitError('End date must be later than start date.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
     const payload: any = {
       title: eventName,
-      slug: eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      description: fullDesc,
+      slug,
+      description: fullDesc || shortDesc,
       short_description: shortDesc || undefined,
       venue: venueLocation,
-      starts_at: eventStartDate && startTime ? new Date(`${eventStartDate}T${startTime}`).toISOString() : undefined,
-      ends_at: eventEndDate && endTime ? new Date(`${eventEndDate}T${endTime}`).toISOString() : undefined,
-      category_id: '', // Will be resolved by category lookup
+      starts_at: startsAt,
+      ends_at: endsAt,
+      category_id: categoryRecord.id,
       is_free: regType === 'free',
-      registration_mode: regRequired === 'no' ? 'individual' : 'individual',
+      registration_mode: regRequired === 'yes' ? 'individual' : 'individual',
       contact_email: '',
       contact_phone: '',
     };
 
-    if (!payload.starts_at || !payload.ends_at) {
-      setSubmitError('Please provide start and end dates with times.');
+    if (fullDesc.trim().length < 10) {
+      setSubmitError('Full description must be at least 10 characters.');
       setIsSubmitting(false);
       return;
     }
@@ -342,14 +428,33 @@ export function CreateEvent() {
                   <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
                     Event Poster
                   </label>
-                  <div className="w-full h-64 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-[#ff914d]/50 hover:bg-white/5 transition-all cursor-pointer group">
-                    <span className="material-symbols-outlined text-4xl text-white/40 group-hover:text-[#ff914d] transition-colors">
-                      cloud_upload
-                    </span>
-                    <div className="text-center">
-                      <p className="text-sm text-white">Drag &amp; drop image here</p>
-                      <p className="text-xs text-white/40 mt-1">PNG, JPG up to 10MB</p>
-                    </div>
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleBannerUpload(file);
+                    }}
+                  />
+                  <div
+                    onClick={() => bannerInputRef.current?.click()}
+                    className="w-full h-64 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-[#ff914d]/50 hover:bg-white/5 transition-all cursor-pointer group"
+                  >
+                    {bannerPreview ? (
+                      <img src={bannerPreview} alt="Banner preview" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-4xl text-white/40 group-hover:text-[#ff914d] transition-colors">
+                          cloud_upload
+                        </span>
+                        <div className="text-center">
+                          <p className="text-sm text-white">Drag &amp; drop image here</p>
+                          <p className="text-xs text-white/40 mt-1">PNG, JPG up to 10MB</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -77,11 +77,11 @@ BEGIN
   -- -------------------------------------------------------------------------
   -- Step 4: Validate event status allows publishing
   -- -------------------------------------------------------------------------
-  IF v_event.status NOT IN ('draft', 'review') THEN
+  IF v_event.status NOT IN ('draft', 'pending_approval') THEN
     RETURN jsonb_build_object(
       'error',   'INVALID_STATUS',
       'message', format(
-        'Event must be in draft or review status to publish. Current status: %s',
+        'Event must be in draft or pending_approval status to publish. Current status: %s',
         v_event.status
       )
     );
@@ -97,10 +97,10 @@ BEGIN
     );
   END IF;
 
-  IF v_event.start_date IS NULL THEN
+  IF v_event.starts_at IS NULL THEN
     RETURN jsonb_build_object(
       'error',   'VALIDATION_ERROR',
-      'message', 'Event start_date is required before publishing.'
+      'message', 'Event start date is required before publishing.'
     );
   END IF;
 

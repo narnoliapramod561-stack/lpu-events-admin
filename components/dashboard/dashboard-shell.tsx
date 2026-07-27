@@ -431,12 +431,14 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                         </div>
                         <div className="flex gap-2">
                           <button
+                            onClick={() => setActiveTab('events')}
                             className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             title="Edit"
                           >
                             <span className="material-symbols-outlined text-[18px]">edit</span>
                           </button>
                           <button
+                            onClick={() => setActiveTab('events')}
                             className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             title="Manage"
                           >
@@ -502,12 +504,14 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                         </div>
                         <div className="flex gap-2">
                           <button
+                            onClick={() => setActiveTab('events')}
                             className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             title="Edit"
                           >
                             <span className="material-symbols-outlined text-[18px]">edit</span>
                           </button>
                           <button
+                            onClick={() => setActiveTab('events')}
                             className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             title="Manage"
                           >

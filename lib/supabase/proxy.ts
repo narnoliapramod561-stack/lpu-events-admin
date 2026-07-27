@@ -68,7 +68,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (pathname.startsWith('/dashboard') && !isOrganizerRole(role)) {
-    return NextResponse.redirect(new URL(roleHome, request.url));
+    const studentUrl = new URL('https://www.lpuevents.live', request.url);
+    return NextResponse.redirect(studentUrl);
   }
 
   if (pathname === '/auth/callback') {

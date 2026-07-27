@@ -118,18 +118,11 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
     'Overview' | 'Registration' | 'Attendees' | 'Payments' | 'Settings'
   >('Overview');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [workspaceTab, setWorkspaceTab] = useState<
-    'Overview' | 'Registration' | 'Attendees' | 'Payments' | 'Settings'
-  >('Overview');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Super Admin Filters State
   const [organizerFilter, setOrganizerFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [featuredEvents, setFeaturedEvents] = useState<Record<string, boolean>>({
-    'evt-ai-symposium': true,
-  });
+  const [featuredEvents, setFeaturedEvents] = useState<Record<string, boolean>>({});
   const [hiddenEvents, setHiddenEvents] = useState<Record<string, boolean>>({});
 
   // Settings Edit states (matching CreateEvent form)
@@ -154,6 +147,47 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const [editRegPlatform, setEditRegPlatform] = useState('lpu_events');
   const [editRegType, setEditRegType] = useState('paid');
   const [editExternalLink, setEditExternalLink] = useState('');
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const response = await fetch('/api/organizer/events');
+      if (response.ok) {
+        const data = await response.json();
+        const mapped: EventDetail[] = (Array.isArray(data) ? data : []).map((evt: any) => ({
+          id: evt.id,
+          title: evt.title,
+          category: evt.category_id || 'Uncategorized',
+          priceType: evt.is_free ? 'Free' : 'Paid',
+          statusLabel: evt.status === 'published' ? 'Registration Open' : evt.status === 'draft' ? 'Draft' : evt.status,
+          location: evt.venue || '',
+          dates: `${new Date(evt.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(evt.ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+          time: `${new Date(evt.starts_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(evt.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+          imageUrl: evt.cover_image_url || '',
+          isLive: evt.status === 'published' && new Date(evt.starts_at) <= new Date() && new Date(evt.ends_at) >= new Date(),
+          registrations: 0,
+          checkedIn: 0,
+          revenue: '₹0',
+          targetCapacity: evt.max_tickets || 0,
+          description: evt.description || '',
+          recentActivity: [],
+          upcomingTasks: [],
+        }));
+        setEvents(mapped);
+      } else {
+        setFetchError('Failed to load events');
+      }
+    } catch {
+      setFetchError('Network error loading events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const toggleEditRequiredField = (fieldId: string) => {
     setEditRequiredStudentFields((prev) =>
@@ -205,109 +239,66 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
       setEditShortDesc(selectedEvent.description || '');
       setEditFullDesc(selectedEvent.description || '');
 
-      // Seed details based on event ID
-      if (selectedEvent.id === 'evt-ai-symposium') {
-        setEditStartDate('2026-10-15');
-        setEditEndDate('2026-10-17');
-        setEditStartTime('09:00');
-        setEditEndTime('17:00');
-        setEditSubcategory('Workshop');
-        setEditRegRequired('yes');
-        setEditRegPlatform('lpu_events');
-        setEditRegType('paid');
-        setEditTicketPrice('499');
-        setEditTotalTickets(500);
-        setEditSalesStartDate('2026-09-01');
-        setEditSalesEndDate('2026-10-14');
-        setEditMaxTickets(5);
-      } else if (selectedEvent.id === 'evt-tech-hackathon') {
-        setEditStartDate('2026-11-05');
-        setEditEndDate('2026-11-06');
-        setEditStartTime('10:00');
-        setEditEndTime('10:00');
-        setEditSubcategory('Hackathon');
-        setEditRegRequired('yes');
-        setEditRegPlatform('lpu_events');
-        setEditRegType('paid');
-        setEditTicketPrice('499');
-        setEditTotalTickets(450);
-        setEditSalesStartDate('2026-10-01');
-        setEditSalesEndDate('2026-11-04');
-        setEditMaxTickets(2);
-      } else {
-        setEditStartDate('2026-12-10');
-        setEditEndDate('2026-12-10');
-        setEditStartTime('10:00');
-        setEditEndTime('18:00');
-        setEditSubcategory('Seminar');
-        setEditRegRequired('yes');
-        setEditRegPlatform('lpu_events');
-        setEditRegType('free');
-        setEditTicketPrice('0');
-        setEditTotalTickets(300);
-        setEditSalesStartDate('2026-11-10');
-        setEditSalesEndDate('2026-12-09');
-        setEditMaxTickets(1);
-      }
+      const startDate = selectedEvent.dates.split(' - ')[0];
+      const endDate = selectedEvent.dates.split(' - ')[1];
+      const timeParts = selectedEvent.time.split(' - ');
+      const startTime = timeParts[0] ? timeParts[0].replace(/[^\d:]/g, '') : '';
+      const endTime = timeParts[1] ? timeParts[1].replace(/[^\d:]/g, '') : '';
+
+      setEditStartDate(startDate || '');
+      setEditEndDate(endDate || '');
+      setEditStartTime(startTime);
+      setEditEndTime(endTime);
+      setEditSubcategory('');
+      setEditRegRequired('yes');
+      setEditRegPlatform('lpu_events');
+      setEditRegType(selectedEvent.priceType === 'Free' ? 'free' : 'paid');
+      setEditTicketPrice(selectedEvent.priceType === 'Free' ? '0' : '');
+      setEditTotalTickets(selectedEvent.targetCapacity || '');
+      setEditSalesStartDate('');
+      setEditSalesEndDate('');
+      setEditMaxTickets('');
     }
   }, [selectedEventId, selectedEvent]);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (!selectedEventId) return;
-    setEvents((prev) =>
-      prev.map((evt) => {
-        if (evt.id === selectedEventId) {
-          // Format date range nicely (e.g. "Oct 15 - 17, 2026")
-          const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit' };
-          const startD = new Date(editStartDate);
-          const endD = new Date(editEndDate);
-          const formattedDates = isNaN(startD.getTime())
-            ? `${editStartDate} - ${editEndDate}`
-            : `${startD.toLocaleDateString('en-US', formatOptions)} - ${endD.toLocaleDateString('en-US', { ...formatOptions, year: 'numeric' })}`;
 
-          const formattedTime = `${editStartTime} to ${editEndTime}`;
-          const isLpuPlatform = editRegRequired === 'yes' && editRegPlatform === 'lpu_events';
+    const updates: any = {};
+    if (editTitle !== selectedEvent.title) updates.title = editTitle;
+    if (editLocation !== selectedEvent.location) updates.venue = editLocation;
+    if (editCategory !== selectedEvent.category) updates.category_id = editCategory;
+    if (editFullDesc !== selectedEvent.description) updates.description = editFullDesc || editShortDesc;
+    if (editStartDate) updates.starts_at = new Date(`${editStartDate}T${editStartTime || '00:00'}`).toISOString();
+    if (editEndDate) updates.ends_at = new Date(`${editEndDate}T${editEndTime || '23:59'}`).toISOString();
+    if (editRegType === 'free') updates.is_free = true;
+    if (editRegType === 'paid') updates.is_free = false;
 
-          return {
-            ...evt,
-            title: editTitle,
-            location: editLocation,
-            category: editCategory,
-            description: editFullDesc || editShortDesc,
-            dates: formattedDates,
-            time: formattedTime,
-            statusLabel:
-              editRegRequired === 'no'
-                ? 'Upcoming'
-                : evt.statusLabel === 'Cancelled'
-                  ? 'Cancelled'
-                  : editRegRequired === 'yes' && evt.statusLabel === 'Registration Paused'
-                    ? 'Registration Paused'
-                    : 'Registration Open',
-            targetCapacity:
-              isLpuPlatform && typeof editTotalTickets === 'number'
-                ? editTotalTickets
-                : evt.targetCapacity,
-            ticketTiers: isLpuPlatform
-              ? [
-                  {
-                    id: evt.ticketTiers?.[0]?.id || 't_gen',
-                    name:
-                      evt.ticketTiers?.[0]?.name ||
-                      (editRegType === 'free' ? 'General Admission' : 'General Ticket'),
-                    price: editRegType === 'free' ? 0 : parseFloat(editTicketPrice) || 0,
-                    quantity: typeof editTotalTickets === 'number' ? editTotalTickets : 300,
-                    sold: evt.ticketTiers?.[0]?.sold || 0,
-                  },
-                  ...(evt.ticketTiers?.slice(1) || []),
-                ]
-              : evt.ticketTiers,
-          };
-        }
-        return evt;
-      })
-    );
-    alert('Event settings updated successfully!');
+    if (Object.keys(updates).length === 0) {
+      alert('No changes to save.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/organizer/events/${selectedEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setEvents((prev) =>
+          prev.map((evt) => (evt.id === selectedEventId ? { ...evt, ...updated } : evt))
+        );
+        alert('Event settings updated successfully!');
+      } else {
+        const result = await response.json().catch(() => ({}));
+        alert(result.error || 'Failed to update event');
+      }
+    } catch {
+      alert('Network error. Please try again.');
+    }
   };
 
   const handleEditCategoryChange = (val: string) => {
@@ -390,14 +381,28 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
 
         {/* Event Cards List */}
         <div className="flex flex-col gap-8">
-          {filteredEvents.length === 0 ? (
+          {loading && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-white/40">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-white/10 border-t-[#ff914d] mb-3"></div>
+              <p>Loading events...</p>
+            </div>
+          )}
+          {fetchError && !loading && (
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-8 text-center text-rose-400">
+              <p className="font-semibold mb-2">{fetchError}</p>
+              <button onClick={fetchEvents} className="px-4 py-2 bg-rose-500/20 rounded-lg text-sm font-bold hover:bg-rose-500/30 transition-all">
+                Retry
+              </button>
+            </div>
+          )}
+          {!loading && !fetchError && filteredEvents.length === 0 && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-white/40">
               <span className="material-symbols-outlined text-4xl mb-2 block">calendar_today</span>
               No events found.
             </div>
-          ) : (
-            filteredEvents.map((evt) => {
-              const capacityPercent = Math.round((evt.registrations / evt.targetCapacity) * 100);
+          )}
+          {!loading && !fetchError && filteredEvents.map((evt) => {
+              const capacityPercent = evt.targetCapacity > 0 ? Math.round((evt.registrations / evt.targetCapacity) * 100) : 0;
               const isFeatured = !!featuredEvents[evt.id];
               const isHidden = !!hiddenEvents[evt.id];
 
@@ -491,13 +496,25 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                             </span>
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (
                                 confirm(
-                                  'Are you sure you want to delete this event as Super Admin?'
+                                  'Are you sure you want to delete this event? This action cannot be undone.'
                                 )
                               ) {
-                                setEvents((prev) => prev.filter((e) => e.id !== evt.id));
+                                try {
+                                  const response = await fetch(`/api/organizer/events/${evt.id}`, {
+                                    method: 'DELETE',
+                                  });
+                                  if (response.ok || response.status === 204) {
+                                    setEvents((prev) => prev.filter((e) => e.id !== evt.id));
+                                  } else {
+                                    const result = await response.json().catch(() => ({}));
+                                    alert(result.error || 'Failed to delete event');
+                                  }
+                                } catch {
+                                  alert('Network error. Please try again.');
+                                }
                               }
                             }}
                             className="p-1.5 rounded text-xs text-rose-400 hover:bg-rose-500/10 transition-all"
@@ -536,7 +553,7 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                           {evt.priceType}
                         </span>
                         <span className="px-2 py-0.5 rounded bg-[#ff914d]/10 border border-[#ff914d]/20 text-[10px] font-bold uppercase tracking-wider text-[#ff914d]">
-                          Organizer: School of CSE
+                          Organizer Event
                         </span>
                       </div>
                     </div>
@@ -834,19 +851,33 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
 
               {/* Card 6: Cancel Event */}
               <button
-                onClick={() => {
+                onClick={async () => {
                   const confirmCancel = window.confirm(
                     'Are you sure you want to cancel this event? This will stop registrations and notify all booked users.'
                   );
                   if (confirmCancel) {
-                    setEvents((prev) =>
-                      prev.map((evt) =>
-                        evt.id === selectedEvent.id
-                          ? { ...evt, statusLabel: 'Cancelled', isLive: false }
-                          : evt
-                      )
-                    );
-                    alert('Event cancelled.');
+                    try {
+                      const response = await fetch(`/api/organizer/events/${selectedEvent.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'cancelled' }),
+                      });
+                      if (response.ok) {
+                        setEvents((prev) =>
+                          prev.map((evt) =>
+                            evt.id === selectedEvent.id
+                              ? { ...evt, statusLabel: 'Cancelled', isLive: false }
+                              : evt
+                          )
+                        );
+                        alert('Event cancelled successfully.');
+                      } else {
+                        const result = await response.json().catch(() => ({}));
+                        alert(result.error || 'Failed to cancel event');
+                      }
+                    } catch {
+                      alert('Network error. Please try again.');
+                    }
                   }
                 }}
                 className="bg-white/5 border border-white/10 rounded-2xl p-5 flex gap-4 text-left transition-all hover:bg-white/10 hover:border-white/20 group"

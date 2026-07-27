@@ -127,11 +127,33 @@ CREATE POLICY profiles_select_own
   TO authenticated
   USING (id = auth.uid());
 
--- All authenticated users can see basic profile info
-CREATE POLICY profiles_select_public_fields
+-- Admins can read all profiles
+CREATE POLICY profiles_select_admin
   ON public.profiles FOR SELECT
   TO authenticated
-  USING (TRUE);
+  USING (public.is_super_admin());
+
+-- Organizers can read profiles of users in their events (for ticket verification, attendee lists, etc.)
+CREATE POLICY profiles_select_event_participants
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.tickets
+      WHERE tickets.user_id = profiles.id
+        AND public.is_event_organizer(tickets.event_id)
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.registrations
+      WHERE registrations.user_id = profiles.id
+        AND public.is_event_organizer(registrations.event_id)
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.reservations
+      WHERE reservations.user_id = profiles.id
+        AND public.is_event_organizer(reservations.event_id)
+    )
+  );
 
 -- Users can update their own profile
 CREATE POLICY profiles_update_own

@@ -1,10 +1,11 @@
 import { BaseService } from "../base/BaseService";
 import { ServiceResult } from "../base/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export class EventService extends BaseService {
-    private supabase: any;
+    private supabase: SupabaseClient;
 
-    constructor(supabaseClient: any) {
+    constructor(supabaseClient: SupabaseClient) {
         super();
         this.supabase = supabaseClient;
     }
@@ -14,11 +15,12 @@ export class EventService extends BaseService {
             .from("events")
             .select("*")
             .eq("id", id)
+            .is("deleted_at", null)
             .single();
         return this.handleResult(data, error);
     }
 
-    async createEvent(eventData: any): Promise<ServiceResult<any>> {
+    async createEvent(eventData: Record<string, unknown>): Promise<ServiceResult<any>> {
         const { data, error } = await this.supabase
             .from("events")
             .insert(eventData)
@@ -27,11 +29,12 @@ export class EventService extends BaseService {
         return this.handleResult(data, error);
     }
 
-    async updateEvent(id: string, updates: any): Promise<ServiceResult<any>> {
+    async updateEvent(id: string, updates: Record<string, unknown>): Promise<ServiceResult<any>> {
         const { data, error } = await this.supabase
             .from("events")
             .update(updates)
             .eq("id", id)
+            .is("deleted_at", null)
             .select()
             .single();
         return this.handleResult(data, error);
@@ -41,12 +44,12 @@ export class EventService extends BaseService {
         const { error } = await this.supabase
             .from("events")
             .delete()
-            .eq("id", id);
+            .eq("id", id)
+            .is("deleted_at", null);
         return this.handleResult(null, error);
     }
 
     async publishEvent(id: string, organizerUserId: string): Promise<ServiceResult<any>> {
-        // Integration with P4-T02 Lifecycle Engine
         const { data, error } = await this.supabase
             .rpc("publish_event", { 
                 p_event_id: id,
@@ -60,7 +63,8 @@ export class EventService extends BaseService {
             .from("events")
             .select("*")
             .eq("organizer_id", organizerId)
-            .eq("status", "draft");
+            .eq("status", "draft")
+            .is("deleted_at", null);
         return this.handleResult(data, error);
     }
 }

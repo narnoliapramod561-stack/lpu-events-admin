@@ -50,6 +50,17 @@ export default function NewEventPage() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
 
+  const [registrationMode, setRegistrationMode] = useState<'individual' | 'team'>('individual');
+  const [teamMinSize, setTeamMinSize] = useState<number>(2);
+  const [teamMaxSize, setTeamMaxSize] = useState<number>(4);
+  const [teamPricing, setTeamPricing] = useState<'fixed' | 'per_member'>('fixed');
+  const [maxTickets, setMaxTickets] = useState<number>(100);
+  const [termsAndConditions, setTermsAndConditions] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [registrationOpensAt, setRegistrationOpensAt] = useState('');
+  const [registrationClosesAt, setRegistrationClosesAt] = useState('');
+
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([
     { name: 'General Admission', description: 'Standard entry ticket', price: 0, totalTickets: 100 }
   ]);
@@ -81,13 +92,11 @@ export default function NewEventPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size (10MB Cap)
     if (file.size > 10 * 1024 * 1024) {
       setError('Image file size must be less than 10MB.');
       return;
     }
 
-    // Validate mime types
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       setError('Please upload a valid image (JPEG, PNG, or WEBP).');
@@ -99,23 +108,29 @@ export default function NewEventPage() {
     setCoverPreview(URL.createObjectURL(file));
   };
 
-  // Add ticket tier
   const addTicketTier = () => {
     setTicketTiers([...ticketTiers, { name: '', description: '', price: 0, totalTickets: 50 }]);
   };
 
-  // Remove ticket tier
   const removeTicketTier = (index: number) => {
     if (ticketTiers.length === 1) return;
     setTicketTiers(ticketTiers.filter((_, i) => i !== index));
   };
 
-  // Update ticket tier field
   const updateTicketTier = (index: number, field: keyof TicketTier, value: any) => {
     const updated = [...ticketTiers];
     updated[index] = { ...updated[index], [field]: value };
     setTicketTiers(updated);
   };
+
+  function sanitizeSlug(input: string): string {
+    return input
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .replace(/-+/g, '-');
+  }
 
   const handleNext = () => {
     setError(null);
@@ -145,12 +160,11 @@ export default function NewEventPage() {
     setStep(step - 1);
   };
 
-  const handleSubmit = async () => {
+  const persistEvent = async (publish: boolean) => {
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Verify User role
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User session not found. Please log in.');
 
@@ -159,24 +173,41 @@ export default function NewEventPage() {
         throw new Error('Only authorized organizers or administrators can create events.');
       }
 
-      // 2. Create Event Record (Draft)
-      const eventSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.floor(1000 + Math.random() * 9000);
+      const eventSlug = sanitizeSlug(title) + '-' + Date.now().toString(36);
       
-      const eventPayload = {
+      const eventPayload: Record<string, unknown> = {
         organizer_id: user.id,
         category_id: categoryId,
         subcategory_id: subcategoryId || null,
-        title,
+        title: title.trim(),
         slug: eventSlug,
-        description,
-        short_description: shortDescription || null,
-        venue,
-        venue_address: venueAddress || null,
+        description: description.trim(),
+        short_description: shortDescription.trim() || null,
+        venue: venue.trim(),
+        venue_address: venueAddress.trim() || null,
         starts_at: new Date(startsAt).toISOString(),
         ends_at: new Date(endsAt).toISOString(),
         is_free: ticketTiers.every(t => t.price === 0),
-        status: 'draft'
+        registration_mode: registrationMode,
+        max_tickets: maxTickets,
+        terms_and_conditions: termsAndConditions.trim() || null,
+        contact_email: contactEmail.trim() || null,
+        contact_phone: contactPhone.trim() || null,
+        status: publish ? 'pending_approval' : 'draft',
       };
+
+      if (registrationMode === 'team') {
+        eventPayload.team_min_size = teamMinSize;
+        eventPayload.team_max_size = teamMaxSize;
+        eventPayload.team_pricing = teamPricing;
+      }
+
+      if (registrationOpensAt) {
+        eventPayload.registration_opens_at = new Date(registrationOpensAt).toISOString();
+      }
+      if (registrationClosesAt) {
+        eventPayload.registration_closes_at = new Date(registrationClosesAt).toISOString();
+      }
 
       const { data: createdEvent, error: eventError } = await supabase
         .from('events')
@@ -190,39 +221,37 @@ export default function NewEventPage() {
 
       const eventId = createdEvent.id;
 
-      // 3. Upload Cover Image to event-media bucket
-      const fileExt = coverFile!.name.split('.').pop();
-      const storagePath = `events/${eventId}/cover-${Date.now()}.${fileExt}`;
+      if (coverFile) {
+        const fileExt = coverFile.name.split('.').pop();
+        const storagePath = `events/${eventId}/cover-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('event-media')
-        .upload(storagePath, coverFile!);
+        const { error: uploadError } = await supabase.storage
+          .from('event-media')
+          .upload(storagePath, coverFile);
 
-      if (uploadError) {
-        // Rollback created event
-        await supabase.from('events').delete().eq('id', eventId);
-        throw new Error(`Failed to upload cover image: ${uploadError.message}`);
+        if (uploadError) {
+          await supabase.from('events').delete().eq('id', eventId);
+          throw new Error(`Failed to upload cover image: ${uploadError.message}`);
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('event-media')
+          .getPublicUrl(storagePath);
+
+        await supabase
+          .from('events')
+          .update({ cover_image_url: publicUrl })
+          .eq('id', eventId);
       }
 
-      // Get Public URL for the cover image
-      const { data: { publicUrl } } = supabase.storage
-        .from('event-media')
-        .getPublicUrl(storagePath);
-
-      // Update Event with the cover image url
-      await supabase
-        .from('events')
-        .update({ cover_image_url: publicUrl })
-        .eq('id', eventId);
-
-      // 4. Create Ticket Tiers & Event Inventory
       for (const tier of ticketTiers) {
+        if (!tier.name.trim()) continue;
         const { data: createdTier, error: tierError } = await supabase
           .from('ticket_types')
           .insert({
             event_id: eventId,
-            name: tier.name,
-            description: tier.description || null,
+            name: tier.name.trim(),
+            description: tier.description.trim() || null,
             price: tier.price,
             total_tickets: tier.totalTickets
           })
@@ -233,7 +262,6 @@ export default function NewEventPage() {
           throw new Error(`Failed to create ticket tier ${tier.name}: ${tierError?.message}`);
         }
 
-        // Create matching event_inventory row manually
         const { error: invError } = await supabase
           .from('event_inventory')
           .insert({
@@ -250,15 +278,16 @@ export default function NewEventPage() {
         }
       }
 
-      // 5. Call publish_event RPC
-      const { data: publishResult, error: publishError } = await supabase
-        .rpc('publish_event', {
-          p_event_id: eventId,
-          p_organizer_user_id: user.id
-        });
+      if (publish) {
+        const { data: publishResult, error: publishError } = await supabase
+          .rpc('publish_event', {
+            p_event_id: eventId,
+            p_organizer_user_id: user.id
+          });
 
-      if (publishError) {
-        throw new Error(`Failed to publish event: ${publishError.message}`);
+        if (publishError) {
+          throw new Error(`Failed to publish event: ${publishError.message}`);
+        }
       }
 
       router.push(`/dashboard/organizer/events/${eventId}`);
@@ -270,7 +299,6 @@ export default function NewEventPage() {
 
   return (
     <main className="min-h-screen bg-[#050507] text-[#e6e2dc] flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background radial highlight */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#ff914d]/5 blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-[640px] z-10 space-y-8">
@@ -294,16 +322,15 @@ export default function NewEventPage() {
           </div>
         </div>
 
-        {/* Wizard Steps indicator */}
         <div className="flex items-center justify-between px-2">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="flex items-center gap-2">
               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                 step >= i ? 'bg-[#ff914d] text-[#050507]' : 'bg-white/10 text-white/40 border border-white/5'
               }`}>
                 {i}
               </span>
-              {i < 5 && <div className={`h-0.5 w-10 sm:w-16 transition-all ${step > i ? 'bg-[#ff914d]' : 'bg-white/10'}`} />}
+              {i < 6 && <div className={`h-0.5 w-10 sm:w-16 transition-all hidden sm:block ${step > i ? 'bg-[#ff914d]' : 'bg-white/10'}`} />}
             </div>
           ))}
         </div>
@@ -316,7 +343,6 @@ export default function NewEventPage() {
 
         <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl space-y-6">
           
-          {/* STEP 1: Basic Information */}
           {step === 1 && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-white font-display">General Details</h2>
@@ -405,11 +431,9 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* STEP 2: Dates */}
           {step === 2 && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-white font-display">Date & Time Settings</h2>
-              
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event Start Date & Time</label>
@@ -420,7 +444,6 @@ export default function NewEventPage() {
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event End Date & Time</label>
                   <input
@@ -434,7 +457,6 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* STEP 3: Tickets */}
           {step === 3 && (
             <div className="space-y-5">
               <div className="flex justify-between items-center">
@@ -512,11 +534,9 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* STEP 4: Image Poster */}
           {step === 4 && (
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-white font-display">Event Cover Image</h2>
-
               <div className="space-y-4">
                 <div className="flex items-center justify-center w-full">
                   <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-3xl cursor-pointer hover:bg-white/2 border-white/10 hover:border-[#ff914d]/50 transition-all bg-white/2">
@@ -534,10 +554,8 @@ export default function NewEventPage() {
                     />
                   </label>
                 </div>
-
                 {coverPreview && (
                   <div className="relative rounded-2xl overflow-hidden border border-white/10 max-h-48 flex justify-center bg-[#050507]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={coverPreview} alt="Cover Preview" className="object-contain h-full" />
                   </div>
                 )}
@@ -545,10 +563,123 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* STEP 5: Review & Submit */}
           {step === 5 && (
             <div className="space-y-5">
-              <h2 className="text-lg font-bold text-white font-display">Review & Publish</h2>
+              <h2 className="text-lg font-bold text-white font-display">Registration & Settings</h2>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Mode</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationMode('individual')}
+                      className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationMode === 'individual' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                    >
+                      Individual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationMode('team')}
+                      className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationMode === 'team' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                    >
+                      Team
+                    </button>
+                  </div>
+                </div>
+
+                {registrationMode === 'team' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Team Min Size</label>
+                      <input
+                        type="number"
+                        min={2}
+                        value={teamMinSize}
+                        onChange={(e) => setTeamMinSize(Number(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Team Max Size</label>
+                      <input
+                        type="number"
+                        min={teamMinSize}
+                        value={teamMaxSize}
+                        onChange={(e) => setTeamMaxSize(Number(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Max Tickets Per Order</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxTickets}
+                    onChange={(e) => setMaxTickets(Number(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Window (optional)</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="datetime-local"
+                      value={registrationOpensAt}
+                      onChange={(e) => setRegistrationOpensAt(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={registrationClosesAt}
+                      onChange={(e) => setRegistrationClosesAt(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Contact Email</label>
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="contact@example.com"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Terms & Conditions</label>
+                  <textarea
+                    value={termsAndConditions}
+                    onChange={(e) => setTermsAndConditions(e.target.value)}
+                    rows={3}
+                    placeholder="Event rules, refund policy, code of conduct..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-5">
+              <h2 className="text-lg font-bold text-white font-display">Review & Submit</h2>
 
               <div className="space-y-4 text-sm text-white/80">
                 <div className="grid grid-cols-2 gap-4">
@@ -573,6 +704,17 @@ export default function NewEventPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration</span>
+                    <span className="capitalize">{registrationMode} {registrationMode === 'team' ? `(Min: ${teamMinSize}, Max: ${teamMaxSize})` : ''}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Max Tickets</span>
+                    <span>{maxTickets}</span>
+                  </div>
+                </div>
+
                 <div className="h-px bg-white/10" />
 
                 <div>
@@ -590,9 +732,8 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* Controls */}
           <div className="flex justify-between gap-4 pt-4 border-t border-white/5">
-            {step > 1 && (
+            {step > 1 ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -601,9 +742,11 @@ export default function NewEventPage() {
               >
                 Back
               </button>
+            ) : (
+              <div />
             )}
             
-            {step < 5 ? (
+            {step < 6 ? (
               <button
                 type="button"
                 onClick={handleNext}
@@ -612,14 +755,24 @@ export default function NewEventPage() {
                 Next Step
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex-grow inline-flex h-12 items-center justify-center rounded-xl bg-[#ff914d] hover:bg-[#e07530] text-sm font-semibold text-[#050507] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,145,77,0.3)]"
-              >
-                {loading ? 'Publishing Event...' : 'Publish Event'}
-              </button>
+              <div className="flex-grow flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => void persistEvent(false)}
+                  disabled={loading}
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                >
+                  {loading ? 'Saving...' : 'Save as Draft'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void persistEvent(true)}
+                  disabled={loading}
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-xl bg-[#ff914d] hover:bg-[#e07530] text-sm font-semibold text-[#050507] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,145,77,0.3)]"
+                >
+                  {loading ? 'Publishing...' : 'Save & Publish'}
+                </button>
+              </div>
             )}
           </div>
 

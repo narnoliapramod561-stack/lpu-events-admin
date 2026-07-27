@@ -46,9 +46,17 @@ const createEventBaseSchema = z.object({
             }
         }, 'Registration open date must be in the future')
         .optional(),
-    registration_closes_at: z.string().optional(),
+    registration_closes_at: z.string()
+        .refine((val) => {
+            try {
+                return new Date(val) > new Date();
+            } catch {
+                return false;
+            }
+        }, 'Registration close date must be in the future')
+        .optional(),
     is_free: z.boolean(),
-    registration_mode: z.enum(['individual', 'team', 'both']),
+    registration_mode: z.enum(['individual', 'team']),
     team_min_size: z.number().min(2, 'Team minimum size must be at least 2').optional(),
     team_max_size: z.number().min(2, 'Team maximum size must be at least 2').optional(),
     team_pricing: z.enum(['fixed', 'per_member']).optional(),
@@ -59,6 +67,7 @@ const createEventBaseSchema = z.object({
     terms_and_conditions: z.string().optional(),
     contact_email: z.string().email('Invalid email format').optional(),
     contact_phone: z.string().optional(),
+    status: z.enum(['draft', 'pending_approval', 'published', 'cancelled']).optional(),
 });
 
 export const createEventDraftValidator = createEventBaseSchema.refine((data) => {

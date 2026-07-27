@@ -600,7 +600,7 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                 </div>
               );
             })
-          )}
+          }
         </div>
       </div>
     );

@@ -103,6 +103,8 @@ interface EventDetail {
   upcomingTasks: Array<{ text: string; alertType: 'error' | 'primary'; actionText: string }>;
   description?: string;
   ticketTiers?: TicketTier[];
+  isFeatured?: boolean;
+  isHidden?: boolean;
 }
 
 interface EventsWorkspaceProps {
@@ -173,8 +175,24 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
           description: evt.description || '',
           recentActivity: [],
           upcomingTasks: [],
+          isFeatured: !!evt.is_featured,
+          isHidden: !!evt.is_hidden,
         }));
         setEvents(mapped);
+        setFeaturedEvents((prev) => {
+          const next = { ...prev };
+          data.forEach((evt: any) => {
+            if (evt.is_featured) next[evt.id] = true;
+          });
+          return next;
+        });
+        setHiddenEvents((prev) => {
+          const next = { ...prev };
+          data.forEach((evt: any) => {
+            if (evt.is_hidden) next[evt.id] = true;
+          });
+          return next;
+        });
       } else {
         setFetchError('Failed to load events');
       }
@@ -262,7 +280,7 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   }, [selectedEventId, selectedEvent]);
 
   const handleSaveSettings = async () => {
-    if (!selectedEventId) return;
+    if (!selectedEventId || !selectedEvent) return;
 
     const updates: any = {};
     if (editTitle !== selectedEvent.title) updates.title = editTitle;
@@ -457,9 +475,23 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                         {/* Super Admin Quick Actions Menu */}
                         <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
                           <button
-                            onClick={() =>
-                              setFeaturedEvents((prev) => ({ ...prev, [evt.id]: !prev[evt.id] }))
-                            }
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/organizer/events/${evt.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ is_featured: !isFeatured }),
+                                });
+                                if (response.ok) {
+                                  setFeaturedEvents((prev) => ({ ...prev, [evt.id]: !prev[evt.id] }));
+                                } else {
+                                  const result = await response.json().catch(() => ({}));
+                                  alert(result.error || 'Failed to update featured status');
+                                }
+                              } catch {
+                                alert('Network error. Please try again.');
+                              }
+                            }}
                             className={`p-1.5 rounded text-xs font-bold transition-all ${
                               isFeatured
                                 ? 'text-[#ff914d] bg-[#ff914d]/10'
@@ -470,9 +502,23 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                             <span className="material-symbols-outlined text-base">star</span>
                           </button>
                           <button
-                            onClick={() =>
-                              setHiddenEvents((prev) => ({ ...prev, [evt.id]: !prev[evt.id] }))
-                            }
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/organizer/events/${evt.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ is_hidden: !isHidden }),
+                                });
+                                if (response.ok) {
+                                  setHiddenEvents((prev) => ({ ...prev, [evt.id]: !prev[evt.id] }));
+                                } else {
+                                  const result = await response.json().catch(() => ({}));
+                                  alert(result.error || 'Failed to update hidden status');
+                                }
+                              } catch {
+                                alert('Network error. Please try again.');
+                              }
+                            }}
                             className={`p-1.5 rounded text-xs font-bold transition-all ${
                               isHidden
                                 ? 'text-rose-400 bg-rose-500/10'

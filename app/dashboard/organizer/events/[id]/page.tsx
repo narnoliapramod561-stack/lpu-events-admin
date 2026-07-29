@@ -106,7 +106,7 @@ export default function EventDashboardPage() {
         .eq('event_id', eventId);
 
       if (invErr) throw invErr;
-      setInventory(inv as any || []);
+      setInventory(inv || []);
 
       const { data: tix, error: tixErr } = await supabase
         .from('tickets')
@@ -120,7 +120,7 @@ export default function EventDashboardPage() {
         .eq('event_id', eventId);
 
       if (tixErr) throw tixErr;
-      setTickets(tix as any || []);
+      setTickets(tix || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load event data.');
     } finally {
@@ -132,7 +132,7 @@ export default function EventDashboardPage() {
     if (eventId) {
       loadData();
     }
-  }, [eventId, supabase]);
+  }, [eventId]);
 
   // Handle CSV Export
   const exportCSV = () => {

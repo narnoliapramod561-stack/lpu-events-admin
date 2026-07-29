@@ -7,12 +7,10 @@ export async function GET() {
 
     // 1. Check database connectivity via SELECT 1
     let databaseStatus = 'error';
-    let databaseLatency = 0;
 
     try {
       const dbStart = performance.now();
       const { error } = await supabase.rpc('verify_ticket', { p_ticket_id: '00000000-0000-0000-0000-000000000000' });
-      databaseLatency = Math.round(performance.now() - dbStart);
 
       if (error) {
         console.error('[HEALTH][DB] Database ping failed:', error.message);
@@ -38,8 +36,8 @@ export async function GET() {
       });
 
       if (healthResponse.ok) {
-        const data = await healthResponse.json();
-        if (data.status === 'healthy' || data.status === 'degraded') {
+        const healthData = await healthResponse.json();
+        if (healthData.status === 'healthy' || healthData.status === 'degraded') {
           edgeFunctionsStatus = 'ok';
         }
       }

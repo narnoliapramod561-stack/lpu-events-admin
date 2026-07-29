@@ -1,5 +1,9 @@
 'use client';
 
+// TODO: This component is currently using mock data (INITIAL_ADS).
+// It needs to be connected to a real backend API to fetch, create, update, and delete advertisements.
+// The state management should be updated to use React Query or a similar library to handle server state.
+
 import { useState } from 'react';
 
 interface AdvertisementItem {

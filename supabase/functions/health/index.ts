@@ -10,6 +10,7 @@
 
 import { corsHeaders, handleCors } from '../_shared/cors.ts';
 import { createServiceClient } from '../_shared/auth.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -24,7 +25,7 @@ interface HealthStatus {
   };
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('health', async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return handleCors();
@@ -85,4 +86,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   });
-});
+}));

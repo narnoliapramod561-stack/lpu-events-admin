@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import { withSentry } from '../_shared/sentry.ts';
 
 import { authenticate, createServiceClient } from '../_shared/auth.ts';
 import { handleCors } from '../_shared/cors.ts';
@@ -54,7 +55,7 @@ async function createRazorpayOrder(amountPaise: number, currency: string, receip
   return data as { id: string; amount: number; currency: string };
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('booking-initiate', async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return handleCors();
   }
@@ -225,4 +226,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error('[BOOKING_INITIATE] Unexpected failure:', err);
     return response.error('BOOKING_INIT_FAILED', 'Unable to start the booking flow right now.', 500);
   }
-});
+}));

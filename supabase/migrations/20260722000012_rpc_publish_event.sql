@@ -8,10 +8,10 @@
 -- ---------------------------------------------------------------------------
 -- publish_event(p_event_id, p_organizer_user_id)
 --
--- Transitions an event from 'draft' or 'review' to 'published'. Atomically:
+-- Transitions an event from 'draft' or 'pending_approval' to 'published'. Atomically:
 --   1. Validates calller is the event's organizer (or super_admin).
 --   2. Loads and locks the event row.
---   3. Validates event status is 'draft' or 'review'.
+--   3. Validates event status is 'draft' or 'pending_approval'.
 --   4. Validates required fields are complete (title, start_date, venue).
 --   5. Validates event_inventory row exists with total_tickets > 0.
 --   6. Updates event status to 'published', sets published_at.
@@ -64,10 +64,10 @@ BEGIN
   END IF;
 
   -- -------------------------------------------------------------------------
-  -- Step 3: Validate caller is owner or super_admin
+  -- Step 3: Validate caller is owner or super_admin/admin
   -- -------------------------------------------------------------------------
   IF v_event.organizer_id <> p_organizer_user_id
-     AND v_caller_profile.role <> 'super_admin' THEN
+     AND v_caller_profile.role NOT IN ('super_admin', 'admin') THEN
     RETURN jsonb_build_object(
       'error',   'UNAUTHORIZED',
       'message', 'Only the event organizer or super_admin can publish this event.'

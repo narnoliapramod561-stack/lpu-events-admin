@@ -18,13 +18,20 @@ interface Advertisement {
   created_at: string;
 }
 
+interface AdminProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+}
+
 export default function AdminAdvertisementsPage() {
   const router = useRouter();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adminProfile, setAdminProfile] = useState<any | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -55,8 +62,8 @@ export default function AdminAdvertisementsPage() {
         .eq('id', user.id)
         .single();
 
-      if (profileErr || !profile || profile.role !== 'super_admin') {
-        setError('Unauthorized access. This area is restricted to super administrators.');
+      if (profileErr || !profile || (profile.role !== 'super_admin' && profile.role !== 'admin')) {
+        setError('Unauthorized access. This area is restricted to super administrators and admins.');
         setLoading(false);
         return;
       }
@@ -152,8 +159,8 @@ export default function AdminAdvertisementsPage() {
       setEndsAt('');
       setAdFile(null);
       setAdPreview(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create advertisement banner.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create advertisement banner.');
     } finally {
       setSubmitting(false);
     }
@@ -169,8 +176,8 @@ export default function AdminAdvertisementsPage() {
 
       if (deleteErr) throw deleteErr;
       setAds(ads.filter(a => a.id !== id));
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete advertisement.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete advertisement.');
     }
   };
 

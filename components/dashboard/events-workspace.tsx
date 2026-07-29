@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { trackAdminEventView, trackAdminSearch } from '@/components/observability/analytics-provider';
 
 const CATEGORY_MAP: Record<string, string[]> = {
   Academics: ['Seminar', 'Guest Lecture', 'Workshop', 'Internship', 'Capstone', 'Others'],
@@ -111,6 +112,22 @@ interface EventsWorkspaceProps {
   onNavigateToTab?: (tab: string, eventId?: string) => void;
 }
 
+interface ApiEvent {
+  id: string;
+  title: string;
+  category_id: string;
+  is_free: boolean;
+  status: 'published' | 'draft' | 'cancelled';
+  venue: string;
+  starts_at: string;
+  ends_at: string;
+  cover_image_url: string;
+  max_tickets: number;
+  description: string;
+  is_featured: boolean;
+  is_hidden: boolean;
+}
+
 export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const [events, setEvents] = useState<EventDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,14 +167,14 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const [editRegType, setEditRegType] = useState('paid');
   const [editExternalLink, setEditExternalLink] = useState('');
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
     try {
       const response = await fetch('/api/organizer/events');
       if (response.ok) {
         const data = await response.json();
-        const mapped: EventDetail[] = (Array.isArray(data) ? data : []).map((evt: any) => ({
+        const mapped: EventDetail[] = (Array.isArray(data) ? data : []).map((evt: ApiEvent) => ({
           id: evt.id,
           title: evt.title,
           category: evt.category_id || 'Uncategorized',
@@ -181,14 +198,14 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
         setEvents(mapped);
         setFeaturedEvents((prev) => {
           const next = { ...prev };
-          data.forEach((evt: any) => {
+          data.forEach((evt: ApiEvent) => {
             if (evt.is_featured) next[evt.id] = true;
           });
           return next;
         });
         setHiddenEvents((prev) => {
           const next = { ...prev };
-          data.forEach((evt: any) => {
+          data.forEach((evt: ApiEvent) => {
             if (evt.is_hidden) next[evt.id] = true;
           });
           return next;
@@ -201,11 +218,20 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const timeoutId = window.setTimeout(() => {
+      trackAdminSearch(searchQuery.trim(), 'events_workspace');
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const toggleEditRequiredField = (fieldId: string) => {
     setEditRequiredStudentFields((prev) =>
@@ -236,6 +262,12 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const selectedEvent = useMemo(() => {
     return events.find((e) => e.id === selectedEventId);
   }, [events, selectedEventId]);
+
+  useEffect(() => {
+    if (selectedEventId) {
+      trackAdminEventView(selectedEventId, selectedEvent?.title);
+    }
+  }, [selectedEventId, selectedEvent]);
 
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {
@@ -277,12 +309,12 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
       setEditSalesEndDate('');
       setEditMaxTickets('');
     }
-  }, [selectedEventId, selectedEvent]);
+  }, [selectedEvent]);
 
   const handleSaveSettings = async () => {
     if (!selectedEventId || !selectedEvent) return;
 
-    const updates: any = {};
+    const updates: Partial<ApiEvent> = {};
     if (editTitle !== selectedEvent.title) updates.title = editTitle;
     if (editLocation !== selectedEvent.location) updates.venue = editLocation;
     if (editCategory !== selectedEvent.category) updates.category_id = editCategory;

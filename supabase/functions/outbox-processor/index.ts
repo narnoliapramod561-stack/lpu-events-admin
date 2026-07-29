@@ -2,8 +2,9 @@ import { success } from '../_shared/response.ts';
 import { createServiceClient } from '../_shared/auth.ts';
 import { handleRpcError, handleUnexpectedError } from '../_shared/errors.ts';
 import { handleCors } from '../_shared/cors.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withSentry('outbox-processor', async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCors();
   }
@@ -34,4 +35,4 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     return handleUnexpectedError(err);
   }
-});
+}));

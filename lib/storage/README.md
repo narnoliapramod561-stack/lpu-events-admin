@@ -298,7 +298,7 @@ Set environment variables in your deployment platform:
 ```bash
 CLOUDFLARE_R2_ACCOUNT_ID=prod-account-id
 CLOUDFLARE_R2_ACCESS_KEY_ID=prod-key-id
-CLOUDFLARE_R2_SECRET_ACCESS_KEY=prod-secret
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=<PROD_SECRET_PLACEHOLDER>
 R2_EVENT_IMAGES_BUCKET=lpu-events-images
 R2_PUBLIC_URL_PREFIX=https://cdn.lpuevents.com
 ```

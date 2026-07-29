@@ -15,6 +15,7 @@ import { handleCors } from '../_shared/cors.ts';
 import * as response from '../_shared/response.ts';
 import { handleUnexpectedError } from '../_shared/errors.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // ─── Rate Limit Config ──────────────────────────────────────────────────────
 const RATE_LIMIT_MAX = 30;
@@ -22,7 +23,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('auth-logout', async (req: Request): Promise<Response> => {
     if (req.method === 'OPTIONS') {
         return handleCors();
     }
@@ -78,4 +79,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch (err) {
         return handleUnexpectedError(err);
     }
-});
+}));

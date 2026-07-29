@@ -96,13 +96,13 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json(result.data, { status: 201 });
-    } catch (error) {
-        console.error(error);
+    } catch (_error) {
+        // Organizer events error handled
         return NextResponse.json({ error: 'INTERNAL_ERROR' }, { status: 500 });
     }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();

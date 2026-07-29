@@ -1,7 +1,10 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Instrument_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/auth/auth-provider';
+import { AnalyticsProvider } from '@/components/observability/analytics-provider';
+import { ErrorBoundary } from '@/components/observability/error-boundary';
 import { getSession, getUserProfile } from '@/lib/auth';
 import { buildAbsoluteUrl, getSiteUrl } from '@/lib/site';
 import { getPublicEnv } from '@/lib/env';
@@ -104,9 +107,14 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${bodyFont.variable} ${displayFont.variable} antialiased`}>
-        <AuthProvider initialSession={session} initialProfile={profile}>
-          {children}
-        </AuthProvider>
+        <ErrorBoundary fallback={<div className="flex min-h-screen items-center justify-center text-sm text-white/72">Something went wrong. Please refresh the page.</div>}>
+          <AuthProvider initialSession={session} initialProfile={profile}>
+            <Suspense fallback={null}>
+              <AnalyticsProvider />
+            </Suspense>
+            {children}
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

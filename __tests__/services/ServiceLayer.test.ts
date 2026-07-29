@@ -5,6 +5,7 @@ import { OrganizerService } from "../../lib/services/organizer/OrganizerService"
 describe("Service Layer Tests", () => {
     const mockQueryBuilder: any = {
         eq: () => mockQueryBuilder,
+        is: () => mockQueryBuilder,
         select: () => mockQueryBuilder,
         single: () => ({ data: { id: "1" }, error: null })
     };

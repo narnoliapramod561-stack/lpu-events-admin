@@ -24,6 +24,13 @@ Student homepage, discovery, filters, public event details, and booking UI belon
 ├── __tests__/              # Jest tests
 ├── app/                    # Next.js App Router routes and API handlers
 ├── components/             # Auth and dashboard UI
+├── docs/
+│   ├── architecture/       # Repository boundaries and structural decisions
+│   ├── database/           # Supabase ownership and schema notes
+│   ├── deployment/         # Deployment notes and runbooks
+│   ├── testing/            # Testing documentation
+│   ├── workflows/          # Process and workflow docs
+│   └── changelog/          # Historical implementation reports
 ├── hooks/                  # Dashboard hooks
 ├── lib/
 │   ├── auth/               # Role guards
@@ -84,4 +91,4 @@ GitHub Actions deploys from `main` using `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACC
 
 ## Shared Backend
 
-Supabase migrations, edge functions, Razorpay webhooks, Resend mail dispatch, and R2 archival jobs are shared backend infrastructure owned by this repository. See `docs/SUPABASE_BACKEND_OWNERSHIP.md`.
+Supabase migrations, edge functions, Razorpay webhooks, Resend mail dispatch, and R2 archival jobs are shared backend infrastructure owned by this repository. See `docs/database/supabase-backend-ownership.md`.

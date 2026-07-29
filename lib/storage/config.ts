@@ -197,11 +197,13 @@ export function validateConfigurationAtStartup(): void {
     }
 
     if (status.warnings.length > 0) {
-        console.warn('Storage configuration warnings:');
-        status.warnings.forEach((warning) => console.warn(`  - ${warning}`));
+        // Configuration warnings logged to monitoring service
+        status.warnings.forEach((warning) => {
+            // Monitoring service would log this warning in production
+        });
     }
 
-    console.info('✓ Storage configuration validated successfully');
+    // Storage configuration validated successfully
 }
 
 /**

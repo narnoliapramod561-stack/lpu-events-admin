@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { CreateEvent } from '@/components/dashboard/create-event';
 import { Attendees } from '@/components/dashboard/attendees';
@@ -27,7 +27,8 @@ type Tab =
   | 'sponsors'
   | 'advertisements'
   | 'access'
-  | 'audit-log';
+  | 'audit-log'
+  | 'profile';
 
 interface NavItem {
   id: Tab;
@@ -43,33 +44,51 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { id: 'payments', label: 'Payments', icon: 'payments' },
   { id: 'attendees', label: 'Attendees', icon: 'group' },
   { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+  { id: 'profile', label: 'Profile', icon: 'person' },
 ];
-
-const SUPER_ADMIN_NAV_ITEMS: NavItem[] = [
-  { id: 'organizer-requests', label: 'Organizer Requests', icon: 'how_to_reg', badge: '● 5' },
-  { id: 'access', label: 'Access', icon: 'admin_panel_settings' },
-  { id: 'categories', label: 'Categories', icon: 'category' },
-  { id: 'sponsors', label: 'Sponsors', icon: 'handshake' },
-  { id: 'advertisements', label: 'Advertisements', icon: 'campaign' },
-  { id: 'audit-log', label: 'Audit Log', icon: 'history' },
-];
-
-interface Profile {
-  displayName: string | null;
-  email: string;
-  role: string;
-}
 
 export function DashboardShell({ profile }: { profile: Profile }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [greeting, setGreeting] = useState('Good Morning');
-  const [currentDate, setCurrentDate] = useState('Tuesday, October 24, 2023');
   const [selectedEventIdForTab, setSelectedEventIdForTab] = useState<string | null>(null);
 
   const isSuperAdmin = profile?.role === 'super_admin';
-  const navItems = isSuperAdmin ? [...BASE_NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS;
-
   const { stats, loading: statsLoading, error: statsError } = useDashboardStats();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const getCurrentDate = () => {
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
+    return new Date().toLocaleDateString('en-US', options);
+  };
+
+  const greeting = getGreeting();
+  const currentDate = getCurrentDate();
+
+  const SUPER_ADMIN_NAV_ITEMS: NavItem[] = [
+    {
+      id: 'organizer-requests',
+      label: 'Organizer Requests',
+      icon: 'how_to_reg',
+      badge: stats?.users.pendingApplications ? `● ${stats.users.pendingApplications}` : undefined,
+    },
+    { id: 'access', label: 'Access', icon: 'admin_panel_settings' },
+    { id: 'categories', label: 'Categories', icon: 'category' },
+    { id: 'sponsors', label: 'Sponsors', icon: 'handshake' },
+    { id: 'advertisements', label: 'Advertisements', icon: 'campaign' },
+    { id: 'audit-log', label: 'Audit Log', icon: 'history' },
+  ];
+
+  const navItems = isSuperAdmin ? [...BASE_NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS;
 
   const handleNavigateToTab = (tabId: string, eventId?: string) => {
     if (eventId) {
@@ -80,22 +99,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
     setActiveTab(tabId as Tab);
   };
 
-  useEffect(() => {
-    // Dynamic greeting based on current time
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
 
-    // Dynamic date formatting
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    };
-    setCurrentDate(new Date().toLocaleDateString('en-US', options));
-  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -274,7 +278,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                       onClick={() => setActiveTab('organizer-requests')}
                       className="p-3 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-all group"
                     >
-                      <span className="text-xs text-white/40 block">{stats?.users.pendingApplications || 0} Organizer Requests</span>
+                      <span className="text-xs text-white/40 block">{statsLoading ? '...' : (stats?.users.pendingApplications || 0)} Organizer Requests</span>
                       <span className="text-sm font-bold text-rose-400 group-hover:underline">
                         Review Applications →
                       </span>
@@ -283,7 +287,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                       onClick={() => setActiveTab('payments')}
                       className="p-3 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-all group"
                     >
-                      <span className="text-xs text-white/40 block">2 Refunds Waiting</span>
+                      <span className="text-xs text-white/40 block">Refunds Waiting</span>
                       <span className="text-sm font-bold text-amber-400 group-hover:underline">
                         Process Refunds →
                       </span>
@@ -292,7 +296,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                       onClick={() => setActiveTab('advertisements')}
                       className="p-3 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-all group"
                     >
-                      <span className="text-xs text-white/40 block">1 Ad Expiring Tomorrow</span>
+                      <span className="text-xs text-white/40 block">Ads Expiring</span>
                       <span className="text-sm font-bold text-blue-400 group-hover:underline">
                         Extend Campaign →
                       </span>
@@ -301,7 +305,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                       onClick={() => setActiveTab('events')}
                       className="p-3 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-all group"
                     >
-                      <span className="text-xs text-white/40 block">3 Cancellation Requests</span>
+                      <span className="text-xs text-white/40 block">Cancellations</span>
                       <span className="text-sm font-bold text-white group-hover:underline">
                         Manage Events →
                       </span>
@@ -363,7 +367,9 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                   <div>
                     <h2 className="text-2xl font-bold text-white tracking-tight">Active Events</h2>
                     <p className="text-sm text-white/60 mt-1">
-                      Managing 6 high-priority events this month.
+                      {isSuperAdmin
+                        ? `Managing ${statsLoading ? '...' : (stats?.events.total || 0)} events platform-wide.`
+                        : `You have ${statsLoading ? '...' : (stats?.events.published || 0)} published events.`}
                     </p>
                   </div>
                   <button
@@ -652,6 +658,28 @@ export function DashboardShell({ profile }: { profile: Profile }) {
         return <Payments initialEventId={selectedEventIdForTab} />;
       case 'analytics':
         return <Analytics />;
+      case 'profile': {
+        return (
+          <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl space-y-6">
+            <h2 className="text-2xl font-bold text-white font-display">Profile</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Name</label>
+                <p className="text-sm text-white/80">{profile?.displayName || '—'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Email</label>
+                <p className="text-sm text-white/80">{profile?.email || '—'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Role</label>
+                <p className="text-sm text-white/80 capitalize">{profile?.role || '—'}</p>
+              </div>
+            </div>
+            <p className="text-xs text-white/40">Visit <a className="text-[#ffb36b] underline" href="/dashboard/profile">/dashboard/profile</a> for full profile management.</p>
+          </div>
+        );
+      }
       case 'organizer-requests':
         return <OrganizerRequests />;
       case 'access':
@@ -801,7 +829,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                 <span className="material-symbols-outlined">help</span>
               </button>
               <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden cursor-pointer flex items-center justify-center text-xs font-semibold text-[#ff914d] uppercase select-none">
-                {(isSuperAdmin ? 'Subham' : profile.displayName || profile.email).slice(0, 2)}
+                {(profile.displayName || profile.email).slice(0, 2)}
               </div>
             </div>
           </div>

@@ -17,6 +17,7 @@ import { handleUnexpectedError } from '../_shared/errors.ts';
 import { parseJsonBody, validateOrRespond } from '../_shared/validation.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import type { Schema } from '../_shared/validation.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // ─── Request Schema ─────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ const RATE_LIMIT_WINDOW_MS = 5 * 60_000;
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('auth-verify-otp', async (req: Request): Promise<Response> => {
     if (req.method === 'OPTIONS') {
         return handleCors();
     }
@@ -145,4 +146,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch (err) {
         return handleUnexpectedError(err);
     }
-});
+}));

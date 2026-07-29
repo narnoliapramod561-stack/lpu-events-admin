@@ -2,12 +2,19 @@
 // Event Lifecycle Engine - Single Source of Truth for Event State Transitions
 // =============================================================================
 
-import { EventState } from "./types";
+export type EventState =
+    | "draft"
+    | "pending_approval"
+    | "published"
+    | "ongoing"
+    | "completed"
+    | "cancelled"
+    | "archived";
 
 /**
  * User Roles for Permission Validation
  */
-export type UserRole = "student" | "organizer" | "super_admin";
+export type UserRole = "student" | "organizer" | "super_admin" | "admin";
 
 /**
  * Transition Context
@@ -73,6 +80,15 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
         archived: [],
     },
     super_admin: {
+        draft: ["pending_approval", "published", "cancelled"],
+        pending_approval: ["published", "draft", "cancelled"],
+        published: ["ongoing", "cancelled"],
+        ongoing: ["completed", "cancelled"],
+        completed: ["archived"],
+        cancelled: ["archived"],
+        archived: [],
+    },
+    admin: {
         draft: ["pending_approval", "published", "cancelled"],
         pending_approval: ["published", "draft", "cancelled"],
         published: ["ongoing", "cancelled"],
@@ -256,15 +272,15 @@ export function isDiscoverable(state: EventState): boolean {
  * Checks if an event can be edited
  */
 export function canEditEvent(state: EventState, userRole: UserRole): boolean {
-    if (userRole === "super_admin" && state !== "archived") {
-        return true;
-    }
+  if ((userRole === 'super_admin' || userRole === 'admin') && state !== 'archived') {
+    return true;
+  }
 
-    if (userRole === "organizer") {
-        return state === "draft" || state === "pending_approval";
-    }
+  if (userRole === 'organizer') {
+    return state === 'draft' || state === 'pending_approval';
+  }
 
-    return false;
+  return false;
 }
 
 /**

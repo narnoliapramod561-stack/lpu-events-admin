@@ -55,7 +55,7 @@ export function AuditLog() {
             }
         } catch (err) {
             setError('Network error loading audit logs');
-            console.error(err);
+            // Error handled
         } finally {
             setLoading(false);
         }

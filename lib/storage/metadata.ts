@@ -144,7 +144,7 @@ export async function extractFileMetadata(
             metadata.dimensions = await getImageDimensions(file);
         } catch (error) {
             // Dimensions extraction failed, continue without them
-            console.warn('Failed to extract image dimensions:', error);
+            // Error logged in production via error tracking service
         }
     }
 

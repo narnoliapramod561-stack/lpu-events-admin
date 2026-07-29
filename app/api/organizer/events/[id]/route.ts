@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateOrganizer } from '@/lib/auth/organizer-guard';
 import { createClient } from '@/lib/supabase/server';
 import { EventService } from '@/lib/services/event/EventService';
-import { canEditEvent } from '@/lib/domain/lifecycle-engine';
+import { canEditEvent, isValidTransition, EventState, UserRole } from '@/lib/domain/lifecycle-engine';
 import { updateEventDraftValidator } from '@/lib/validators/EventValidator';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,10 +36,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
         const isOwner = event.organizer_id === user.id;
         const isAdmin = role === 'super_admin' || role === 'admin';
-
-        if (!isOwner && !isAdmin && role !== 'organizer') {
-            return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-        }
 
         if (!isOwner && !isAdmin) {
             return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
@@ -87,18 +83,30 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: 'FORBIDDEN', message: 'You do not have permission to edit this event' }, { status: 403 });
         }
 
-        if (!canEditEvent(event.status, role)) {
-            return NextResponse.json({ error: 'FORBIDDEN', message: 'Cannot edit event in current state' }, { status: 403 });
-        }
-
         const updates = await request.json();
         const parseResult = updateEventDraftValidator.safeParse(updates);
         if (!parseResult.success) {
             return NextResponse.json({ error: 'VALIDATION_ERROR', details: parseResult.error.issues }, { status: 400 });
         }
 
-        const mappedUpdates: any = {};
         const data = parseResult.data;
+
+        // Type assertions for event status and role
+        const eventStatus = event.status as EventState | null;
+        const userRole = role as UserRole | null;
+
+        if (data.status && eventStatus && !isValidTransition(eventStatus, data.status as EventState)) {
+            return NextResponse.json({
+                error: 'INVALID_TRANSITION',
+                message: `Cannot transition event from ${event.status} to ${data.status}`
+            }, { status: 400 });
+        }
+
+        if (!canEditEvent(eventStatus || 'draft', userRole || 'student') && !isAdmin) {
+            return NextResponse.json({ error: 'FORBIDDEN', message: 'Cannot edit event in current state' }, { status: 403 });
+        }
+
+        const mappedUpdates: Record<string, unknown> = {};
         if (data.title !== undefined) mappedUpdates.title = data.title;
         if (data.description !== undefined) mappedUpdates.description = data.description;
         if (data.slug !== undefined) mappedUpdates.slug = data.slug;
@@ -111,6 +119,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (data.cover_image_url !== undefined) mappedUpdates.cover_image_url = data.cover_image_url;
         if (data.is_free !== undefined) mappedUpdates.is_free = data.is_free;
         if (data.registration_mode !== undefined) mappedUpdates.registration_mode = data.registration_mode;
+        if (data.is_featured !== undefined) mappedUpdates.is_featured = data.is_featured;
+        if (data.is_hidden !== undefined) mappedUpdates.is_hidden = data.is_hidden;
         if (data.team_min_size !== undefined) mappedUpdates.team_min_size = data.team_min_size;
         if (data.team_max_size !== undefined) mappedUpdates.team_max_size = data.team_max_size;
         if (data.team_pricing !== undefined) mappedUpdates.team_pricing = data.team_pricing;
@@ -118,8 +128,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (data.terms_and_conditions !== undefined) mappedUpdates.terms_and_conditions = data.terms_and_conditions;
         if (data.contact_email !== undefined) mappedUpdates.contact_email = data.contact_email;
         if (data.contact_phone !== undefined) mappedUpdates.contact_phone = data.contact_phone;
+        if (data.status !== undefined) mappedUpdates.status = data.status;
 
-        if (mappedUpdates.ends_at && mappedUpdates.starts_at && new Date(mappedUpdates.ends_at) <= new Date(mappedUpdates.starts_at)) {
+        if (mappedUpdates.ends_at && mappedUpdates.starts_at && new Date(mappedUpdates.ends_at as string) <= new Date(mappedUpdates.starts_at as string)) {
             return NextResponse.json({ error: 'VALIDATION_ERROR', message: 'End date must be later than start date' }, { status: 400 });
         }
 

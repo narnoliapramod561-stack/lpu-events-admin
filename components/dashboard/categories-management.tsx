@@ -45,7 +45,7 @@ export function CategoriesManagement() {
       }
     } catch (err) {
       setError('Network error loading categories');
-      console.error(err);
+      // Error handled
     } finally {
       setLoading(false);
     }

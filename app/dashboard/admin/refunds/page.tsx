@@ -24,15 +24,22 @@ interface CapturedPayment {
   profiles: {
     display_name: string | null;
     email: string | null;
-  } | null;
+  }[] | null;
   registrations: {
     id: string;
     events: {
       id: string;
       title: string;
-    } | null;
-  } | null;
+    }[] | null;
+  }[] | null;
   refunds: RefundRecord[] | null;
+}
+
+interface AdminProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
 }
 
 export default function AdminRefundsPage() {
@@ -41,7 +48,7 @@ export default function AdminRefundsPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adminProfile, setAdminProfile] = useState<any | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   
   const [payments, setPayments] = useState<CapturedPayment[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -66,8 +73,8 @@ export default function AdminRefundsPage() {
         .eq('id', user.id)
         .single();
 
-      if (profileErr || !profile || profile.role !== 'super_admin') {
-        setError('Unauthorized access. This area is restricted to super administrators.');
+      if (profileErr || !profile || (profile.role !== 'super_admin' && profile.role !== 'admin')) {
+        setError('Unauthorized access. This area is restricted to super administrators and admins.');
         setLoading(false);
         return;
       }
@@ -93,9 +100,9 @@ export default function AdminRefundsPage() {
         .order('created_at', { ascending: false });
 
       if (listErr) throw listErr;
-      setPayments(list as any || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load transaction registers.');
+      setPayments((list || []) as CapturedPayment[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load transaction registers.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +121,10 @@ export default function AdminRefundsPage() {
 
   // Submit Refund Execution
   const handleInitiateRefund = async () => {
-    if (!activePayment) return;
+    if (!activePayment || !adminProfile) {
+      if (!adminProfile) setError('Admin profile not loaded.');
+      return;
+    }
     setSubmittingId(activePayment.id);
     setError(null);
 
@@ -231,12 +241,12 @@ export default function AdminRefundsPage() {
                           {p.razorpay_payment_id || '—'}
                         </td>
                         <td className="py-3 px-4 text-white max-w-[200px] truncate">
-                          {p.registrations?.events?.title || 'N/A'}
+                          {p.registrations?.[0]?.events?.[0]?.title || 'N/A'}
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-xs">
-                            <p className="font-semibold text-white">{p.profiles?.display_name || 'N/A'}</p>
-                            <p className="text-white/40">{p.profiles?.email || 'N/A'}</p>
+                            <p className="font-semibold text-white">{p.profiles?.[0]?.display_name || 'N/A'}</p>
+                            <p className="text-white/40">{p.profiles?.[0]?.email || 'N/A'}</p>
                           </div>
                         </td>
                         <td className="py-3 px-4 font-semibold text-white">₹{p.amount}</td>

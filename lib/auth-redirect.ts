@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import type { UserRole } from '@/lib/types/auth';
 
 export function getDefaultRouteForRole(role: UserRole) {
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'super_admin') {
     return '/dashboard';
   }
 

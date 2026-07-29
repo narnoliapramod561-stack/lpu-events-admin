@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { trackAdminRegistration } from '@/components/observability/analytics-provider';
 
 // Taxonomy data mapped directly from database seed records and frontend categories
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -200,7 +201,7 @@ export function CreateEvent() {
         const response = await fetch('/api/admin/categories');
         if (response.ok) {
           const data = await response.json();
-          const cats = (data.data || []).map((cat: any) => ({ id: cat.id, name: cat.name }));
+          const cats = (data.data || []).map((cat: CategoryOption) => ({ id: cat.id, name: cat.name }));
           setCategories(cats);
         }
       } catch {
@@ -291,7 +292,22 @@ export function CreateEvent() {
 
     const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    const payload: any = {
+    interface EventPayload {
+      title: string;
+      slug: string;
+      description: string;
+      short_description?: string;
+      venue: string;
+      starts_at: string;
+      ends_at: string;
+      category_id: string;
+      is_free: boolean;
+      registration_mode: 'individual' | 'team';
+      contact_email: string;
+      contact_phone: string;
+    }
+
+    const payload: EventPayload = {
       title: eventName,
       slug,
       description: fullDesc || shortDesc,
@@ -326,6 +342,11 @@ export function CreateEvent() {
         return;
       }
 
+      trackAdminRegistration('event_created', {
+        title: eventName,
+        category,
+        registration_type: regType,
+      });
       setSubmitSuccess('Event created successfully! Redirecting...');
       setTimeout(() => {
         window.location.href = '/dashboard/events';

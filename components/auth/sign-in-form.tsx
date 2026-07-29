@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/client';
 import { getPublicEnv } from '@/lib/env';
+import { trackAdminLogin } from '@/components/observability/analytics-provider';
 
 type SignInFormProps = {
   defaultEmail: string;
@@ -26,18 +27,27 @@ export function SignInForm({ defaultEmail }: SignInFormProps) {
     setMessage(null);
     setError(null);
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+    trackAdminLogin('otp');
 
-    setIsOtpPending(false);
+    let response: Response | undefined;
+    try {
+      response = await fetch('/api/v1/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, turnstile_token: undefined }),
+      });
+    } catch {
+      setError('Network error. Please try again.');
+      setIsOtpPending(false);
+      return;
+    } finally {
+      setIsOtpPending(false);
+    }
 
-    if (signInError) {
-      setError(signInError.message);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      setMessage(data.message || data.error?.message || 'OTP request failed.');
       return;
     }
 
@@ -56,10 +66,11 @@ export function SignInForm({ defaultEmail }: SignInFormProps) {
     setMessage(null);
     setError(null);
 
+    trackAdminLogin('google');
+
     const env = getPublicEnv();
     const supabase = createClient();
 
-    // Dynamically detect current origin to allow correct redirect on localhost
     const origin = typeof window !== 'undefined' ? window.location.origin : env.NEXT_PUBLIC_APP_URL;
     const callbackUrl = new URL('/auth/callback', origin);
 
@@ -85,13 +96,13 @@ export function SignInForm({ defaultEmail }: SignInFormProps) {
     <div className="space-y-6">
       <div className="space-y-2">
         <label className="text-sm font-medium text-white/72" htmlFor="email">
-          University email
+          Email address
         </label>
         <input
           id="email"
           type="email"
           autoComplete="email"
-          placeholder="your.name@lpu.in"
+          placeholder="you@example.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 px-4 text-base text-white outline-none transition placeholder:text-white/28 focus:border-[#ff9b54] focus:bg-black/40"

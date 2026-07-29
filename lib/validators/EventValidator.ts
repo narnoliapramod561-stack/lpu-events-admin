@@ -57,6 +57,8 @@ const createEventBaseSchema = z.object({
         .optional(),
     is_free: z.boolean(),
     registration_mode: z.enum(['individual', 'team']),
+    is_featured: z.boolean().optional(),
+    is_hidden: z.boolean().optional(),
     team_min_size: z.number().min(2, 'Team minimum size must be at least 2').optional(),
     team_max_size: z.number().min(2, 'Team maximum size must be at least 2').optional(),
     team_pricing: z.enum(['fixed', 'per_member']).optional(),

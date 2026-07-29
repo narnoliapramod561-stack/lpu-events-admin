@@ -17,6 +17,7 @@ import { handleUnexpectedError } from '../_shared/errors.ts';
 import { parseJsonBody, validateOrRespond } from '../_shared/validation.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import type { Schema } from '../_shared/validation.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // ─── Request Schema ─────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('auth-google', async (req: Request): Promise<Response> => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return handleCors();
@@ -127,4 +128,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch (err) {
         return handleUnexpectedError(err);
     }
-});
+}));

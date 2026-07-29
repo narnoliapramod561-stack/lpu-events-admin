@@ -2,11 +2,12 @@ import * as response from '../_shared/response.ts';
 import { createServiceClient } from '../_shared/auth.ts';
 import { handleRpcError, handleUnexpectedError } from '../_shared/errors.ts';
 import { handleCors } from '../_shared/cors.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // Pre-shared secret for Razorpay webhook HMAC verification
-const RAZORPAY_WEBHOOK_SECRET = 'rzp_test_your_secret_here';
+const RAZORPAY_WEBHOOK_SECRET = Deno.env.get('RAZORPAY_WEBHOOK_SECRET') || '';
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withSentry('razorpay-webhook', async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCors();
   }
@@ -67,7 +68,7 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     return handleUnexpectedError(err);
   }
-});
+}));
 
 /**
  * Generate HMAC-SHA256 signature

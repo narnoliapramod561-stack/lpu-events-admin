@@ -85,7 +85,7 @@ export async function getAllCategorySlugsForBuild(): Promise<string[]> {
 
   if (error) {
     // During build, fall back to empty list rather than crashing the build.
-    console.error(`getAllCategorySlugsForBuild: ${error.message}`);
+    // Build-time query errors are expected and handled gracefully.
     return [];
   }
 

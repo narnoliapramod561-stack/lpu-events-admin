@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
         const { data: applications, error: queryError, count } = await query;
 
         if (queryError) {
-            console.error('Query error:', queryError);
+            // Query error handled
             return NextResponse.json(
                 {
                     error: 'DATABASE_ERROR',

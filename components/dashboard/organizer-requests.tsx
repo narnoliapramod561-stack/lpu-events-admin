@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react';
 
+interface SupportingDocument {
+  url: string;
+  name: string;
+  [key: string]: unknown;
+}
+
 interface OrganizerRequest {
   id: string;
   user_id: string;
   organization_name: string;
   description: string;
-  supporting_documents: any[];
+  supporting_documents: SupportingDocument[];
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
   review_notes: string | null;

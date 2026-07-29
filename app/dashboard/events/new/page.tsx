@@ -117,7 +117,7 @@ export default function NewEventPage() {
     setTicketTiers(ticketTiers.filter((_, i) => i !== index));
   };
 
-  const updateTicketTier = (index: number, field: keyof TicketTier, value: any) => {
+  const updateTicketTier = (index: number, field: keyof TicketTier, value: string | number) => {
     const updated = [...ticketTiers];
     updated[index] = { ...updated[index], [field]: value };
     setTicketTiers(updated);

@@ -2,7 +2,7 @@
  * OTP Request Edge Function — Send Magic Link / OTP via email.
  *
  * Initiates passwordless authentication by sending an OTP to the user's email.
- * Only LPU email addresses (@lpu.in) are permitted.
+ * Any valid email address is permitted.
  *
  * POST /functions/v1/auth-otp
  *
@@ -18,14 +18,15 @@ import { parseJsonBody, validateOrRespond } from '../_shared/validation.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { verifyTurnstile } from '../_shared/turnstile.ts';
 import type { Schema } from '../_shared/validation.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // ─── Request Schema ─────────────────────────────────────────────────────────
 
-const LPU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@lpu\.in$/i;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i;
 
 const AUTH_OTP_SCHEMA: Schema = {
     email: { type: 'string', required: true, minLength: 5, maxLength: 255 },
-    turnstile_token: { type: 'string', required: true, minLength: 1, maxLength: 4096 },
+    turnstile_token: { type: 'string', required: false, minLength: 0, maxLength: 4096 },
 };
 
 // ─── Rate Limit Config ──────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ const RATE_LIMIT_WINDOW_MS = 5 * 60_000;
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('auth-otp', async (req: Request): Promise<Response> => {
     if (req.method === 'OPTIONS') {
         return handleCors();
     }
@@ -63,11 +64,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const email = (bodyResult.email as string).trim().toLowerCase();
         const turnstileToken = bodyResult.turnstile_token as string;
 
-        // ── Validate LPU email domain ─────────────────────────────────────
-        if (!LPU_EMAIL_REGEX.test(email)) {
+        // ── Validate email format ───────────────────────────────────────
+        if (!EMAIL_REGEX.test(email)) {
             return response.validationError(
                 'INVALID_EMAIL_DOMAIN',
-                'Only LPU email addresses (@lpu.in) are allowed.'
+                'Please use a valid email address.'
             );
         }
 
@@ -79,9 +80,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         );
         if (emailRateLimited) return emailRateLimited;
 
-        // ── Turnstile Verification ────────────────────────────────────────
-        const turnstileResult = await verifyTurnstile(turnstileToken, clientIp);
-        if (turnstileResult) return turnstileResult;
+        // ── Turnstile Verification (optional when proxied through Next.js) ──
+        if (turnstileToken) {
+            const turnstileResult = await verifyTurnstile(turnstileToken, clientIp);
+            if (turnstileResult) return turnstileResult;
+        }
 
         // ── Send OTP via Supabase Auth ────────────────────────────────────
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -114,4 +117,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch (err) {
         return handleUnexpectedError(err);
     }
-});
+}));

@@ -1,3 +1,5 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+
 export interface ServiceResult<T> {
     data: T | null;
     error: string | null;
@@ -5,5 +7,5 @@ export interface ServiceResult<T> {
 }
 
 export interface BaseServiceOptions {
-    supabaseClient?: any;
+    supabaseClient?: SupabaseClient;
 }

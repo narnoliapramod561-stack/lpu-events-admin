@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { createClient } from '@/lib/supabase/client';
 import { getDefaultRouteForRole, getSafeNextPath } from '@/lib/auth-redirect';
 
 type VerifyFormProps = {
@@ -92,59 +91,62 @@ export function VerifyForm({ email, next }: VerifyFormProps) {
     setError(null);
     setMessage(null);
 
-    const supabase = createClient();
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    });
+    let response: Response | undefined;
+    try {
+      response = await fetch('/api/v1/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: token }),
+      });
+    } catch {
+      setError('Network error. Please try again.');
+      setIsPending(false);
+      return;
+    } finally {
+      setIsPending(false);
+    }
 
-    setIsPending(false);
+    const data = await response.json().catch(() => ({}));
 
-    if (verifyError) {
-      setError(verifyError.message);
+    if (response.ok && data?.user?.role) {
+      const destination = getSafeNextPath(next, getDefaultRouteForRole(data.user.role));
+      setMessage('Verification complete. Redirecting you into LPU Events...');
+      router.replace(destination);
       return;
     }
 
-    if (!data.user) {
-      setError('Verification failed: User session not created.');
+    if (response.ok && data?.session?.access_token && data?.session?.refresh_token) {
+      const destination = getSafeNextPath(next, getDefaultRouteForRole('student'));
+      setMessage('Verification complete. Redirecting you into LPU Events...');
+      router.replace(destination);
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .maybeSingle();
-
-    const role =
-      profile?.role === 'super_admin' || profile?.role === 'organizer' || profile?.role === 'student'
-        ? profile.role
-        : 'student';
-
-    const destination = getSafeNextPath(next, getDefaultRouteForRole(role));
-    setMessage('Verification complete. Redirecting you into LPU Events...');
-    router.replace(destination);
+    setError(data?.error?.message || data?.message || 'Verification failed.');
   }
 
   async function handleResend() {
     setMessage(null);
     setError(null);
 
-    const supabase = createClient();
-    const { error: resendError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+    try {
+      const response = await fetch('/api/v1/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, turnstile_token: undefined }),
+      });
 
-    if (resendError) {
-      setError(resendError.message);
-      return;
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setMessage('A fresh code has been sent.');
+        return;
+      }
+
+      setError(data?.message || data?.error?.message || 'Failed to resend OTP.');
+    } catch {
+      setError('Network error. Please try again.');
     }
-
-    setMessage('A fresh code has been sent.');
   }
 
   return (

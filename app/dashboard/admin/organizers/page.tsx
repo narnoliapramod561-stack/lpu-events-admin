@@ -16,7 +16,14 @@ interface Application {
     display_name: string | null;
     email: string | null;
     registration_number: string | null;
-  } | null;
+  }[] | null;
+}
+
+interface AdminProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
 }
 
 export default function AdminOrganizersPage() {
@@ -25,7 +32,7 @@ export default function AdminOrganizersPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adminProfile, setAdminProfile] = useState<any | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   
@@ -48,8 +55,8 @@ export default function AdminOrganizersPage() {
         .eq('id', user.id)
         .single();
 
-      if (profileErr || !profile || profile.role !== 'super_admin') {
-        setError('Unauthorized access. This area is restricted to super administrators.');
+      if (profileErr || !profile || (profile.role !== 'super_admin' && profile.role !== 'admin')) {
+        setError('Unauthorized access. This area is restricted to super administrators and admins.');
         setLoading(false);
         return;
       }
@@ -71,9 +78,9 @@ export default function AdminOrganizersPage() {
         .order('created_at', { ascending: true });
 
       if (appsErr) throw appsErr;
-      setApplications(apps as any || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load organizer applications.');
+      setApplications(apps || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load organizer applications.');
     } finally {
       setLoading(false);
     }
@@ -85,6 +92,11 @@ export default function AdminOrganizersPage() {
 
   // Handle Approve
   const handleApprove = async (appId: string) => {
+    if (!adminProfile) {
+      setError('Admin profile not loaded.');
+      return;
+    }
+
     setSubmittingId(appId);
     setError(null);
 
@@ -108,7 +120,10 @@ export default function AdminOrganizersPage() {
 
   // Handle Reject Submit
   const handleRejectSubmit = async () => {
-    if (!rejectId) return;
+    if (!rejectId || !adminProfile) {
+      if (!adminProfile) setError('Admin profile not loaded.');
+      return;
+    }
     setSubmittingId(rejectId);
     setError(null);
 
@@ -205,9 +220,9 @@ export default function AdminOrganizersPage() {
                       {app.organization_name}
                     </h3>
                     <div className="text-xs text-white/50 space-y-0.5">
-                      <p>Applicant: <strong className="text-white/80">{app.profiles?.display_name || 'N/A'}</strong></p>
-                      <p>Email: <strong className="text-white/80">{app.profiles?.email || 'N/A'}</strong></p>
-                      <p>Reg/Roll Number: <strong className="text-white/80">{app.profiles?.registration_number || 'N/A'}</strong></p>
+                      <p>Applicant: <strong className="text-white/80">{app.profiles?.[0]?.display_name || 'N/A'}</strong></p>
+                      <p>Email: <strong className="text-white/80">{app.profiles?.[0]?.email || 'N/A'}</strong></p>
+                      <p>Reg/Roll Number: <strong className="text-white/80">{app.profiles?.[0]?.registration_number || 'N/A'}</strong></p>
                     </div>
                   </div>
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 
 import { validateSuperAdmin } from '@/lib/auth/admin-guard';
 import { createClient } from '@/lib/supabase/server';
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
         const { data: auditLogs, error: queryError, count } = await query;
 
         if (queryError) {
-            console.error('Query error:', queryError);
+            Sentry.captureException(queryError);
             return NextResponse.json(
                 {
                     error: 'DATABASE_ERROR',
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('Unexpected error:', error);
+        Sentry.captureException(error);
         return NextResponse.json(
             {
                 error: 'INTERNAL_ERROR',

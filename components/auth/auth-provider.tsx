@@ -83,30 +83,23 @@ export function AuthProvider({ children, initialSession, initialProfile }: AuthP
 
       if (!nextSession?.user) {
         setProfile(null);
-        startTransition(() => {
-          router.refresh();
-        });
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
         return;
       }
 
       void loadProfile(nextSession.user.id).then((nextProfile) => {
         setProfile(nextProfile);
-        startTransition(() => {
-          router.refresh();
-        });
       });
-
-      if (event === 'SIGNED_OUT') {
-        startTransition(() => {
-          router.refresh();
-        });
-      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

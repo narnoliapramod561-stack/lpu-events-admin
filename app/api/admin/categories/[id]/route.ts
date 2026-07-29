@@ -125,7 +125,7 @@ export async function PATCH(
             .single();
 
         if (updateError) {
-            console.error('Update error:', updateError);
+            // Update error handled
             return NextResponse.json(
                 {
                     error: 'DATABASE_ERROR',

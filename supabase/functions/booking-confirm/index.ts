@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import { withSentry } from '../_shared/sentry.ts';
 
 import { authenticate, createServiceClient } from '../_shared/auth.ts';
 import { handleCors } from '../_shared/cors.ts';
@@ -13,7 +14,7 @@ const BOOKING_CONFIRM_SCHEMA: Schema = {
   signature: { type: 'string', required: true, minLength: 1, maxLength: 512 },
 };
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(withSentry('booking-confirm', async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return handleCors();
   }
@@ -69,4 +70,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch (err) {
     return handleUnexpectedError(err);
   }
-});
+}));

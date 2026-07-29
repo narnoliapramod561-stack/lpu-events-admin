@@ -2,6 +2,21 @@ import { BaseService } from "../base/BaseService";
 import { ServiceResult } from "../base/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export interface Event {
+  id: string;
+  title: string;
+  slug: string;
+  status: 'draft' | 'published' | 'archived' | 'pending_approval';
+  organizer_id: string;
+  category_id?: string;
+  starts_at?: string;
+  ends_at?: string;
+  is_featured?: boolean;
+  is_hidden?: boolean;
+  deleted_at?: string | null;
+  // Other fields can be added here
+}
+
 export class EventService extends BaseService {
     private supabase: SupabaseClient;
 
@@ -10,7 +25,7 @@ export class EventService extends BaseService {
         this.supabase = supabaseClient;
     }
 
-    async getEvent(id: string): Promise<ServiceResult<any>> {
+    async getEvent(id: string): Promise<ServiceResult<Event>> {
         const { data, error } = await this.supabase
             .from("events")
             .select("*")
@@ -20,7 +35,7 @@ export class EventService extends BaseService {
         return this.handleResult(data, error);
     }
 
-    async createEvent(eventData: Record<string, unknown>): Promise<ServiceResult<any>> {
+    async createEvent(eventData: Partial<Event>): Promise<ServiceResult<Event>> {
         const { data, error } = await this.supabase
             .from("events")
             .insert(eventData)
@@ -29,7 +44,7 @@ export class EventService extends BaseService {
         return this.handleResult(data, error);
     }
 
-    async updateEvent(id: string, updates: Record<string, unknown>): Promise<ServiceResult<any>> {
+    async updateEvent(id: string, updates: Partial<Event>): Promise<ServiceResult<Event>> {
         const { data, error } = await this.supabase
             .from("events")
             .update(updates)
@@ -49,7 +64,7 @@ export class EventService extends BaseService {
         return this.handleResult(null, error);
     }
 
-    async publishEvent(id: string, organizerUserId: string): Promise<ServiceResult<any>> {
+    async publishEvent(id: string, organizerUserId: string): Promise<ServiceResult<Event>> {
         const { data, error } = await this.supabase
             .rpc("publish_event", { 
                 p_event_id: id,
@@ -58,7 +73,7 @@ export class EventService extends BaseService {
         return this.handleResult(data, error);
     }
 
-    async getDrafts(organizerId: string): Promise<ServiceResult<any[]>> {
+    async getDrafts(organizerId: string): Promise<ServiceResult<Event[]>> {
         const { data, error } = await this.supabase
             .from("events")
             .select("*")

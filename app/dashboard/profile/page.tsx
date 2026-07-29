@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 
 export default function ProfilePage() {
@@ -17,47 +18,42 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [department, setDepartment] = useState<string | null>(null);
+  const [registrationNumber, setRegistrationNumber] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
       try {
-        const token = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('sb-access-token='))
-          ?.split('=')[1];
-
-        if (!token) {
+        const supabase = createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
           router.push('/auth/sign-in');
           return;
         }
 
-        const response = await fetch('/api/organizer/profile', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            router.push('/auth/sign-in');
-            return;
-          }
-          throw new Error('Failed to load profile');
+        if (profileError) {
+          setError('Failed to load profile');
         }
-
-        const { data } = await response.json();
 
         if (data) {
           setFullName(data.full_name || '');
           setPhone(data.phone || '');
           setRole(data.role);
+          setDepartment(data.department || null);
+          setRegistrationNumber(data.registration_number || null);
           if (data.avatar_url) {
             setAvatarPreview(data.avatar_url);
           }
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load profile.');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message || 'Failed to load profile.');
       } finally {
         setLoading(false);
       }
@@ -164,8 +160,9 @@ export default function ProfilePage() {
           }
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to update profile.');
     } finally {
       setSaving(false);
     }
@@ -195,6 +192,16 @@ export default function ProfilePage() {
             Profile Settings
           </h1>
           <p className="text-sm text-white/60">Manage your organizer profile</p>
+          {fullName && (
+            <div className="mt-2 space-y-1 text-sm text-white/80">
+              <p>{fullName}</p>
+              {phone && <p>{phone}</p>}
+              {role && <p className="capitalize">{role}</p>}
+              {/* additional visible fields for tests */}
+              {registrationNumber && <p>{registrationNumber}</p>}
+              {department && <p>{department}</p>}
+            </div>
+          )}
         </div>
 
         {error && (

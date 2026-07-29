@@ -1,5 +1,5 @@
 import { describe, it, expect, jest } from '@jest/globals';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// testing-library imports not used in these placeholder tests
 
 /**
  * Component Tests for Categories Management
@@ -8,7 +8,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 describe('CategoriesManagement Component', () => {
     beforeEach(() => {
-        global.fetch = jest.fn() as any;
+        // mock fetch as a jest mock
+        // @ts-expect-error augmenting global for tests
+        global.fetch = jest.fn() as jest.Mock;
     });
 
     afterEach(() => {

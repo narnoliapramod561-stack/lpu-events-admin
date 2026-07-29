@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { NextRequest } from 'next/server';
-import { PostgrestError } from '@supabase/postgrest-js';
+// No NextRequest needed in these placeholder tests
 
 // Mock all external dependencies with explicit factories
 jest.mock('@/lib/auth/organizer-guard', () => ({ validateOrganizer: jest.fn() }));
@@ -51,19 +50,7 @@ beforeEach(() => {
     (updateEventDraftValidator.safeParse as jest.Mock).mockImplementation((data: any) => ({ success: true, data }));
 });
 
-// Test utilities
-const createMockRequest = (body: any = {}, method: string = 'POST', searchParams?: URLSearchParams) => {
-    const request = new NextRequest('http://localhost:3000/api/organizer/events', {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer test-token'
-        },
-        body: method !== 'GET' ? JSON.stringify(body) : undefined,
-        searchParams: searchParams || undefined
-    });
-    return request;
-};
+// No request helpers needed for these placeholder tests
 
 describe('P4-T06 Organizer Event Management APIs', () => {
     describe('Event Creation (POST /api/organizer/events)', () => {

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { BookingService } from '@/lib/services/booking/BookingService';
-import { ValidationErrors, cancelRegistrationSchema } from '@/lib/validators/BookingValidator';
-
-const bookingService = new BookingService(null);
+import { cancelRegistrationSchema } from '@/lib/validators/BookingValidator';
 
 /**
  * PUT /api/v1/bookings/[id]/cancel
@@ -60,6 +58,9 @@ export async function PUT(
     // Validate cancellation reason
     const parsed = cancelRegistrationSchema.parse(body);
     const { cancellation_reason } = parsed;
+
+    // Instantiate BookingService with the Supabase client
+    const bookingService = new BookingService(supabase);
 
     // Check if user is authorized to cancel this registration
     const { data: registration, error: registrationError } = await bookingService.getRegistrationById(registrationId);
@@ -167,7 +168,7 @@ export async function PUT(
           error: 'CANCEL_FAILED',
           message: 'Unable to cancel registration',
           details: cancelError && typeof cancelError === 'object' && 'message' in cancelError
-            ? (cancelError as any).message
+            ? String((cancelError as Record<string, unknown>).message)
             : 'Unknown error'
         },
         { status: 500 }
@@ -188,7 +189,7 @@ export async function PUT(
         {
           error: 'VALIDATION_ERROR',
           message: error.message,
-          details: (error as any).errors
+          details: (error as unknown as { errors?: unknown }).errors
         },
         { status: 400 }
       );

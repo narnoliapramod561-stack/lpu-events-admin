@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SignOutButton } from '@/components/auth/sign-out-button';
@@ -47,7 +47,7 @@ export default function AdminAdvertisementsPage() {
   const [adFile, setAdFile] = useState<File | null>(null);
   const [adPreview, setAdPreview] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // 1. Authenticate & Verify Role
       const { data: { user } } = await supabase.auth.getUser();
@@ -77,16 +77,19 @@ export default function AdminAdvertisementsPage() {
 
       if (listErr) throw listErr;
       setAds(list || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load advertisement listings.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to load advertisement listings.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    loadData();
-  }, [supabase]);
+    (async () => {
+      await loadData();
+    })();
+  }, [loadData]);
 
   // Handle Image File selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

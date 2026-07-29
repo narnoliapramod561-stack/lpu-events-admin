@@ -6,16 +6,12 @@ jest.mock('@/lib/auth/organizer-guard', () => ({
   validateOrganizer: jest.fn(),
 }));
 
-jest.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: jest.fn(),
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(),
 }));
 
-import { validateOrganizer } from '@/lib/auth/organizer-guard';
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { GET, PUT } from '@/app/api/organizer/profile/route';
-
-const mockValidateOrganizer = validateOrganizer as jest.Mock;
-const mockCreateServiceRoleClient = createServiceRoleClient as jest.Mock;
+// Mocks will be required inside each test after calling jest.resetModules()
+// to ensure we operate on fresh mock instances.
 
 const createSelectChain = (result: unknown) => ({
   select: jest.fn().mockReturnValue({
@@ -51,21 +47,31 @@ const createRequest = (method: 'GET' | 'PUT', body?: unknown, headers?: Record<s
 };
 
 describe('Organizer Profile APIs', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    jest.resetModules();
     jest.clearAllMocks();
 
-    mockValidateOrganizer.mockResolvedValue({
+    const { validateOrganizer } = await import('@/lib/auth/organizer-guard');
+    const supabaseMock = await import('@supabase/supabase-js');
+    const mockCreateClient = supabaseMock.createClient as jest.MockedFunction<any>;
+
+    (validateOrganizer as jest.Mock).mockResolvedValue({
       status: 200,
       message: 'Authorized',
       user: { id: 'test-user-id', role: 'organizer' },
+    });
+
+    // default supabase client returns no profile; tests override as needed
+    mockCreateClient.mockReturnValue({
+      from: jest.fn().mockReturnValue(createSelectChain({ data: null, error: null })),
     });
   });
 
   describe('GET /api/organizer/profile', () => {
     it('should return 401 for unauthorized request', async () => {
       const request = createRequest('GET', undefined, { Authorization: '' });
-
-      const response = await GET(request);
+        const { GET } = (await import('@/app/api/organizer/profile/route')) as any;
+        const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(401);
@@ -88,11 +94,20 @@ describe('Organizer Profile APIs', () => {
         updated_at: new Date().toISOString(),
       };
 
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const mockValidateOrganizer = validateOrganizer;
+
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(createSelectChain({ data: mockProfile, error: null })),
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) },
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { GET } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await GET(createRequest('GET'));
       const data = await response.json();
 
@@ -103,11 +118,19 @@ describe('Organizer Profile APIs', () => {
     });
 
     it('should return 404 when profile is not found', async () => {
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(createSelectChain({ data: null, error: null })),
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) },
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { GET } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await GET(createRequest('GET'));
       const data = await response.json();
 
@@ -116,11 +139,19 @@ describe('Organizer Profile APIs', () => {
     });
 
     it('should return 500 for GET server error', async () => {
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(createSelectChain({ data: null, error: { message: 'Database connection failed' } })),
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) },
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { GET } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await GET(createRequest('GET'));
       const data = await response.json();
 
@@ -131,6 +162,8 @@ describe('Organizer Profile APIs', () => {
 
   describe('PUT /api/organizer/profile', () => {
     it('should return 401 for unauthorized request', async () => {
+      jest.resetModules();
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(createRequest('PUT', { full_name: 'Jane Doe' }, { Authorization: '' }));
       const data = await response.json();
 
@@ -154,11 +187,18 @@ describe('Organizer Profile APIs', () => {
         updated_at: new Date().toISOString(),
       };
 
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(createUpdateChain({ data: updatedProfile, error: null })),
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(createRequest('PUT', {
         full_name: 'Jane Doe',
         phone: '+91 98765 43211',
@@ -182,6 +222,7 @@ describe('Organizer Profile APIs', () => {
       ] as const;
 
       for (const [body, expectedMessage] of cases) {
+        const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
         const response = await PUT(createRequest('PUT', body));
         const data = await response.json();
 
@@ -201,6 +242,7 @@ describe('Organizer Profile APIs', () => {
         body: '{ invalid json }',
       });
 
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(request);
       const data = await response.json();
 
@@ -225,6 +267,12 @@ describe('Organizer Profile APIs', () => {
         updated_at: new Date().toISOString(),
       };
 
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(
           createUpdateChain({ data: updatedProfile, error: null }, (value) => {
@@ -232,8 +280,9 @@ describe('Organizer Profile APIs', () => {
           })
         ),
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(createRequest('PUT', {
         full_name: 'Jane Doe',
         phone: '+91 98765 43211',
@@ -269,6 +318,12 @@ describe('Organizer Profile APIs', () => {
         updated_at: new Date().toISOString(),
       };
 
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(
           createUpdateChain({ data: updatedProfile, error: null }, (value) => {
@@ -276,8 +331,9 @@ describe('Organizer Profile APIs', () => {
           })
         ),
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(createRequest('PUT', {
         full_name: null,
         phone: null,
@@ -310,6 +366,12 @@ describe('Organizer Profile APIs', () => {
         updated_at: new Date().toISOString(),
       };
 
+      const supabaseMock = (await import('@supabase/supabase-js')) as any;
+      const mockCreateClient = supabaseMock.createClient;
+      const { validateOrganizer } = (await import('@/lib/auth/organizer-guard')) as any;
+      const mockValidateOrganizer = validateOrganizer;
+      mockValidateOrganizer.mockResolvedValue({ status: 200, message: 'Authorized', user: { id: 'test-user-id', role: 'organizer' } });
+
       const mockSupabase = {
         from: jest.fn().mockReturnValue(
           createUpdateChain({ data: updatedProfile, error: null }, (value) => {
@@ -317,8 +379,9 @@ describe('Organizer Profile APIs', () => {
           })
         ),
       };
-      mockCreateServiceRoleClient.mockReturnValue(mockSupabase);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
+      const { PUT } = (await import('@/app/api/organizer/profile/route')) as any;
       const response = await PUT(createRequest('PUT', {
         full_name: 'Jane Doe',
       }));

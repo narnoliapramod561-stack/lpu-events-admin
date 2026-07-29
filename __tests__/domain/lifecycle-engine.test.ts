@@ -15,14 +15,12 @@ import {
     canEditEvent,
     getLifecycleStage,
     EVENT_STATE_TRANSITIONS,
-    ROLE_TRANSITION_PERMISSIONS,
     InvalidTransitionError,
     PermissionDeniedError,
     BusinessRuleViolationError,
-    type UserRole,
     type TransitionContext,
 } from "../../lib/domain/lifecycle-engine";
-import { EventState } from "../../lib/domain/types";
+
 
 describe("Event Lifecycle Engine", () => {
     describe("EVENT_STATE_TRANSITIONS", () => {

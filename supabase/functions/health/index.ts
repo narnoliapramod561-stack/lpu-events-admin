@@ -68,7 +68,7 @@ Deno.serve(withSentry('health', async (req: Request): Promise<Response> => {
         latency_ms: dbLatency,
       };
     }
-  } catch (_err) {
+  } catch {
     health.checks.database = {
       status: 'error',
       error: 'Database unreachable',

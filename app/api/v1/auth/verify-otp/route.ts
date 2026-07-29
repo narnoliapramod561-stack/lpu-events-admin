@@ -63,13 +63,13 @@ export async function POST(request: Request) {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
-      } catch (_sessionError) {
+      } catch {
         // Session error handled gracefully
       }
     }
 
     return NextResponse.json(data, { status });
-  } catch (_error) {
+  } catch {
     // Auth verify OTP error handled
     return NextResponse.json({ error: 'INTERNAL_ERROR', message: 'Unable to verify OTP.' }, { status: 500 });
   }

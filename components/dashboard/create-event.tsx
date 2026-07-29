@@ -85,7 +85,6 @@ const STUDENT_FIELD_OPTIONS = [
 export function CreateEvent() {
   const [activeSection, setActiveSection] = useState<number>(2);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   // Form fields states
   const [eventName, setEventName] = useState('');
@@ -196,7 +195,6 @@ export function CreateEvent() {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      setCategoriesLoading(true);
       try {
         const response = await fetch('/api/admin/categories');
         if (response.ok) {
@@ -207,7 +205,6 @@ export function CreateEvent() {
       } catch {
         // Keep empty categories on error
       } finally {
-        setCategoriesLoading(false);
       }
     };
     fetchCategories();

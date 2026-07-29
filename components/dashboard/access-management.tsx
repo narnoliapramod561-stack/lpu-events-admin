@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Organizer {
@@ -29,12 +29,7 @@ export function AccessManagement() {
   const [canViewAnalytics, setCanViewAnalytics] = useState(false);
   const [canManageAttendees, setCanManageAttendees] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    loadOrganizers();
-  }, []);
-
-  const loadOrganizers = async () => {
+  const loadOrganizers = useCallback(async () => {
     try {
       setLoading(true);
       const supabase = createClient();
@@ -71,7 +66,13 @@ export function AccessManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      await loadOrganizers();
+    })();
+  }, [loadOrganizers]);
 
   const openPermissionModal = (organizer: Organizer) => {
     setSelectedOrganizer(organizer);

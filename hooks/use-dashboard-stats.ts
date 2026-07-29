@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface DashboardStats {
     users: {
@@ -32,7 +32,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -50,16 +50,18 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        fetchStats();
+        (async () => {
+            await fetchStats();
+        })();
 
         // Auto-refresh every 2 minutes
         const interval = setInterval(fetchStats, 120000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchStats]);
 
     return {
         stats,

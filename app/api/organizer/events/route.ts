@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json(result.data, { status: 201 });
-    } catch (_error) {
+    } catch {
         // Organizer events error handled
         return NextResponse.json({ error: 'INTERNAL_ERROR' }, { status: 500 });
     }

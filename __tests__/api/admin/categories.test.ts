@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { createMocks } from 'node-mocks-http';
+import { describe, it, expect } from '@jest/globals';
 
 /**
  * API Tests for Categories Management

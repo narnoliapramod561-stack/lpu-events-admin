@@ -57,7 +57,11 @@ Deno.serve(withSentry('razorpay-webhook', async (req: Request) => {
     });
 
     if (result.error) {
-      return handleRpcError(result.error as any);
+      return handleRpcError({
+        message: String((result.error as unknown as { message?: string }).message || ''),
+        code: (result.error as unknown as { code?: string }).code,
+        details: (result.error as unknown as { details?: string }).details,
+      });
     }
 
     return response.success('Payment confirmed successfully', {

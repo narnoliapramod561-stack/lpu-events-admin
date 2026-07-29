@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { BookingService } from '@/lib/services/booking/BookingService';
 import { filterRegistrationsSchema, createRegistrationSchema } from '@/lib/validators/BookingValidator';
 
-const bookingService = new BookingService(null);
-
 /**
  * GET /api/v1/bookings
  *
@@ -67,7 +65,9 @@ export async function GET(request: NextRequest) {
 
     const params = validation.data;
 
-    // Fetch bookings using BookingService
+    // Instantiate BookingService with Supabase client and fetch bookings
+    const supabase = await createClient();
+    const bookingService = new BookingService(supabase);
     const result = await bookingService.getAllRegistrations(params);
 
     if (!result.success || !result.data) {
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       message: 'Bookings fetched successfully'
     }, { status: 200 });
 
-  } catch (error) {
+  } catch {
     // Booking fetch error handled
     return NextResponse.json(
       {
@@ -151,8 +151,7 @@ export async function POST(request: NextRequest) {
       ticket_type_id,
       registration_mode,
       quantity = 1,
-      team_name,
-      metadata
+      team_name
     } = parsed;
 
     // Fetch event data to check status and registration window
@@ -257,7 +256,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch event inventory to check capacity
-    const { data: inventory, error: inventoryError } = await supabase
+    const { data: inventory } = await supabase
       .from('event_inventory')
       .select('available_tickets, sold_tickets, total_tickets')
       .eq('event_id', event_id)
@@ -317,7 +316,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create registration (booking)
-    const { data: registration, error: registrationError } = await bookingService.createRegistration({
+    const bookingServiceForPost = new BookingService(supabase);
+    const { data: registration, error: registrationError } = await bookingServiceForPost.createRegistration({
       user_id: user.id,
       event_id,
       ticket_type_id,
@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
           error: 'REGISTRATION_FAILED',
           message: 'Unable to create registration',
           details: registrationError && typeof registrationError === 'object' && 'message' in registrationError
-            ? (registrationError as any).message
+            ? String((registrationError as Record<string, unknown>).message)
             : 'Unknown error'
         },
         { status: 500 }
@@ -346,18 +346,16 @@ export async function POST(request: NextRequest) {
       message: 'Registration created successfully'
     }, { status: 201 });
 
-  } catch (error) {
-    // Error handling: Cast error to unknown before type checking
-    const err = error as unknown;
+  } catch (err) {
     console.error('[BOOKINGS][POST] Error:', err);
 
     if (err instanceof Error && err.name === 'ZodError') {
-      const zodError = err as any;
+      const zodErr = err as unknown as { errors?: unknown };
       return NextResponse.json(
         {
           error: 'VALIDATION_ERROR',
           message: err.message,
-          details: zodError.errors
+          details: zodErr.errors
         },
         { status: 400 }
       );

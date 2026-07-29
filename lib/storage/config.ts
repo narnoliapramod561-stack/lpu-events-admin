@@ -198,7 +198,7 @@ export function validateConfigurationAtStartup(): void {
 
     if (status.warnings.length > 0) {
         // Configuration warnings logged to monitoring service
-        status.warnings.forEach((warning) => {
+        status.warnings.forEach(() => {
             // Monitoring service would log this warning in production
         });
     }

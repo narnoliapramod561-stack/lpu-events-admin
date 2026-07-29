@@ -26,11 +26,6 @@ export function CategoriesManagement() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const fetchCategories = async () => {
     setLoading(true);
     setError('');
@@ -43,13 +38,18 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to fetch categories');
       }
-    } catch (err) {
+    } catch {
       setError('Network error loading categories');
-      // Error handled
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      await fetchCategories();
+    })();
+  }, []);
 
   const filteredCategories = categories.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,7 +72,7 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to update category');
       }
-    } catch (err) {
+    } catch {
       alert('Network error updating category');
     } finally {
       setActionLoading(false);
@@ -96,7 +96,7 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to reorder category');
       }
-    } catch (err) {
+    } catch {
       alert('Network error reordering category');
     } finally {
       setActionLoading(false);
@@ -125,7 +125,7 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to delete category');
       }
-    } catch (err) {
+    } catch {
       alert('Network error deleting category');
     } finally {
       setActionLoading(false);
@@ -171,7 +171,7 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to create category');
       }
-    } catch (err) {
+    } catch {
       alert('Network error creating category');
     } finally {
       setActionLoading(false);
@@ -203,7 +203,7 @@ export function CategoriesManagement() {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to update category');
       }
-    } catch (err) {
+    } catch {
       alert('Network error updating category');
     } finally {
       setActionLoading(false);
@@ -276,7 +276,7 @@ export function CategoriesManagement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredCategories.map((cat, idx) => (
+          {filteredCategories.map((cat) => (
             <div
               key={cat.id}
               className={`rounded-2xl border p-6 bg-white/5 backdrop-blur-md flex flex-col justify-between gap-6 transition-all ${cat.is_active ? 'border-white/10' : 'border-white/5 opacity-50'

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { BookingService } from '@/lib/services/booking/BookingService';
 
-const bookingService = new BookingService(null);
-
 /**
  * GET /api/v1/bookings/[id]
  *
@@ -36,6 +34,10 @@ export async function GET(
       );
     }
 
+    // Instantiate BookingService with Supabase client
+    const supabaseClient = await createClient();
+    const bookingService = new BookingService(supabaseClient);
+
     // Fetch registration details
     const { data: registration, error } = await bookingService.getRegistrationById(registrationId);
 
@@ -49,9 +51,9 @@ export async function GET(
       );
     }
 
-    // Get user profile information
-    const supabase = await createClient();
-    const { data: user, error: userError } = await supabase
+    // Get user profile information (reuse existing client)
+    const supabase = supabaseClient;
+    const { data: user } = await supabase
       .from('profiles')
       .select(`
         id,
@@ -65,7 +67,7 @@ export async function GET(
     const userProfile = user || null;
 
     // Get event details
-    const { data: event, error: eventError } = await supabase
+    const { data: event } = await supabase
       .from('events')
       .select('id, title, slug, description, cover_image_url, venue, starts_at, ends_at, status')
       .eq('id', registration.event_id)
@@ -74,7 +76,7 @@ export async function GET(
     const eventDetails = event || null;
 
     // Get ticket type details
-    const { data: ticketType, error: ticketTypeError } = await supabase
+    const { data: ticketType } = await supabase
       .from('ticket_types')
       .select('id, name, description, price')
       .eq('id', registration.ticket_type_id)
@@ -83,7 +85,7 @@ export async function GET(
     const ticketTypeDetails = ticketType || null;
 
     // Get payment information if exists
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment } = await supabase
       .from('payments')
       .select('*')
       .eq('registration_id', registrationId)
@@ -94,26 +96,26 @@ export async function GET(
     // Get related members if it's a team registration
     let members = [];
     if (registration.registration_mode === 'team') {
-      const { data: membersData, error: membersError } = await supabase
+      const { data: membersData } = await supabase
         .from('registration_members')
         .select('*')
         .eq('registration_id', registrationId)
         .order('created_at', { ascending: true });
 
-      if (!membersError && membersData) {
+      if (membersData) {
         members = membersData;
       }
     }
 
     // Get QR token for tickets
     let qrToken = null;
-    const { data: ticketData, error: ticketError } = await supabase
+    const { data: ticketData } = await supabase
       .from('tickets')
       .select('qr_token, status')
       .eq('registration_id', registrationId)
       .limit(1);
 
-    if (!ticketError && ticketData && ticketData.length > 0) {
+    if (ticketData && ticketData.length > 0) {
       qrToken = ticketData[0].qr_token;
     }
 
@@ -131,7 +133,7 @@ export async function GET(
       message: 'Registration details fetched successfully'
     }, { status: 200 });
 
-  } catch (error) {
+  } catch {
     // Booking fetch error handled
     return NextResponse.json(
       {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { Profile } from '@/lib/types/profile';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { CreateEvent } from '@/components/dashboard/create-event';
 import { Attendees } from '@/components/dashboard/attendees';
@@ -829,7 +830,7 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                 <span className="material-symbols-outlined">help</span>
               </button>
               <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden cursor-pointer flex items-center justify-center text-xs font-semibold text-[#ff914d] uppercase select-none">
-                {(profile.displayName || profile.email).slice(0, 2)}
+                {((profile?.displayName || profile?.email) ?? '').slice(0, 2)}
               </div>
             </div>
           </div>

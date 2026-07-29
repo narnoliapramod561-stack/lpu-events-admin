@@ -19,14 +19,18 @@ Deno.serve(withSentry('archive-events', async (req: Request) => {
     });
   }
 
-  try {
+    try {
     const supabase = createServiceClient();
     const result = await supabase.rpc('expire_reservations_batch', {
       p_batch_size: 100,
     });
 
-    if (result.error) {
-      return handleRpcError(result.error as any);
+      if (result.error) {
+      return handleRpcError({
+        message: String((result.error as unknown as { message?: string }).message || ''),
+        code: (result.error as unknown as { code?: string }).code,
+        details: (result.error as unknown as { details?: string }).details,
+      });
     }
 
     return success('Archive events processed successfully', {

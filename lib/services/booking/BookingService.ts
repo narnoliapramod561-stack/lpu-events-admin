@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { BaseService } from "../base/BaseService";
 import { ServiceResult } from "../base/types";
-import { z } from "zod";
+// zod import removed (unused)
 
 /**
  * BookingService - Handles all booking-related operations
@@ -710,8 +710,7 @@ export class BookingService extends BaseService {
   async updatePaymentStatus(
     paymentId: string,
     status: 'processing' | 'captured' | 'failed' | 'refunded',
-    razorpayPaymentId?: string,
-    razorpaySignature?: string
+    razorpayPaymentId?: string
   ): Promise<ServiceResult<Payment>> {
     const updateData: Partial<Payment> = {
       status,

@@ -1,5 +1,4 @@
 import { describe, it, expect, jest } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
 
 /**
  * Hook Tests for Dashboard Stats
@@ -8,7 +7,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 
 describe('useDashboardStats Hook', () => {
     beforeEach(() => {
-        global.fetch = jest.fn() as any;
+        global.fetch = jest.fn() as unknown as typeof fetch;
         jest.useFakeTimers();
     });
 

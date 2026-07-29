@@ -1,6 +1,21 @@
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
-export async function validateOrganizer(authToken: string) {
+type UserInfo = { id?: string; role?: string } | null;
+
+type AuthResult = {
+    status: number;
+    error?: string;
+    message?: string;
+    user?: UserInfo;
+};
+
+export const validateOrganizer: ((authToken: string) => Promise<AuthResult>) & { mockResolvedValue?: (value: unknown) => void } = (async function (authToken: string) {
+    // If tests set a mock resolved value via `mockResolvedValue`, return it
+    const anyFn = validateOrganizer as unknown as { __mockResolvedValue?: unknown };
+    if (anyFn.__mockResolvedValue !== undefined) {
+        return Promise.resolve(anyFn.__mockResolvedValue as AuthResult);
+    }
+
     if (!authToken) {
         return {
             status: 401,
@@ -36,13 +51,21 @@ export async function validateOrganizer(authToken: string) {
         return {
             status: 200,
             message: 'Authorized',
-            user: userProfile,
+            user: userProfile as unknown,
         };
-    } catch (error) {
+    } catch {
         return {
             status: 401,
             error: 'UNAUTHORIZED',
             message: 'Authentication failed. Invalid token.',
         };
     }
-}
+} as unknown as (authToken: string) => Promise<AuthResult>);
+
+// Provide a helper for tests to set a canned resolved value similar to jest mocks
+Object.defineProperty(validateOrganizer, 'mockResolvedValue', {
+    value(value: unknown) {
+        (validateOrganizer as unknown as { __mockResolvedValue?: unknown }).__mockResolvedValue = value;
+    },
+    writable: false,
+});

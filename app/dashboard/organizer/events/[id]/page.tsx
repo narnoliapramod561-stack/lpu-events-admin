@@ -21,10 +21,12 @@ interface Inventory {
   available_tickets: number;
   reserved_tickets: number;
   sold_tickets: number;
-  ticket_types: {
-    name: string;
-    price: number;
-  } | null;
+  ticket_types: TicketType[] | null;
+}
+
+interface TicketType {
+  name: string;
+  price: number;
 }
 
 interface TicketRecord {
@@ -55,7 +57,6 @@ export default function EventDashboardPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [tickets, setTickets] = useState<TicketRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [userRole, setUserRole] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -71,8 +72,7 @@ export default function EventDashboardPage() {
         .select('role')
         .eq('id', user.id)
         .maybeSingle();
-
-      setUserRole(profile?.role || null);
+      // profile role available if needed
 
       const { data: evt, error: evtErr } = await supabase
         .from('events')
@@ -120,9 +120,43 @@ export default function EventDashboardPage() {
         .eq('event_id', eventId);
 
       if (tixErr) throw tixErr;
-      setTickets(tix || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load event data.');
+      const normalizedTickets: TicketRecord[] = (tix || []).map((rawItem: unknown) => {
+        const item = rawItem as Record<string, unknown>;
+        const profilesArr = Array.isArray(item.profiles) ? (item.profiles as unknown[]) : [];
+        const ticketVerificationsArr = Array.isArray(item.ticket_verifications) ? (item.ticket_verifications as unknown[]) : [];
+
+        const profile = profilesArr.length > 0 && typeof profilesArr[0] === 'object' && profilesArr[0] !== null
+          ? (profilesArr[0] as Record<string, unknown>)
+          : null;
+
+        const verifications = ticketVerificationsArr.length > 0
+          ? ticketVerificationsArr.map((v) => {
+              const rec = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {} as Record<string, unknown>;
+              return {
+                verified_at: rec.verified_at ? String(rec.verified_at) : '',
+                status: rec.status ? String(rec.status) : '',
+              };
+            })
+          : null;
+
+        return {
+          id: item.id ? String(item.id) : '',
+          ticket_number: item.ticket_number ? String(item.ticket_number) : '',
+          status: item.status ? String(item.status) : '',
+          profiles: profile
+            ? {
+                display_name: profile.display_name ? String(profile.display_name) : null,
+                email: profile.email ? String(profile.email) : null,
+              }
+            : null,
+          ticket_verifications: verifications,
+        } as TicketRecord;
+      });
+
+      setTickets(normalizedTickets);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to load event data.');
     } finally {
       setLoading(false);
     }
@@ -130,7 +164,9 @@ export default function EventDashboardPage() {
 
   useEffect(() => {
     if (eventId) {
-      loadData();
+      (async () => {
+        await loadData();
+      })();
     }
   }, [eventId]);
 
@@ -285,9 +321,9 @@ export default function EventDashboardPage() {
             {inventory.map((inv, idx) => (
               <div key={idx} className="p-4 rounded-2xl border border-white/5 bg-white/2 space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                  <strong className="text-white">{inv.ticket_types?.name || 'Standard'}</strong>
+                  <strong className="text-white">{inv.ticket_types?.[0]?.name || 'Standard'}</strong>
                   <span className="text-[#ffb36b] font-bold">
-                    {inv.ticket_types?.price === 0 ? 'Free' : `₹${inv.ticket_types?.price}`}
+                    {inv.ticket_types?.[0]?.price === 0 ? 'Free' : `₹${inv.ticket_types?.[0]?.price}`}
                   </span>
                 </div>
                 <div className="text-xs text-white/60 space-y-1">

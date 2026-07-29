@@ -53,7 +53,7 @@ export default function NewEventPage() {
   const [registrationMode, setRegistrationMode] = useState<'individual' | 'team'>('individual');
   const [teamMinSize, setTeamMinSize] = useState<number>(2);
   const [teamMaxSize, setTeamMaxSize] = useState<number>(4);
-  const [teamPricing, setTeamPricing] = useState<'fixed' | 'per_member'>('fixed');
+  const [teamPricing] = useState<'fixed' | 'per_member'>('fixed');
   const [maxTickets, setMaxTickets] = useState<number>(100);
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -79,12 +79,14 @@ export default function NewEventPage() {
   }, [supabase]);
 
   useEffect(() => {
-    if (categoryId) {
-      setFilteredSubcategories(subcategories.filter(s => s.category_id === categoryId));
-      setSubcategoryId('');
-    } else {
-      setFilteredSubcategories([]);
-    }
+    (async () => {
+      if (categoryId) {
+        setFilteredSubcategories(subcategories.filter(s => s.category_id === categoryId));
+        setSubcategoryId('');
+      } else {
+        setFilteredSubcategories([]);
+      }
+    })();
   }, [categoryId, subcategories]);
 
   // Handle Cover image selection
@@ -279,7 +281,7 @@ export default function NewEventPage() {
       }
 
       if (publish) {
-        const { data: publishResult, error: publishError } = await supabase
+        const { error: publishError } = await supabase
           .rpc('publish_event', {
             p_event_id: eventId,
             p_organizer_user_id: user.id
@@ -291,8 +293,9 @@ export default function NewEventPage() {
       }
 
       router.push(`/dashboard/organizer/events/${eventId}`);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during submission.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'An error occurred during submission.');
       setLoading(false);
     }
   };

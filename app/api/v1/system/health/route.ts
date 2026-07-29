@@ -9,7 +9,6 @@ export async function GET() {
     let databaseStatus = 'error';
 
     try {
-      const dbStart = performance.now();
       const { error } = await supabase.rpc('verify_ticket', { p_ticket_id: '00000000-0000-0000-0000-000000000000' });
 
       if (error) {
@@ -18,7 +17,7 @@ export async function GET() {
       } else {
         databaseStatus = 'ok';
       }
-    } catch (dbError) {
+    } catch {
       console.error('[HEALTH][DB] Database ping exception');
       databaseStatus = 'error';
     }
@@ -41,7 +40,7 @@ export async function GET() {
           edgeFunctionsStatus = 'ok';
         }
       }
-    } catch (edgeError) {
+    } catch {
       console.error('[HEALTH][EDGE] Edge functions check failed');
       edgeFunctionsStatus = 'error';
     }
@@ -60,7 +59,7 @@ export async function GET() {
       if (cdnResponse.ok && cdnResponse.status < 400) {
         cdnStatus = 'ok';
       }
-    } catch (cdnError) {
+    } catch {
       console.error('[HEALTH][CDN] CDN check failed');
       cdnStatus = 'error';
     }
@@ -81,7 +80,7 @@ export async function GET() {
       status: 200,
     });
   } catch (error) {
-    console.error('[HEALTH][CRITICAL] Health check system error');
+    console.error('[HEALTH][CRITICAL] Health check system error', error);
 
     const healthResponse = {
       success: false,

@@ -87,7 +87,9 @@ export function OrganizerRequests() {
   };
 
   useEffect(() => {
-    fetchRequests();
+    (async () => {
+      await fetchRequests();
+    })();
   }, [pagination.page, statusFilter]);
 
   const handleSearch = () => {

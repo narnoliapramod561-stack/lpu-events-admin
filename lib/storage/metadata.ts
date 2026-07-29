@@ -13,7 +13,7 @@ import {
     sanitizeFilename,
     getFileExtension,
     generatePublicUrl,
-    calculateChecksum,
+    
 } from './utils';
 
 /**
@@ -142,7 +142,7 @@ export async function extractFileMetadata(
     if (file.type.startsWith('image/') && mediaType !== MediaType.DOCUMENT) {
         try {
             metadata.dimensions = await getImageDimensions(file);
-        } catch (error) {
+        } catch {
             // Dimensions extraction failed, continue without them
             // Error logged in production via error tracking service
         }
@@ -160,13 +160,6 @@ export function getImageDimensions(
     return new Promise((resolve, reject) => {
         const img = new Image();
 
-        img.onload = () => {
-            resolve({
-                width: img.width,
-                height: img.height,
-            });
-        };
-
         img.onerror = () => {
             reject(new Error('Failed to load image'));
         };
@@ -175,7 +168,7 @@ export function getImageDimensions(
         const url = URL.createObjectURL(file);
         img.src = url;
 
-        // Clean up object URL after image loads
+        // Clean up object URL after image loads and resolve
         img.onload = () => {
             URL.revokeObjectURL(url);
             resolve({

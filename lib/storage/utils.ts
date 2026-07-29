@@ -7,7 +7,7 @@
  */
 
 import { MEDIA_PATHS, MediaType, FILE_EXTENSIONS } from './constants';
-import type { StorageKeyOptions, StoragePathInfo, FileMetadata } from './types';
+import type { StorageKeyOptions, StoragePathInfo } from './types';
 
 /**
  * Generate a secure, unique storage key for a file
@@ -16,7 +16,7 @@ import type { StorageKeyOptions, StoragePathInfo, FileMetadata } from './types';
  * Example: events/posters/abc123/1234567890-a1b2c3d4.jpg
  */
 export function generateStorageKey(options: StorageKeyOptions): string {
-    const { eventId, mediaType, filename, userId } = options;
+    const { eventId, mediaType, filename } = options;
 
     // Get base path for media type
     const basePath = getMediaPath(mediaType);

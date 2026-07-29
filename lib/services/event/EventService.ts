@@ -14,7 +14,25 @@ export interface Event {
   is_featured?: boolean;
   is_hidden?: boolean;
   deleted_at?: string | null;
-  // Other fields can be added here
+    // Additional event fields used across the app
+    description?: string;
+    short_description?: string | null;
+    venue?: string | null;
+    venue_address?: string | null;
+    registration_opens_at?: string | null;
+    registration_closes_at?: string | null;
+    is_free?: boolean;
+    registration_mode?: 'individual' | 'team';
+    team_min_size?: number | null;
+    team_max_size?: number | null;
+    team_pricing?: 'fixed' | 'per_member' | null;
+    max_tickets?: number | null;
+    terms_and_conditions?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    cover_image_url?: string | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export class EventService extends BaseService {

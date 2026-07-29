@@ -213,7 +213,7 @@ export async function GET() {
             },
             { status: 403 }
         );
-    } catch (_error) {
+    } catch {
         // Admin dashboard stats error handled
         return NextResponse.json(
             {

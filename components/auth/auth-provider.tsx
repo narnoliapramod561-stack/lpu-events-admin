@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  startTransition,
   useContext,
   useEffect,
   useMemo,
@@ -10,7 +9,6 @@ import {
   type ReactNode,
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/client';
 import type { AuthUserProfile, UserRole } from '@/lib/types/auth';
@@ -69,7 +67,6 @@ async function loadProfile(userId: string) {
 }
 
 export function AuthProvider({ children, initialSession, initialProfile }: AuthProviderProps) {
-  const router = useRouter();
   const [session, setSession] = useState<Session | null>(initialSession);
   const [profile, setProfile] = useState<AuthUserProfile | null>(initialProfile);
 

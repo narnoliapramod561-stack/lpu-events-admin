@@ -169,6 +169,15 @@ BEGIN
     v_user_agent := NULL;
   END;
 
+  -- Redact PII from JSONB state (email, full_name)
+  IF v_before IS NOT NULL THEN
+    v_before := v_before - 'email' - 'full_name';
+  END IF;
+
+  IF v_after IS NOT NULL THEN
+    v_after := v_after - 'email' - 'full_name';
+  END IF;
+
   -- Insert audit record
   INSERT INTO public.audit_log (
     actor_id,

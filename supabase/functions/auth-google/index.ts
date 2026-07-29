@@ -11,7 +11,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { handleCors } from '../_shared/cors.ts';
 import * as response from '../_shared/response.ts';
 import { handleUnexpectedError } from '../_shared/errors.ts';
 import { parseJsonBody, validateOrRespond } from '../_shared/validation.ts';

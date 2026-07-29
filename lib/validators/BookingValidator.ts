@@ -31,7 +31,7 @@ export const createRegistrationSchema = z.object({
   team_name: z.string()
     .max(200, 'Team name cannot exceed 200 characters')
     .optional(),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -124,7 +124,7 @@ export interface ValidationResult {
   success: boolean;
   error?: string;
   errorCode?: string;
-  details?: any;
+  details?: unknown;
   data?: unknown;
 }
 
@@ -139,7 +139,6 @@ export async function validateCreateRegistration(
   registrationClosesAt?: string,
   availableTickets?: number,
   existingRegistrationCount?: number,
-  currentUserId?: string
 ): Promise<ValidationResult> {
   try {
     // Parse and validate request data
@@ -369,9 +368,7 @@ export async function validateVerifyTicket(
   data: unknown,
   ticketExists: boolean,
   ticketStatus: string,
-  ticketEventId?: string,
-  currentUserId?: string
-): Promise<ValidationResult> {
+  ): Promise<ValidationResult> {
   try {
     const parsed = verifyTicketSchema.parse(data);
 
@@ -432,7 +429,7 @@ export async function validateMultipleRegistrations(
   eventExists: boolean,
   eventStatus: string,
   availableTickets: number,
-  existingRegistrations: any[]
+  existingRegistrations: unknown[]
 ): Promise<ValidationResult[]> {
   return Promise.all(
     registrations.map((reg) =>
@@ -443,8 +440,7 @@ export async function validateMultipleRegistrations(
         undefined,
         undefined,
         availableTickets,
-        existingRegistrations.length,
-        undefined
+        existingRegistrations.length
       )
     )
   );

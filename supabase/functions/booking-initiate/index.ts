@@ -99,8 +99,12 @@ Deno.serve(withSentry('booking-initiate', async (req: Request): Promise<Response
       return response.notFound('RESERVATION_NOT_FOUND', 'Reservation not found or does not belong to the requesting user.');
     }
 
-    const ticketType: any = (reservation as any).ticket_types;
-    const event: any = (reservation as any).events;
+    const rawTicketType = (reservation as unknown as Record<string, unknown>)?.ticket_types;
+    const rawEvent = (reservation as unknown as Record<string, unknown>)?.events;
+
+    const ticketType = typeof rawTicketType === 'object' && rawTicketType !== null ? rawTicketType as Record<string, unknown> : undefined;
+    const event = typeof rawEvent === 'object' && rawEvent !== null ? rawEvent as Record<string, unknown> : undefined;
+
     const amount = asNumber(ticketType?.price);
 
     if (amount <= 0) {
@@ -223,7 +227,6 @@ Deno.serve(withSentry('booking-initiate', async (req: Request): Promise<Response
       },
     });
   } catch (err) {
-    console.error('[BOOKING_INITIATE] Unexpected failure:', err);
-    return response.error('BOOKING_INIT_FAILED', 'Unable to start the booking flow right now.', 500);
+    return handleUnexpectedError(err);
   }
 }));

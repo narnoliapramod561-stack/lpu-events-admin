@@ -9,6 +9,8 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/jest.setup.js'],
+  resetModules: true,
 };
 
 module.exports = createJestConfig(customJestConfig);

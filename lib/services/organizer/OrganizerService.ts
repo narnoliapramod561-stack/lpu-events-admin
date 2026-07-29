@@ -1,8 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { BaseService } from "../base/BaseService";
 import { ServiceResult } from "../base/types";
-import { Event } from "../event/EventService";
-import { Payment } from "../booking/BookingService";
+// Removed unused imports: Event, Payment
 
 export interface OrganizerProfile {
   id: string;
@@ -121,7 +120,7 @@ export class OrganizerService extends BaseService {
     organizerId: string,
     params?: OrganizerEventsParams
   ): Promise<ServiceResult<{
-    events: any[];
+    events: unknown[];
     total: number;
     page: number;
     limit: number;
@@ -186,7 +185,7 @@ export class OrganizerService extends BaseService {
       .select('status, id', { count: 'exact' })
       .eq('organizer_id', organizerId);
 
-    if (eventsError) {
+      if (eventsError) {
       return {
         data: null,
         error: eventsError.message || 'An unexpected error occurred',
@@ -195,9 +194,13 @@ export class OrganizerService extends BaseService {
     }
 
     // Get active events (ongoing and published)
-    const activeEvents = (events || []).filter(
-      (e: { status: string }) => e.status === 'ongoing' || e.status === 'published'
-    ).length;
+    const activeEvents = (events || []).filter((e: unknown) => {
+      if (e && typeof e === 'object' && 'status' in e) {
+        const st = (e as { status?: string }).status;
+        return st === 'ongoing' || st === 'published';
+      }
+      return false;
+    }).length;
 
     // Get total bookings
     const { data: bookings, error: bookingsError } = await this.supabase
@@ -243,7 +246,13 @@ export class OrganizerService extends BaseService {
       };
     }
 
-    const totalRevenue = (payments || []).reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+    const totalRevenue = (payments || []).reduce((sum: number, p: unknown) => {
+      if (p && typeof p === 'object' && 'amount' in p) {
+        const amt = (p as { amount?: number | string }).amount;
+        return sum + (Number(amt) || 0);
+      }
+      return sum;
+    }, 0);
 
     return this.handleResult(
       {

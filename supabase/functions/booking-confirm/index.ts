@@ -1,4 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
 import { withSentry } from '../_shared/sentry.ts';
 
 import { authenticate, createServiceClient } from '../_shared/auth.ts';

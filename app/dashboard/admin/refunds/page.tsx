@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SignOutButton } from '@/components/auth/sign-out-button';
@@ -58,7 +58,7 @@ export default function AdminRefundsPage() {
   const [refundReason, setRefundReason] = useState('');
   const [refundAmount, setRefundAmount] = useState<number>(0);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // 1. Authenticate & Verify Role
       const { data: { user } } = await supabase.auth.getUser();
@@ -102,15 +102,18 @@ export default function AdminRefundsPage() {
       if (listErr) throw listErr;
       setPayments((list || []) as CapturedPayment[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load transaction registers.');
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to load transaction registers.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    loadData();
-  }, [supabase]);
+    (async () => {
+      await loadData();
+    })();
+  }, [loadData]);
 
   // Open Refund dialog
   const openRefundDialog = (payment: CapturedPayment) => {
@@ -130,7 +133,7 @@ export default function AdminRefundsPage() {
 
     try {
       // Call initiate_refund database RPC
-      const { data, error: rpcErr } = await supabase.rpc('initiate_refund', {
+      const { error: rpcErr } = await supabase.rpc('initiate_refund', {
         p_payment_id: activePayment.id,
         p_admin_id: adminProfile.id,
         p_amount: refundAmount,
@@ -142,8 +145,9 @@ export default function AdminRefundsPage() {
       // Close modal and reload dashboard data
       setActivePayment(null);
       await loadData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to initiate database refund transaction.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to initiate database refund transaction.');
     } finally {
       setSubmittingId(null);
     }

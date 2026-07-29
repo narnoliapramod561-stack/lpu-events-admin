@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
+// NOTE: `validateOrganizer` will be required at runtime inside handlers
+// so tests can mock the module before the route is loaded.
+import { createClient } from '@supabase/supabase-js';
+import { getServerEnv } from '@/lib/env';
 import { validateOrganizer } from '@/lib/auth/organizer-guard';
 
 /**
@@ -12,6 +15,7 @@ import { validateOrganizer } from '@/lib/auth/organizer-guard';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Validate organizer authentication
     // Validate organizer authentication
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -36,7 +40,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const env = getServerEnv();
+    const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
     const userId = authResult.user.id;
 
     // Fetch profile from database
@@ -78,7 +83,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: profile
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Unexpected error in GET /api/organizer/profile:', error);
     return NextResponse.json(
       { error: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
@@ -129,56 +134,95 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const env = getServerEnv();
+    const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
     const userId = authResult.user.id;
 
     // Parse and validate request body
     let body;
     try {
       body = await request.json();
-    } catch (_error) {
+    } catch {
       return NextResponse.json(
         { error: 'INVALID_REQUEST', message: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
 
+    
+
     // Validate required fields if provided
-    if (body.full_name !== undefined && body.full_name !== null) {
-      const fullName = body.full_name.trim();
-      if (fullName.length < 1 || fullName.length > 200) {
+    if (body.full_name !== undefined) {
+      if (body.full_name === null) {
+        // allowed: explicit null to clear the field
+      } else if (typeof body.full_name === 'string') {
+        const fullName = body.full_name.trim();
+        if (fullName.length < 1 || fullName.length > 200) {
+          return NextResponse.json(
+            { error: 'INVALID_DATA', message: 'Full name must be between 1 and 200 characters' },
+            { status: 400 }
+          );
+        }
+      } else {
         return NextResponse.json(
-          { error: 'INVALID_DATA', message: 'Full name must be between 1 and 200 characters' },
+          { error: 'INVALID_DATA', message: 'Full name must be a string or null' },
           { status: 400 }
         );
       }
     }
 
-    if (body.phone !== undefined && body.phone !== null) {
-      const phone = body.phone.trim();
-      if (phone.length > 20) {
+    if (body.phone !== undefined) {
+      if (body.phone === null) {
+        // allowed
+      } else if (typeof body.phone === 'string') {
+        const phone = body.phone.trim();
+        if (phone.length > 20) {
+          return NextResponse.json(
+            { error: 'INVALID_DATA', message: 'Phone number cannot exceed 20 characters' },
+            { status: 400 }
+          );
+        }
+      } else {
         return NextResponse.json(
-          { error: 'INVALID_DATA', message: 'Phone number cannot exceed 20 characters' },
+          { error: 'INVALID_DATA', message: 'Phone must be a string or null' },
           { status: 400 }
         );
       }
     }
 
-    if (body.registration_number !== undefined && body.registration_number !== null) {
-      const regNumber = body.registration_number.trim();
-      if (regNumber.length > 50) {
+    if (body.registration_number !== undefined) {
+      if (body.registration_number === null) {
+        // allowed
+      } else if (typeof body.registration_number === 'string') {
+        const regNumber = body.registration_number.trim();
+        if (regNumber.length > 50) {
+          return NextResponse.json(
+            { error: 'INVALID_DATA', message: 'Registration number cannot exceed 50 characters' },
+            { status: 400 }
+          );
+        }
+      } else {
         return NextResponse.json(
-          { error: 'INVALID_DATA', message: 'Registration number cannot exceed 50 characters' },
+          { error: 'INVALID_DATA', message: 'Registration number must be a string or null' },
           { status: 400 }
         );
       }
     }
 
-    if (body.department !== undefined && body.department !== null) {
-      const dept = body.department.trim();
-      if (dept.length > 100) {
+    if (body.department !== undefined) {
+      if (body.department === null) {
+        // allowed
+      } else if (typeof body.department === 'string') {
+        const dept = body.department.trim();
+        if (dept.length > 100) {
+          return NextResponse.json(
+            { error: 'INVALID_DATA', message: 'Department cannot exceed 100 characters' },
+            { status: 400 }
+          );
+        }
+      } else {
         return NextResponse.json(
-          { error: 'INVALID_DATA', message: 'Department cannot exceed 100 characters' },
+          { error: 'INVALID_DATA', message: 'Department must be a string or null' },
           { status: 400 }
         );
       }
@@ -197,19 +241,35 @@ export async function PUT(request: NextRequest) {
     const updates: Record<string, unknown> = {};
 
     if (body.full_name !== undefined) {
-      updates.full_name = body.full_name.trim() || null;
+      if (body.full_name === null) {
+        updates.full_name = null;
+      } else {
+        updates.full_name = (body.full_name as string).trim() || null;
+      }
     }
 
     if (body.phone !== undefined) {
-      updates.phone = body.phone.trim() || null;
+      if (body.phone === null) {
+        updates.phone = null;
+      } else {
+        updates.phone = (body.phone as string).trim() || null;
+      }
     }
 
     if (body.registration_number !== undefined) {
-      updates.registration_number = body.registration_number.trim() || null;
+      if (body.registration_number === null) {
+        updates.registration_number = null;
+      } else {
+        updates.registration_number = (body.registration_number as string).trim() || null;
+      }
     }
 
     if (body.department !== undefined) {
-      updates.department = body.department.trim() || null;
+      if (body.department === null) {
+        updates.department = null;
+      } else {
+        updates.department = (body.department as string).trim() || null;
+      }
     }
 
     if (body.metadata !== undefined) {
@@ -253,7 +313,7 @@ export async function PUT(request: NextRequest) {
       data: profile,
       message: 'Profile updated successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Unexpected error in PUT /api/organizer/profile:', error);
     return NextResponse.json(
       { error: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },

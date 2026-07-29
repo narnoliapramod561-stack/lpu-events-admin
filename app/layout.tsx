@@ -14,7 +14,7 @@ import {
   buildWebSiteJsonLd,
   serializeJsonLd,
 } from '@/lib/seo/schema';
-import { DEFAULT_DESCRIPTION, buildCanonicalUrl } from '@/lib/seo/metadata';
+import { buildCanonicalUrl } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 

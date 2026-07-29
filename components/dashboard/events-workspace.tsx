@@ -221,7 +221,9 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   }, []);
 
   useEffect(() => {
-    fetchEvents();
+    (async () => {
+      await fetchEvents();
+    })();
   }, [fetchEvents]);
 
   useEffect(() => {
@@ -282,33 +284,35 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
 
   // Sync settings inputs when selectedEventId changes
   useEffect(() => {
-    if (selectedEvent) {
-      setEditTitle(selectedEvent.title);
-      setEditLocation(selectedEvent.location);
-      setEditCategory(selectedEvent.category);
-      setEditShortDesc(selectedEvent.description || '');
-      setEditFullDesc(selectedEvent.description || '');
+    (async () => {
+      if (selectedEvent) {
+        setEditTitle(selectedEvent.title);
+        setEditLocation(selectedEvent.location);
+        setEditCategory(selectedEvent.category);
+        setEditShortDesc(selectedEvent.description || '');
+        setEditFullDesc(selectedEvent.description || '');
 
-      const startDate = selectedEvent.dates.split(' - ')[0];
-      const endDate = selectedEvent.dates.split(' - ')[1];
-      const timeParts = selectedEvent.time.split(' - ');
-      const startTime = timeParts[0] ? timeParts[0].replace(/[^\d:]/g, '') : '';
-      const endTime = timeParts[1] ? timeParts[1].replace(/[^\d:]/g, '') : '';
+        const startDate = selectedEvent.dates.split(' - ')[0];
+        const endDate = selectedEvent.dates.split(' - ')[1];
+        const timeParts = selectedEvent.time.split(' - ');
+        const startTime = timeParts[0] ? timeParts[0].replace(/[^\d:]/g, '') : '';
+        const endTime = timeParts[1] ? timeParts[1].replace(/[^\d:]/g, '') : '';
 
-      setEditStartDate(startDate || '');
-      setEditEndDate(endDate || '');
-      setEditStartTime(startTime);
-      setEditEndTime(endTime);
-      setEditSubcategory('');
-      setEditRegRequired('yes');
-      setEditRegPlatform('lpu_events');
-      setEditRegType(selectedEvent.priceType === 'Free' ? 'free' : 'paid');
-      setEditTicketPrice(selectedEvent.priceType === 'Free' ? '0' : '');
-      setEditTotalTickets(selectedEvent.targetCapacity || '');
-      setEditSalesStartDate('');
-      setEditSalesEndDate('');
-      setEditMaxTickets('');
-    }
+        setEditStartDate(startDate || '');
+        setEditEndDate(endDate || '');
+        setEditStartTime(startTime);
+        setEditEndTime(endTime);
+        setEditSubcategory('');
+        setEditRegRequired('yes');
+        setEditRegPlatform('lpu_events');
+        setEditRegType(selectedEvent.priceType === 'Free' ? 'free' : 'paid');
+        setEditTicketPrice(selectedEvent.priceType === 'Free' ? '0' : '');
+        setEditTotalTickets(selectedEvent.targetCapacity || '');
+        setEditSalesStartDate('');
+        setEditSalesEndDate('');
+        setEditMaxTickets('');
+      }
+    })();
   }, [selectedEvent]);
 
   const handleSaveSettings = async () => {

@@ -3,7 +3,14 @@ import { MediaService } from "../../lib/services/media/MediaService";
 import { OrganizerService } from "../../lib/services/organizer/OrganizerService";
 
 describe("Service Layer Tests", () => {
-    const mockQueryBuilder: any = {
+    interface MockQueryBuilder {
+        eq: (...args: unknown[]) => MockQueryBuilder;
+        is: (...args: unknown[]) => MockQueryBuilder;
+        select: (...args: unknown[]) => MockQueryBuilder;
+        single: () => { data: { id: string } | null; error: null | unknown };
+    }
+
+    const mockQueryBuilder: MockQueryBuilder = {
         eq: () => mockQueryBuilder,
         is: () => mockQueryBuilder,
         select: () => mockQueryBuilder,

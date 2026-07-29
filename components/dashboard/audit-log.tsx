@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface AuditLogEntry {
     id: string;
@@ -10,9 +10,9 @@ interface AuditLogEntry {
     action: string;
     resource_type: string;
     resource_id: string | null;
-    metadata: Record<string, any> | null;
-    before_state: Record<string, any> | null;
-    after_state: Record<string, any> | null;
+    metadata: Record<string, unknown> | null;
+    before_state: Record<string, unknown> | null;
+    after_state: Record<string, unknown> | null;
     created_at: string;
 }
 
@@ -27,11 +27,7 @@ export function AuditLog() {
     const [resourceFilter, setResourceFilter] = useState('');
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchLogs();
-    }, [page, searchQuery, actionFilter, resourceFilter]);
-
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
@@ -53,13 +49,18 @@ export function AuditLog() {
                 const errorData = await response.json();
                 setError(errorData.message || 'Failed to fetch audit logs');
             }
-        } catch (err) {
+        } catch {
             setError('Network error loading audit logs');
-            // Error handled
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, searchQuery, actionFilter, resourceFilter]);
+
+    useEffect(() => {
+        (async () => {
+            await fetchLogs();
+        })();
+    }, [fetchLogs]);
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);

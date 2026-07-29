@@ -6,8 +6,11 @@ export abstract class BaseService {
             // Service error handled gracefully
             // Error message returned to caller
             let message = "An unexpected error occurred";
-            if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
-                message = (error as any).message;
+            if (typeof error === 'object' && error !== null && 'message' in error) {
+                const maybeMessage = (error as { message?: unknown }).message;
+                if (typeof maybeMessage === 'string') {
+                    message = maybeMessage;
+                }
             }
             return {
                 data: null,

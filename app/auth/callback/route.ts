@@ -6,7 +6,7 @@ const VALID_ROLES = ['student', 'organizer', 'super_admin', 'admin'] as const;
 
 type CallbackRole = (typeof VALID_ROLES)[number];
 
-function resolveCallbackDestination(
+export function resolveCallbackDestination(
   next: string | null,
   roleHint: string | null,
   profileRole: string | null | undefined

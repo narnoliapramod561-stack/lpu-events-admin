@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SignOutButton } from '@/components/auth/sign-out-button';
@@ -40,7 +40,7 @@ export default function AdminOrganizersPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // 1. Check User identity & role
       const { data: { user } } = await supabase.auth.getUser();
@@ -80,15 +80,18 @@ export default function AdminOrganizersPage() {
       if (appsErr) throw appsErr;
       setApplications(apps || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load organizer applications.');
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to load organizer applications.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    loadData();
-  }, [supabase]);
+    (async () => {
+      await loadData();
+    })();
+  }, [loadData]);
 
   // Handle Approve
   const handleApprove = async (appId: string) => {
@@ -101,7 +104,7 @@ export default function AdminOrganizersPage() {
     setError(null);
 
     try {
-      const { data, error: rpcErr } = await supabase.rpc('approve_organizer', {
+      const { error: rpcErr } = await supabase.rpc('approve_organizer', {
         p_application_id: appId,
         p_admin_id: adminProfile.id,
         p_notes: 'Approved via Super Admin Portal'
@@ -111,8 +114,9 @@ export default function AdminOrganizersPage() {
       
       // Remove from list
       setApplications(applications.filter(a => a.id !== appId));
-    } catch (err: any) {
-      setError(err.message || 'Failed to approve application.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to approve application.');
     } finally {
       setSubmittingId(null);
     }
@@ -128,7 +132,7 @@ export default function AdminOrganizersPage() {
     setError(null);
 
     try {
-      const { data, error: rpcErr } = await supabase.rpc('reject_organizer', {
+      const { error: rpcErr } = await supabase.rpc('reject_organizer', {
         p_application_id: rejectId,
         p_admin_id: adminProfile.id,
         p_notes: rejectReason || 'Rejected via Super Admin Portal'
@@ -140,8 +144,9 @@ export default function AdminOrganizersPage() {
       setApplications(applications.filter(a => a.id !== rejectId));
       setRejectId(null);
       setRejectReason('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to reject application.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'Failed to reject application.');
     } finally {
       setSubmittingId(null);
     }

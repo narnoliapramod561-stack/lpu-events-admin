@@ -26,7 +26,7 @@ export async function GET() {
             .eq('id', user.id)
             .maybeSingle();
 
-        const role = profile?.role || 'student';
+        const role = profile?.role || 'pending';
 
         if (role === 'super_admin' || role === 'admin') {
             const [

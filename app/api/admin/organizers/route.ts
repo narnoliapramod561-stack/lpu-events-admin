@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { validateSuperAdmin } from '@/lib/auth/admin-guard';
+import { adminApiGuard } from '@/lib/auth/admin-api-guard';
 import { createClient } from '@/lib/supabase/server';
 
 const querySchema = z.object({
@@ -13,42 +13,35 @@ const querySchema = z.object({
 
 export async function GET(request: NextRequest) {
     try {
-        // Get user session
+        // Use admin API guard for authentication and authorization
+        const guardResult = await adminApiGuard(request);
+        if (guardResult.error) {
+            return guardResult.response;
+        }
+
+        // Check if user is Super Admin
+        if (!guardResult.isSuperAdmin) {
+            return NextResponse.json(
+                {
+                    error: 'FORBIDDEN',
+                    message: 'Access denied. Only Super Admin can view organizer requests.',
+                },
+                { status: 403 }
+            );
+        }
+
         const supabase = await createClient();
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            return NextResponse.json(
-                {
-                    error: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                },
-                { status: 401 }
-            );
-        }
-
-        // Validate Super Admin role
-        const authResult = await validateSuperAdmin(user.id);
-        if (authResult.status !== 200) {
-            return NextResponse.json(
-                {
-                    error: authResult.error,
-                    message: authResult.message,
-                },
-                { status: authResult.status }
-            );
-        }
 
         // Parse and validate query parameters
         const { searchParams } = new URL(request.url);
+        const statusParam = searchParams.get('status');
+        const searchParam = searchParams.get('search');
+
         const parseResult = querySchema.safeParse({
             page: searchParams.get('page') || '1',
             limit: searchParams.get('limit') || '20',
-            status: searchParams.get('status'),
-            search: searchParams.get('search'),
+            status: (statusParam === 'all' || !statusParam) ? undefined : statusParam,
+            search: !searchParam ? undefined : searchParam,
         });
 
         if (!parseResult.success) {
@@ -107,11 +100,17 @@ export async function GET(request: NextRequest) {
         const { data: applications, error: queryError, count } = await query;
 
         if (queryError) {
-            // Query error handled
+            console.error('Database query error:', queryError);
             return NextResponse.json(
                 {
                     error: 'DATABASE_ERROR',
                     message: 'Failed to fetch organizer applications',
+                    details: process.env.NODE_ENV === 'development' ? {
+                        code: queryError.code,
+                        message: queryError.message,
+                        details: queryError.details,
+                        hint: queryError.hint,
+                    } : undefined,
                 },
                 { status: 500 }
             );

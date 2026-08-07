@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { supabaseAdmin } from '@/lib/supabase';
 
 type UserInfo = { id?: string; role?: string } | null;
 
@@ -25,7 +25,7 @@ export const validateOrganizer: ((authToken: string) => Promise<AuthResult>) & {
     }
 
     try {
-        const supabase = createServiceRoleClient();
+        const supabase = supabaseAdmin;
         const { data: userProfile, error } = await supabase
             .from('profiles')
             .select('id, role')
@@ -51,13 +51,17 @@ export const validateOrganizer: ((authToken: string) => Promise<AuthResult>) & {
         return {
             status: 200,
             message: 'Authorized',
-            user: userProfile as unknown,
+            user: {
+                id: userProfile.id,
+                role: userProfile.role,
+            },
         };
-    } catch {
+    } catch (error) {
+        console.error(error);
         return {
-            status: 401,
-            error: 'UNAUTHORIZED',
-            message: 'Authentication failed. Invalid token.',
+            status: 500,
+            error: 'INTERNAL_SERVER_ERROR',
+            message: 'Internal server error',
         };
     }
 } as unknown as (authToken: string) => Promise<AuthResult>);

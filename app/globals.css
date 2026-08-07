@@ -1,5 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 @import 'tailwindcss';
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
 
 :root {
   --background: #050507;
@@ -94,4 +114,21 @@ input[type='time']::-webkit-calendar-picker-indicator {
   color: transparent;
   background: transparent;
   cursor: pointer;
+}
+
+/* DateTimePicker popover scrollbar */
+.date-time-picker-popover::-webkit-scrollbar {
+  width: 4px;
+}
+.date-time-picker-popover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.date-time-picker-popover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* DateTimePicker time button active ring */
+.time-picker-btn-active {
+  box-shadow: 0 0 0 2px rgba(255, 145, 77, 0.3);
 }

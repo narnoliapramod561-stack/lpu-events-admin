@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { validateSuperAdmin } from '@/lib/auth/admin-guard';
+import { validateOrganizer } from '@/lib/auth/organizer-guard';
 import { createClient } from '@/lib/supabase/server';
 
 const querySchema = z.object({
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Validate Super Admin role
-        const authResult = await validateSuperAdmin(user.id);
+        // Validate Organizer/Admin/Super Admin role
+        const authResult = await validateOrganizer(user.id);
         if (authResult.status !== 200) {
             return NextResponse.json(
                 {
@@ -53,11 +54,14 @@ export async function GET(request: NextRequest) {
 
         // Parse and validate query parameters
         const { searchParams } = new URL(request.url);
+        const activeParam = searchParams.get('active');
+        const searchParam = searchParams.get('search');
+
         const parseResult = querySchema.safeParse({
             page: searchParams.get('page') || '1',
             limit: searchParams.get('limit') || '20',
-            active: searchParams.get('active'),
-            search: searchParams.get('search'),
+            active: (activeParam === null || activeParam === '') ? undefined : activeParam,
+            search: !searchParam ? undefined : searchParam,
         });
 
         if (!parseResult.success) {

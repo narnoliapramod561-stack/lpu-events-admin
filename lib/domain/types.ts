@@ -6,10 +6,21 @@
  * Event State Types
  * Represents the life cycle stages of an Event.
  * Aligned with database schema (event_status enum)
+ *
+ * FSM lifecycle:
+ *   draft → pending_approval | published | cancelled
+ *   pending_approval → published | rejected | cancelled
+ *   rejected → pending_approval  (organizer re-submits; server re-evaluates approval)
+ *   published → ongoing | cancelled
+ *   ongoing → completed | cancelled
+ *   completed → archived
+ *   cancelled → archived
+ *   archived → (terminal)
  */
 export type EventState =
     | "draft"
     | "pending_approval"
+    | "rejected"
     | "published"
     | "ongoing"
     | "completed"

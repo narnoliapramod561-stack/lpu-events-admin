@@ -33,7 +33,7 @@ async function loadProfile(userId: string) {
   const supabase = createClient();
   const { data } = await supabase
     .from('profiles')
-    .select('id, email, role, full_name, avatar_url, is_active')
+    .select('id, email, role, approval_status, full_name, avatar_url, is_active')
     .eq('id', userId)
     .maybeSingle();
 
@@ -47,18 +47,26 @@ async function loadProfile(userId: string) {
       : data.email.split('@')[0] || 'LPU Student';
 
   const role =
-    data.role === 'super_admin' || data.role === 'organizer' || data.role === 'student'
+    data.role === 'super_admin' || data.role === 'organizer' || data.role === 'student' || data.role === 'admin'
       ? data.role
       : 'student';
 
+  const approvalStatus =
+    data.approval_status === 'pending' || data.approval_status === 'approved' || data.approval_status === 'rejected'
+      ? data.approval_status
+      : 'approved';
+
   const avatarUrl = typeof data.avatar_url === 'string' ? data.avatar_url : null;
   const fullName = typeof data.full_name === 'string' ? data.full_name : null;
-  const status = data.is_active === false ? 'inactive' : 'active';
+  const isActive = data.is_active !== false;
+  const status = isActive ? 'active' : 'inactive';
 
   return {
     id: data.id,
     email: data.email,
     role,
+    approvalStatus,
+    isActive,
     displayName,
     fullName,
     avatarUrl,

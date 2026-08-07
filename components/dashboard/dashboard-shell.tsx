@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Profile } from '@/lib/types/profile';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { CreateEvent } from '@/components/dashboard/create-event';
@@ -14,6 +14,7 @@ import { SponsorsManagement } from '@/components/dashboard/sponsors-management';
 import { AdvertisementsManagement } from '@/components/dashboard/advertisements-management';
 import { AccessManagement } from '@/components/dashboard/access-management';
 import { AuditLog } from '@/components/dashboard/audit-log';
+import { PaidEventRequests } from '@/components/dashboard/paid-event-requests';
 import { useDashboardStats } from '@/hooks/use-dashboard-stats';
 
 type Tab =
@@ -29,6 +30,7 @@ type Tab =
   | 'advertisements'
   | 'access'
   | 'audit-log'
+  | 'paid-event-requests'
   | 'profile';
 
 interface NavItem {
@@ -55,25 +57,30 @@ export function DashboardShell({ profile }: { profile: Profile }) {
   const isSuperAdmin = profile?.role === 'super_admin';
   const { stats, loading: statsLoading, error: statsError } = useDashboardStats();
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
+  const [greeting, setGreeting] = useState<string>('');
+  const [currentDate, setCurrentDate] = useState<string>('');
 
-  const getCurrentDate = () => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+  useEffect(() => {
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'Good Morning';
+      if (hour < 18) return 'Good Afternoon';
+      return 'Good Evening';
     };
-    return new Date().toLocaleDateString('en-US', options);
-  };
 
-  const greeting = getGreeting();
-  const currentDate = getCurrentDate();
+    const getCurrentDate = () => {
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      };
+      return new Date().toLocaleDateString('en-US', options);
+    };
+
+    setGreeting(getGreeting());
+    setCurrentDate(getCurrentDate());
+  }, []);
 
   const SUPER_ADMIN_NAV_ITEMS: NavItem[] = [
     {
@@ -81,6 +88,11 @@ export function DashboardShell({ profile }: { profile: Profile }) {
       label: 'Organizer Requests',
       icon: 'how_to_reg',
       badge: stats?.users.pendingApplications ? `● ${stats.users.pendingApplications}` : undefined,
+    },
+    {
+      id: 'paid-event-requests',
+      label: 'Paid Event Requests',
+      icon: 'star',
     },
     { id: 'access', label: 'Access', icon: 'admin_panel_settings' },
     { id: 'categories', label: 'Categories', icon: 'category' },
@@ -113,13 +125,13 @@ export function DashboardShell({ profile }: { profile: Profile }) {
                 <div className="relative z-10 flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <p className="text-xs font-bold tracking-[0.2em] text-[#ff914d] uppercase opacity-90">
-                      {currentDate}
+                      {currentDate || 'Loading date...'}
                     </p>
                     <div className="h-px w-12 bg-[#ff914d]/30 mt-2"></div>
                   </div>
                   <div className="relative">
                     <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight tracking-tight font-display">
-                      {greeting},{' '}
+                      {greeting || 'Welcome'},{' '}
                       <span className="text-[#ff914d] relative inline-block">
                          {isSuperAdmin ? profile.displayName || 'Super Admin' : profile.displayName || 'Organizer'}
                         <span className="absolute -bottom-1 left-0 w-full h-1 bg-[#ff914d]/20 rounded-full"></span>
@@ -693,6 +705,8 @@ export function DashboardShell({ profile }: { profile: Profile }) {
         return <AdvertisementsManagement />;
       case 'audit-log':
         return <AuditLog />;
+      case 'paid-event-requests':
+        return <PaidEventRequests />;
       default:
         // Render simple loader or default tab wrapper
         const item = navItems.find((nav) => nav.id === activeTab);

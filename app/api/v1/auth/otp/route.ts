@@ -17,23 +17,45 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+    let sendError: any = null;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
 
-    if (error) {
-      // Auth OTP error handled
-      const errorMessage = typeof error?.message === 'string' && error.message.trim().length > 0
-        ? error.message
-        : 'Unable to send OTP.';
+      sendError = error;
+    } catch (err) {
+      sendError = err;
+    }
+
+    if (sendError) {
+      console.error('[AUTH][OTP] Supabase error:', sendError);
+      
+      // Extract error message from various error formats
+      let errorMessage = 'Unable to send OTP.';
+      
+      if (sendError?.message) {
+        errorMessage = sendError.message;
+      } else if (sendError?.error_description) {
+        errorMessage = sendError.error_description;
+      } else if (typeof sendError === 'string') {
+        errorMessage = sendError;
+      } else if (sendError?.toString && sendError.toString() !== '[object Object]') {
+        errorMessage = sendError.toString();
+      }
 
       return NextResponse.json(
         {
           error: 'OTP_SEND_FAILED',
           message: errorMessage,
+          details: process.env.NODE_ENV === 'development' ? {
+            name: sendError?.name,
+            status: sendError?.status,
+            code: sendError?.code,
+          } : undefined,
         },
         { status: 500 }
       );

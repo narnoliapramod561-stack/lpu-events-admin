@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export interface Category {
   id: string;
@@ -38,8 +37,7 @@ function normalizeCategory(row: CategoryRow): Category {
 }
 
 export async function getAllCategories(): Promise<Category[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('categories')
     .select('id, name, slug, icon_name')
     .eq('is_active', true)
@@ -50,12 +48,11 @@ export async function getAllCategories(): Promise<Category[]> {
     throw new Error(`getAllCategories: ${error.message}`);
   }
 
-  return (data ?? []).map(normalizeCategory);
+  return data.map(normalizeCategory);
 }
 
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('categories')
     .select('id, name, slug, icon_name')
     .eq('slug', slug)

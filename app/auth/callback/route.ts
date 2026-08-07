@@ -1,48 +1,77 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getDefaultRouteForRole, getSafeNextPath } from '@/lib/auth-redirect';
 
-const VALID_ROLES = ['student', 'organizer', 'super_admin', 'admin'] as const;
+export interface ProfileAuthInfo {
+  role: string;
+  approval_status: string;
+  is_active: boolean;
+}
 
-type CallbackRole = (typeof VALID_ROLES)[number];
+export function resolveAuthorizationDestination(
+  profile: ProfileAuthInfo | null,
+  next: string | null
+): string {
+  if (!profile) {
+    return '/auth/access-request';
+  }
 
-export function resolveCallbackDestination(
-  next: string | null,
-  roleHint: string | null,
-  profileRole: string | null | undefined
-) {
-  const normalizedProfileRole =
-    profileRole && VALID_ROLES.includes(profileRole as CallbackRole) ? profileRole : null;
+  if (!profile.is_active) {
+    return '/auth/unauthorized?reason=disabled';
+  }
 
-  const fallbackRoute =
-    roleHint === 'admin' ? '/dashboard' : getDefaultRouteForRole((normalizedProfileRole ?? 'student') as CallbackRole);
+  if (profile.role === 'pending') {
+    return '/auth/access-request';
+  }
 
-  return getSafeNextPath(next, fallbackRoute);
+  if (profile.role === 'student') {
+    return '/auth/unauthorized?reason=student';
+  }
+
+  if (profile.role === 'organizer' || profile.role === 'admin' || profile.role === 'super_admin') {
+    if (profile.approval_status === 'pending') {
+      return '/auth/pending';
+    }
+    if (profile.approval_status === 'rejected') {
+      return '/auth/rejected';
+    }
+    if (profile.approval_status === 'approved') {
+      return next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+    }
+  }
+
+  return '/auth/unauthorized?reason=unknown';
 }
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next');
-  const roleHint = requestUrl.searchParams.get('role');
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Fetch the user role to direct them to the correct dashboard
+      // Step 1: Get authenticated user.id (canonical identity)
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user) {
+        // Super Admin check
+        if (user.email === 'subhamkumar16072006@gmail.com') {
+          const destination = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+          return NextResponse.redirect(new URL(destination, requestUrl.origin));
+        }
+
+        // Query profiles using user.id
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, approval_status, is_active')
           .eq('id', user.id)
           .maybeSingle();
 
-        const destination = resolveCallbackDestination(next, roleHint, profile?.role);
+        const destination = resolveAuthorizationDestination(profile, next);
         return NextResponse.redirect(new URL(destination, requestUrl.origin));
       }
     }

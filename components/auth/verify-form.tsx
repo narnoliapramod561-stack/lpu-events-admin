@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { getDefaultRouteForRole, getSafeNextPath } from '@/lib/auth-redirect';
+import { getSafeNextPath } from '@/lib/auth-redirect';
 
 type VerifyFormProps = {
   email: string;
@@ -108,15 +108,19 @@ export function VerifyForm({ email, next }: VerifyFormProps) {
 
     const data = await response.json().catch(() => ({}));
 
-    if (response.ok && data?.user?.role) {
-      const destination = getSafeNextPath(next, getDefaultRouteForRole(data.user.role));
+    // This is the admin portal — the API resolves organizer_profiles authorization
+    // (approved/pending/rejected/unauthorized) and returns the destination.
+    if (response.ok && data?.adminDestination) {
+      const destination = getSafeNextPath(next, data.adminDestination);
       setMessage('Verification complete. Redirecting you into LPU Events...');
       router.replace(destination);
       return;
     }
 
     if (response.ok && data?.session?.access_token && data?.session?.refresh_token) {
-      const destination = getSafeNextPath(next, getDefaultRouteForRole('student'));
+      // Session established but admin authorization could not be resolved —
+      // send to access request flow rather than the public site.
+      const destination = getSafeNextPath(next, '/auth/access-request');
       setMessage('Verification complete. Redirecting you into LPU Events...');
       router.replace(destination);
       return;
@@ -139,6 +143,13 @@ export function VerifyForm({ email, next }: VerifyFormProps) {
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        if (typeof data.dev_otp === 'string' && /^\d{6}$/.test(data.dev_otp)) {
+          sessionStorage.setItem(`lpu-events-dev-otp:${email.toLowerCase()}`, data.dev_otp);
+          setDigits(data.dev_otp.split(''));
+          setMessage('Fresh local preview code filled automatically.');
+          return;
+        }
+
         setMessage('A fresh code has been sent.');
         return;
       }

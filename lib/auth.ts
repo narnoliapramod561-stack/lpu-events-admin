@@ -2,22 +2,24 @@ import { z } from 'zod';
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
-import type { AuthUserProfile, UserRole } from '@/lib/types/auth';
+import { supabaseBrowser } from './supabase';
 
-const userRoleSchema = z.enum(['student', 'organizer', 'super_admin', 'admin']);
+const userRoleSchema = z.enum(['student', 'organizer', 'super_admin', 'admin', 'pending']);
+const approvalStatusSchema = z.enum(['pending', 'approved', 'rejected']);
 
 const authProfileSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email().catch(''),
-  role: userRoleSchema.catch('student'),
+  role: userRoleSchema.catch('pending'),
+  approval_status: approvalStatusSchema.catch('pending'),
+  is_active: z.boolean().catch(true),
   full_name: z.string().nullable().optional(),
   avatar_url: z.string().url().nullable().optional(),
 });
 
 function getEmailPrefix(email: string | undefined) {
   const prefix = email?.split('@')[0]?.trim();
-  return prefix && prefix.length > 0 ? prefix : 'LPU Student';
+  return prefix && prefix.length > 0 ? prefix : 'User';
 }
 
 function mapProfile(row: z.infer<typeof authProfileSchema>): AuthUserProfile {
@@ -27,6 +29,8 @@ function mapProfile(row: z.infer<typeof authProfileSchema>): AuthUserProfile {
     id: row.id,
     email: row.email,
     role: row.role,
+    approvalStatus: row.approval_status,
+    isActive: row.is_active,
     displayName,
     fullName: row.full_name ?? null,
     avatarUrl: row.avatar_url ?? null,
@@ -48,7 +52,9 @@ function buildFallbackProfile(user: User): AuthUserProfile {
   return {
     id: user.id,
     email: user.email ?? '',
-    role: 'student',
+    role: 'pending',
+    approvalStatus: 'pending',
+    isActive: true,
     displayName: metadataName?.trim() || getEmailPrefix(user.email),
     fullName: metadataName,
     avatarUrl,
@@ -57,7 +63,7 @@ function buildFallbackProfile(user: User): AuthUserProfile {
 }
 
 export async function getSession() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -67,13 +73,13 @@ export async function getSession() {
 }
 
 export async function getUser() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return data.user;
 }
 
 export async function getUserProfile() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createClient();
   return getUserProfileFromClient(supabase);
 }
 
@@ -93,7 +99,7 @@ export async function getUserProfileFromClient(supabase: SupabaseClient) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, full_name, avatar_url')
+    .select('id, email, role, approval_status, is_active, full_name, avatar_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -107,7 +113,7 @@ export async function getUserProfileFromClient(supabase: SupabaseClient) {
 
 export async function getUserRoleFromClient(supabase: SupabaseClient) {
   const profile = await getUserProfileFromClient(supabase);
-  return profile?.role ?? 'student';
+  return profile?.role ?? 'pending';
 }
 
 export function isOrganizerRole(role: UserRole) {
@@ -187,4 +193,8 @@ export function setAuthSessionCookies(response: NextResponse, session: Session):
   }
 
   return response;
+}
+
+function createClient() {
+  return supabaseBrowser;
 }

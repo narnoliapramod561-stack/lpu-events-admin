@@ -1,21 +1,57 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { resolveCallbackDestination } from '@/app/auth/callback/route';
+import { resolveAuthorizationDestination } from '@/app/auth/callback/route';
 
-describe('resolveCallbackDestination', () => {
-  it('routes admin OAuth callbacks to the admin dashboard when the profile role is missing', () => {
-    expect(resolveCallbackDestination(null, 'admin', null)).toBe('/dashboard');
+describe('resolveAuthorizationDestination', () => {
+  it('routes to access-request when no profile exists (new user)', () => {
+    expect(resolveAuthorizationDestination(null, null)).toBe('/auth/access-request');
   });
 
-  it('preserves organizer dashboard redirects when the profile role is organizer', () => {
-    expect(resolveCallbackDestination(null, null, 'organizer')).toBe('/dashboard');
+  it('routes to access-request when role is pending (not yet approved)', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'pending', approval_status: 'pending', is_active: true }, null)
+    ).toBe('/auth/access-request');
   });
 
-  it('keeps safe next paths when present', () => {
-    expect(resolveCallbackDestination('/dashboard/events', 'admin', null)).toBe('/dashboard/events');
+  it('routes to unauthorized when role is student', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'student', approval_status: 'approved', is_active: true }, null)
+    ).toBe('/auth/unauthorized?reason=student');
   });
 
-  it('rejects unsafe next paths and falls back to the admin dashboard', () => {
-    expect(resolveCallbackDestination('https://evil.test', 'admin', null)).toBe('/dashboard');
+  it('routes to pending page when an admin role has pending approval', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'organizer', approval_status: 'pending', is_active: true }, null)
+    ).toBe('/auth/pending');
+  });
+
+  it('routes to rejected page when an admin role has rejected approval', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'organizer', approval_status: 'rejected', is_active: true }, null)
+    ).toBe('/auth/rejected');
+  });
+
+  it('routes to dashboard when an admin role is approved', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'organizer', approval_status: 'approved', is_active: true }, null)
+    ).toBe('/dashboard');
+  });
+
+  it('preserves safe next paths when approved', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'admin', approval_status: 'approved', is_active: true }, '/dashboard/events')
+    ).toBe('/dashboard/events');
+  });
+
+  it('routes to unauthorized when disabled', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'organizer', approval_status: 'approved', is_active: false }, null)
+    ).toBe('/auth/unauthorized?reason=disabled');
+  });
+
+  it('routes to unauthorized for unknown roles', () => {
+    expect(
+      resolveAuthorizationDestination({ role: 'unknown', approval_status: 'approved', is_active: true }, null)
+    ).toBe('/auth/unauthorized?reason=unknown');
   });
 });

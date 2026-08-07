@@ -11,6 +11,12 @@ export function getDefaultRouteForRole(role: UserRole) {
     return '/dashboard';
   }
 
+  // Pending users must request access first
+  if (role === 'pending') {
+    return '/auth/access-request';
+  }
+
+  // Student role - no admin access, redirect to student site home
   return '/';
 }
 

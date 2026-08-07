@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { trackAdminRegistration } from '@/components/observability/analytics-provider';
+import { DatePicker } from '@/components/dashboard/date-picker';
+import { TimePicker } from '@/components/dashboard/time-picker';
 
 // Taxonomy data mapped directly from database seed records and frontend categories
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -73,6 +75,13 @@ interface CategoryOption {
   name: string;
 }
 
+interface SubcategoryOption {
+  id: string;
+  name: string;
+  category_id: string;
+  category_name: string;
+}
+
 const STUDENT_FIELD_OPTIONS = [
   { id: 'regNo', label: 'Registration No.' },
   { id: 'branch', label: 'Branch' },
@@ -85,20 +94,87 @@ const STUDENT_FIELD_OPTIONS = [
 export function CreateEvent() {
   const [activeSection, setActiveSection] = useState<number>(2);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<SubcategoryOption[]>([]);
 
   // Form fields states
   const [eventName, setEventName] = useState('');
   const [shortDesc, setShortDesc] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
+  const [showCatSearch, setShowCatSearch] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
+  const [showSubSearch, setShowSubSearch] = useState(false);
+  const [subSearch, setSubSearch] = useState('');
+  const catSearchRef = useRef<HTMLInputElement>(null);
+  const subSearchRef = useRef<HTMLInputElement>(null);
+  const [catSearchHighlight, setCatSearchHighlight] = useState(-1);
+  const [subSearchHighlight, setSubSearchHighlight] = useState(-1);
   const [fullDesc, setFullDesc] = useState('');
+
+  // Refs for auto-resizing textareas
+  const shortDescRef = useRef<HTMLTextAreaElement>(null);
+  const fullDescRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textareas when content changes
+  useEffect(() => {
+    const textarea = shortDescRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [shortDesc]);
+
+  useEffect(() => {
+    const textarea = fullDescRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [fullDesc]);
 
   // Schedule & Location (Using HTML5 native inputs with empty initial states)
   const [eventStartDate, setEventStartDate] = useState('');
+  const [eventStartTime, setEventStartTime] = useState('');
+  const [eventStartPeriod, setEventStartPeriod] = useState<'AM' | 'PM'>('AM');
   const [eventEndDate, setEventEndDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [eventEndTime, setEventEndTime] = useState('');
+  const [eventEndPeriod, setEventEndPeriod] = useState<'AM' | 'PM'>('AM');
   const [venueLocation, setVenueLocation] = useState('');
+  const [venueType, setVenueType] = useState('');
+  const [blockNo, setBlockNo] = useState('');
+  const [roomNo, setRoomNo] = useState('');
+  const [otherVenue, setOtherVenue] = useState('');
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+  const venueDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (venueType === 'Shanti Devi Mittal Auditorium' || venueType === 'Baldev Raj Mittal Auditorium') {
+      setVenueLocation(venueType);
+    } else if (venueType === 'Block & Room') {
+      if (blockNo.trim() && roomNo.trim()) {
+        setVenueLocation(`Block ${blockNo.trim()}, Room ${roomNo.trim()}`);
+      } else {
+        setVenueLocation('');
+      }
+    } else if (venueType === 'Other Venue') {
+      setVenueLocation(otherVenue.trim());
+    } else {
+      setVenueLocation('');
+    }
+  }, [venueType, blockNo, roomNo, otherVenue]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (venueDropdownRef.current && !venueDropdownRef.current.contains(event.target as Node)) {
+        setShowVenueDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Registration logic
   const [regRequired, setRegRequired] = useState('yes'); // 'yes' or 'no'
@@ -157,9 +233,9 @@ export function CreateEvent() {
     fullDesc.trim() !== '';
   const isSection2Complete =
     eventStartDate !== '' &&
+    eventStartTime !== '' &&
     eventEndDate !== '' &&
-    startTime !== '' &&
-    endTime !== '' &&
+    eventEndTime !== '' &&
     venueLocation.trim() !== '';
   const isSection3Complete =
     regRequired === 'no' ||
@@ -191,10 +267,57 @@ export function CreateEvent() {
   const handleCategoryChange = (val: string) => {
     setCategory(val);
     setSubcategory(''); // Reset subcategory when category changes
+    setSubSearch(''); // Reset search when category changes
+    setShowCatSearch(false);
+    setCatSearch('');
   };
 
+  const handleCatSearchSelect = (catName: string, catId: string) => {
+    setCategory(catName);
+    setSubcategory('');
+    setShowCatSearch(false);
+    setCatSearch('');
+    setCatSearchHighlight(-1);
+    // Fetch subcategories for the selected category
+    fetchSubcategories(catId);
+  };
+
+  const handleSubSearchSelect = (sub: SubcategoryOption) => {
+    setSubcategory(sub.name);
+    // Auto-select category from the selected subcategory
+    if (sub.category_name !== category) {
+      setCategory(sub.category_name);
+    }
+    setShowSubSearch(false);
+    setSubSearch('');
+    setSubSearchHighlight(-1);
+  };
+
+  const fetchSubcategories = async (categoryId?: string, search?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (categoryId) params.set('category_id', categoryId);
+      if (search) params.set('search', search);
+      const response = await fetch(`/api/admin/subcategories?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        const subs = (data.data || []).map((sub: SubcategoryOption) => ({
+          id: sub.id,
+          name: sub.name,
+          category_id: sub.category_id,
+          category_name: sub.category_name,
+        }));
+        setSubcategories(subs);
+        setFilteredSubcategories(subs);
+      }
+    } catch {
+      // Keep empty on error
+    }
+  };
+
+  // Fetch categories and ALL subcategories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
         const response = await fetch('/api/admin/categories');
         if (response.ok) {
@@ -204,11 +327,62 @@ export function CreateEvent() {
         }
       } catch {
         // Keep empty categories on error
-      } finally {
       }
     };
-    fetchCategories();
+    fetchData();
+    
+    // Fetch ALL subcategories on mount for global search
+    const fetchAllSubs = async () => {
+      try {
+        const response = await fetch('/api/admin/subcategories');
+        if (response.ok) {
+          const data = await response.json();
+          const subs = (data.data || []).map((sub: SubcategoryOption) => ({
+            id: sub.id,
+            name: sub.name,
+            category_id: sub.category_id,
+            category_name: sub.category_name,
+          }));
+          setSubcategories(subs);
+          setFilteredSubcategories(subs);
+        }
+      } catch {
+        // Keep empty on error
+      }
+    };
+    fetchAllSubs();
   }, []);
+
+  // Filter subcategories by selected category (when NOT searching)
+  useEffect(() => {
+    if (!subSearch && category && categories.length > 0) {
+      const catRecord = categories.find((c) => c.name === category);
+      if (catRecord) {
+        const filtered = subcategories.filter((s) => s.category_id === catRecord.id);
+        setFilteredSubcategories(filtered);
+      }
+    } else if (!subSearch && !category) {
+      // Show all subcategories when no category selected
+      setFilteredSubcategories(subcategories);
+    }
+  }, [category, categories]);
+
+  // Filter subcategories locally when search changes (NO API calls)
+  useEffect(() => {
+    if (subSearch) {
+      const filtered = subcategories.filter((sub) =>
+        sub.name.toLowerCase().includes(subSearch.toLowerCase())
+      );
+      setFilteredSubcategories(filtered);
+    }
+  }, [subSearch]);
+
+  // Filter categories locally when search changes (NO API calls)
+  useEffect(() => {
+    if (catSearch) {
+      // Just for highlighting, no state change needed
+    }
+  }, [catSearch]);
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -259,8 +433,17 @@ export function CreateEvent() {
     setSubmitError(null);
     setSubmitSuccess(null);
 
-    if (!category) {
-      setSubmitError('Please select a category.');
+    // Client-side field validation with clear messages
+    const missing: string[] = [];
+    if (!eventName.trim()) missing.push('Event Title');
+    if (!category) missing.push('Category');
+    if (!venueLocation.trim()) missing.push('Venue');
+    if (!eventStartDate || !eventStartTime) missing.push('Start Date & Time');
+    if (!eventEndDate || !eventEndTime) missing.push('End Date & Time');
+    if (!(fullDesc || shortDesc).trim()) missing.push('Description');
+
+    if (missing.length > 0) {
+      setSubmitError(`Please fill in the following required fields: ${missing.join(', ')}`);
       setIsSubmitting(false);
       return;
     }
@@ -272,8 +455,19 @@ export function CreateEvent() {
       return;
     }
 
-    const startsAt = eventStartDate && startTime ? new Date(`${eventStartDate}T${startTime}`).toISOString() : null;
-    const endsAt = eventEndDate && endTime ? new Date(`${eventEndDate}T${endTime}`).toISOString() : null;
+    const convertTo24Hour = (time12h: string, period: 'AM' | 'PM') => {
+      const [hoursStr, minutesStr] = time12h.split(':');
+      let hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    };
+
+    const start24 = eventStartTime ? convertTo24Hour(eventStartTime, eventStartPeriod) : '';
+    const end24 = eventEndTime ? convertTo24Hour(eventEndTime, eventEndPeriod) : '';
+    const startsAt = eventStartDate && start24 ? new Date(`${eventStartDate}T${start24}`).toISOString() : null;
+    const endsAt = eventEndDate && end24 ? new Date(`${eventEndDate}T${end24}`).toISOString() : null;
 
     if (!startsAt || !endsAt) {
       setSubmitError('Please provide start and end dates with times.');
@@ -287,7 +481,9 @@ export function CreateEvent() {
       return;
     }
 
-    const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const baseSlug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const slug = `${baseSlug}-${randomSuffix}`;
 
     interface EventPayload {
       title: string;
@@ -319,8 +515,8 @@ export function CreateEvent() {
       contact_phone: '',
     };
 
-    if (fullDesc.trim().length < 10) {
-      setSubmitError('Full description must be at least 10 characters.');
+    if (fullDesc.trim().length < 1) {
+      setSubmitError('Full description must be at least 1 character.');
       setIsSubmitting(false);
       return;
     }
@@ -335,7 +531,15 @@ export function CreateEvent() {
       const result = await response.json();
 
       if (!response.ok) {
-        setSubmitError(result.error || result.message || 'Failed to create event');
+        // Show detailed validation errors if available
+        if (result.details && Array.isArray(result.details)) {
+          const messages = result.details.map((d: { path?: string[]; message?: string }) =>
+            d.path?.length ? `${d.path.join('.')}: ${d.message}` : d.message
+          ).join('; ');
+          setSubmitError(`Validation failed — ${messages}`);
+        } else {
+          setSubmitError(result.message || result.error || 'Failed to create event');
+        }
         return;
       }
 
@@ -346,7 +550,7 @@ export function CreateEvent() {
       });
       setSubmitSuccess('Event created successfully! Redirecting...');
       setTimeout(() => {
-        window.location.href = '/dashboard/events';
+        window.location.href = '/dashboard';
       }, 1500);
     } catch {
       setSubmitError('Network error. Please try again.');
@@ -361,12 +565,22 @@ export function CreateEvent() {
       setShortDesc('');
       setCategory('');
       setSubcategory('');
+      setShowCatSearch(false);
+      setCatSearch('');
+      setShowSubSearch(false);
+      setSubSearch('');
+      setCatSearchHighlight(-1);
+      setSubSearchHighlight(-1);
       setFullDesc('');
       setEventStartDate('');
+      setEventStartTime('');
       setEventEndDate('');
-      setStartTime('');
-      setEndTime('');
+      setEventEndTime('');
       setVenueLocation('');
+      setVenueType('');
+      setBlockNo('');
+      setRoomNo('');
+      setOtherVenue('');
       setRegRequired('yes');
       setRegPlatform('lpu_events');
       setRegType('paid');
@@ -388,7 +602,7 @@ export function CreateEvent() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2 font-display">
             Create Event
           </h1>
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-white">
             Create and publish your event with a simple and premium experience.
           </p>
         </div>
@@ -440,7 +654,7 @@ export function CreateEvent() {
 
           {activeSection === 1 && (
             <div className="pt-6 border-t border-white/5 animate-fadeIn">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Left Col: Poster */}
                 <div className="flex flex-col gap-3">
                   <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
@@ -495,6 +709,7 @@ export function CreateEvent() {
                       Short Description
                     </label>
                     <textarea
+                      ref={shortDescRef}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all resize-none"
                       placeholder="Briefly describe your event..."
                       rows={2}
@@ -502,49 +717,220 @@ export function CreateEvent() {
                       onChange={(e) => setShortDesc(e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="flex space-x-4 items-start">
                     {/* Category Dropdown */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                        Category
-                      </label>
-                      <select
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
-                        value={category}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                      >
-                        <option value="" disabled>
-                          Select category...
-                        </option>
-                        {Object.keys(CATEGORY_MAP).map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
+                    <div className="flex flex-col flex-1 gap-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                          Category
+                        </label>
+                        <button
+                          type="button"
+                          className="p-1 hover:scale-110 transition-transform"
+                          onClick={() => {
+                            setShowCatSearch(true);
+                            setCatSearch('');
+                            setCatSearchHighlight(-1);
+                            setTimeout(() => catSearchRef.current?.focus(), 0);
+                          }}
+                          aria-label="Search categories"
+                        >
+                          <span className="material-symbols-outlined text-white/60 text-[18px]">search</span>
+                        </button>
+                      </div>
+                      {showCatSearch ? (
+                        <div className="relative">
+                          <input
+                            ref={catSearchRef}
+                            type="text"
+                            placeholder="Search category..."
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all"
+                            value={catSearch}
+                            onChange={(e) => {
+                              setCatSearch(e.target.value);
+                              setCatSearchHighlight(-1);
+                            }}
+                            onKeyDown={(e) => {
+                              const filtered = categories.filter((cat) =>
+                                cat.name.toLowerCase().includes(catSearch.toLowerCase())
+                              );
+                              if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setCatSearchHighlight((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+                              } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                setCatSearchHighlight((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+                              } else if (e.key === 'Enter' && catSearchHighlight >= 0 && filtered[catSearchHighlight]) {
+                                e.preventDefault();
+                                const selected = filtered[catSearchHighlight];
+                                handleCatSearchSelect(selected.name, selected.id);
+                              } else if (e.key === 'Escape') {
+                                setShowCatSearch(false);
+                                setCatSearch('');
+                                setCatSearchHighlight(-1);
+                              }
+                            }}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setShowCatSearch(false);
+                                setCatSearch('');
+                                setCatSearchHighlight(-1);
+                              }, 200);
+                            }}
+                          />
+                          <div className="absolute z-50 w-full mt-1 bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                            {categories
+                              .filter((cat) => cat.name.toLowerCase().includes(catSearch.toLowerCase()))
+                              .map((cat, idx) => (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                                    idx === catSearchHighlight
+                                      ? 'bg-[#ff914d]/20 text-white'
+                                      : 'text-white/80 hover:bg-white/5'
+                                  }`}
+                                  onMouseDown={() => handleCatSearchSelect(cat.name, cat.id)}
+                                >
+                                  {cat.name}
+                                </button>
+                              ))}
+                            {categories.filter((cat) =>
+                              cat.name.toLowerCase().includes(catSearch.toLowerCase())
+                            ).length === 0 && (
+                              <div className="px-4 py-3 text-sm text-white/40">No results found</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                          value={category}
+                          onChange={(e) => handleCategoryChange(e.target.value)}
+                        >
+                          <option value="" disabled>
+                            Select category...
                           </option>
-                        ))}
-                      </select>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.name}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
                     {/* Subcategory Dropdown */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                        Subcategory
-                      </label>
-                      <select
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        value={subcategory}
-                        onChange={(e) => setSubcategory(e.target.value)}
-                        disabled={!category}
-                      >
-                        <option value="" disabled>
-                          {category ? 'Select subcategory...' : 'Choose category first'}
-                        </option>
-                        {category &&
-                          CATEGORY_MAP[category]?.map((sub) => (
-                            <option key={sub} value={sub}>
-                              {sub}
+                    <div className="flex flex-col flex-1 gap-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                          Subcategory
+                        </label>
+                        <button
+                          type="button"
+                          className="p-1 hover:scale-110 transition-transform"
+                          onClick={() => {
+                            setShowSubSearch(true);
+                            setSubSearch('');
+                            setSubSearchHighlight(-1);
+                            setTimeout(() => subSearchRef.current?.focus(), 0);
+                          }}
+                          aria-label="Search subcategories"
+                        >
+                          <span className="material-symbols-outlined text-white/60 text-[18px]">search</span>
+                        </button>
+                      </div>
+                      {showSubSearch ? (
+                        <div className="relative">
+                          <input
+                            ref={subSearchRef}
+                            type="text"
+                            placeholder="Search subcategory..."
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all"
+                            value={subSearch}
+                            onChange={(e) => {
+                              setSubSearch(e.target.value);
+                              setSubSearchHighlight(-1);
+                            }}
+                            onKeyDown={(e) => {
+                              const filtered = subcategories.filter((sub) =>
+                                sub.name.toLowerCase().includes(subSearch.toLowerCase())
+                              );
+                              if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setSubSearchHighlight((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+                              } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                setSubSearchHighlight((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+                              } else if (e.key === 'Enter' && subSearchHighlight >= 0 && filtered[subSearchHighlight]) {
+                                e.preventDefault();
+                                handleSubSearchSelect(filtered[subSearchHighlight]);
+                              } else if (e.key === 'Escape') {
+                                setShowSubSearch(false);
+                                setSubSearch('');
+                                setSubSearchHighlight(-1);
+                              }
+                            }}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setShowSubSearch(false);
+                                setSubSearch('');
+                                setSubSearchHighlight(-1);
+                              }, 200);
+                            }}
+                          />
+                          <div className="absolute z-50 w-full mt-1 bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                            {subcategories
+                              .filter((sub) => sub.name.toLowerCase().includes(subSearch.toLowerCase()))
+                              .map((sub, idx) => (
+                                <button
+                                  key={sub.id}
+                                  type="button"
+                                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                                    idx === subSearchHighlight
+                                      ? 'bg-[#ff914d]/20 text-white'
+                                      : 'text-white/80 hover:bg-white/5'
+                                  }`}
+                                  onMouseDown={() => handleSubSearchSelect(sub)}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{sub.name}</span>
+                                    <span className="text-xs text-white/40">{sub.category_name}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            {subcategories.filter((sub) =>
+                              sub.name.toLowerCase().includes(subSearch.toLowerCase())
+                            ).length === 0 && (
+                              <div className="px-4 py-3 text-sm text-white/40">No results found</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          value={subcategory}
+                          onChange={(e) => {
+                            const selectedSub = e.target.value;
+                            setSubcategory(selectedSub);
+                            // Auto-select category from the selected subcategory
+                            const found = filteredSubcategories.find((s) => s.name === selectedSub);
+                            if (found && found.category_name !== category) {
+                              setCategory(found.category_name);
+                            }
+                          }}
+                          disabled={!category}
+                        >
+                          <option value="" disabled>
+                            {category ? 'Select subcategory...' : 'Choose category first'}
+                          </option>
+                          {filteredSubcategories.map((sub) => (
+                            <option key={sub.id} value={sub.name}>
+                              {sub.name}
                             </option>
                           ))}
-                      </select>
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -555,6 +941,7 @@ export function CreateEvent() {
                     Full Description
                   </label>
                   <textarea
+                    ref={fullDescRef}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all resize-none"
                     placeholder="Provide detailed information about the schedule, speakers, requirements..."
                     rows={6}
@@ -622,97 +1009,132 @@ export function CreateEvent() {
           {activeSection === 2 && (
             <div className="pt-6 border-t border-white/5 animate-fadeIn">
               <div className="flex flex-col gap-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Start Date (Right-aligned icon) */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                      Start Date
-                    </label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                        calendar_month
-                      </span>
-                      <input
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                        type="date"
-                        value={eventStartDate}
-                        onChange={(e) => setEventStartDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* End Date (Right-aligned icon) */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                      End Date
-                    </label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                        calendar_month
-                      </span>
-                      <input
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                        type="date"
-                        value={eventEndDate}
-                        onChange={(e) => setEventEndDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Start Time (Right-aligned icon) */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                      Start Time
-                    </label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                        schedule
-                      </span>
-                      <input
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* End Time (Right-aligned icon) */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                      End Time
-                    </label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                        schedule
-                      </span>
-                      <input
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DatePicker
+                    value={eventStartDate}
+                    onChange={setEventStartDate}
+                    label="Start Date"
+                    minDate={new Date().toISOString().split('T')[0]}
+                  />
+                  <TimePicker
+                    value={eventStartTime}
+                    period={eventStartPeriod}
+                    onChange={setEventStartTime}
+                    onPeriodChange={setEventStartPeriod}
+                    label="Start Time"
+                  />
+                  <DatePicker
+                    value={eventEndDate}
+                    onChange={setEventEndDate}
+                    label="End Date"
+                    minDate={eventStartDate || new Date().toISOString().split('T')[0]}
+                  />
+                  <TimePicker
+                    value={eventEndTime}
+                    period={eventEndPeriod}
+                    onChange={setEventEndTime}
+                    onPeriodChange={setEventEndPeriod}
+                    label="End Time"
+                  />
                 </div>
 
-                {/* Venue Location (Right-aligned icon) */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                    Venue Location
-                  </label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px]">
-                      location_on
-                    </span>
-                    <input
-                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
-                      placeholder="Search for a venue..."
-                      type="text"
-                      value={venueLocation}
-                      onChange={(e) => setVenueLocation(e.target.value)}
-                    />
+                {/* Venue Location Dropdown */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                      Venue Location
+                    </label>
+                    <div className="relative" ref={venueDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowVenueDropdown(!showVenueDropdown)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white text-left focus:outline-none focus:border-[#ff914d] transition-all flex items-center justify-between"
+                      >
+                        <span className={venueType ? 'text-white' : 'text-white/40'}>
+                          {venueType || 'Select Venue...'}
+                        </span>
+                        <span className="absolute right-3 top-3.5 text-white/40 text-xs select-none">▼</span>
+                      </button>
+
+                      {showVenueDropdown && (
+                        <div className="absolute z-50 mt-1 w-full bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+                          <ul>
+                            {[
+                              'Shanti Devi Mittal Auditorium',
+                              'Baldev Raj Mittal Auditorium',
+                              'Block & Room',
+                              'Other Venue',
+                            ].map((option) => (
+                              <li key={option}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setVenueType(option);
+                                    setShowVenueDropdown(false);
+                                    if (option !== 'Block & Room') {
+                                      setBlockNo('');
+                                      setRoomNo('');
+                                    }
+                                    if (option !== 'Other Venue') {
+                                      setOtherVenue('');
+                                    }
+                                  }}
+                                  className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                                >
+                                  {option}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Conditional Fields */}
+                  {venueType === 'Block & Room' && (
+                    <div className="flex flex-col sm:flex-row gap-4 animate-fadeIn">
+                      <div className="flex flex-col flex-1 gap-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                          Block No. <span className="text-[#ff914d]">*</span>
+                        </label>
+                        <input
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                          placeholder="e.g. 34"
+                          type="text"
+                          value={blockNo}
+                          onChange={(e) => setBlockNo(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col flex-1 gap-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                          Room No. <span className="text-[#ff914d]">*</span>
+                        </label>
+                        <input
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                          placeholder="e.g. 102"
+                          type="text"
+                          value={roomNo}
+                          onChange={(e) => setRoomNo(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {venueType === 'Other Venue' && (
+                    <div className="flex flex-col gap-2 animate-fadeIn">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                        Venue Name <span className="text-[#ff914d]">*</span>
+                      </label>
+                      <input
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                        placeholder="Enter custom venue name..."
+                        type="text"
+                        value={otherVenue}
+                        onChange={(e) => setOtherVenue(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-between mt-8">

@@ -1,3 +1,13 @@
+import { getPublicEnv } from './lib/env';
+
+const publicEnv = getPublicEnv();
+
+// Set mock environment variables for tests
+process.env.NEXT_PUBLIC_APP_URL = publicEnv.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+process.env.NEXT_PUBLIC_SUPABASE_URL = publicEnv.NEXT_PUBLIC_SUPABASE_URL || 'https://aknxfyzmzhkkuthpetcu.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-service-role-key';
+
 // Minimal test setup: polyfill fetch and URL.createObjectURL
 if (typeof global.fetch === 'undefined') {
   global.fetch = () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) });

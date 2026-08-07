@@ -14,7 +14,7 @@
 --   3. Validates event status is 'draft' or 'pending_approval'.
 --   4. Validates required fields are complete (title, start_date, venue).
 --   5. Validates event_inventory row exists with total_tickets > 0.
---   6. Updates event status to 'published', sets published_at.
+--   6. Updates event status to 'published', sets updated_at.
 --   7. Emits event.published outbox event.
 -- ---------------------------------------------------------------------------
 
@@ -122,12 +122,16 @@ BEGIN
 
   -- -------------------------------------------------------------------------
   -- Step 7: Publish the event
+  --   Domain 2 trigger trg_events_block_direct_publish forbids direct flips to
+  --   'published'. This RPC is the canonical publisher, so it sets a
+  --   transaction-local GUC the trigger checks.
   -- -------------------------------------------------------------------------
+  PERFORM set_config('app.allow_publish', 'rpc', true);
+
   UPDATE public.events
      SET status       = 'published',
-         published_at = now(),
          updated_at   = now()
-   WHERE id = p_event_id;
+    WHERE id = p_event_id;
 
   -- -------------------------------------------------------------------------
   -- Step 8: Emit event.published outbox event

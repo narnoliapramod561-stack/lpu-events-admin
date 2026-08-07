@@ -9,7 +9,7 @@ export async function GET() {
     let databaseStatus = 'error';
 
     try {
-      const { error } = await supabase.rpc('verify_ticket', { p_ticket_id: '00000000-0000-0000-0000-000000000000' });
+      const { error } = await supabase.from('system_config').select('key').limit(1);
 
       if (error) {
         console.error('[HEALTH][DB] Database ping failed:', error.message);

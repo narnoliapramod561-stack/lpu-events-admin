@@ -9,7 +9,7 @@ export interface OrganizerProfile {
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
-  role: 'student' | 'organizer' | 'super_admin' | 'admin';
+  role: 'student' | 'organizer' | 'super_admin' | 'admin' | 'pending';
   registration_number: string | null;
   department: string | null;
   metadata: Record<string, unknown> | null;

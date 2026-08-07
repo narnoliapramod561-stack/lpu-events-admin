@@ -3,7 +3,10 @@
 -- Fix for: profiles_full_name_length constraint violation during OTP signup
 -- Related Issue: "new row for relation \"profiles\" violates check constraint \"profiles_full_name_length\""
 
--- 1. Drop the existing trigger function
+-- 1. Drop the existing trigger first (it depends on the function)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- 1b. Drop the existing trigger function
 DROP FUNCTION IF EXISTS public.handle_new_user();
 
 -- 2. Recreate the function with corrected fallback using email prefix
@@ -31,7 +34,6 @@ END;
 $$;
 
 -- 3. Re-create the trigger
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW

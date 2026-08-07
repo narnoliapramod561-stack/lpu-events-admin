@@ -56,19 +56,49 @@ export async function POST(request: Request) {
       );
     }
 
-    if (response.ok && data?.session?.access_token && data?.session?.refresh_token) {
+    const authData = data?.data ?? data;
+    let adminDestination: string | null = null;
+
+    if (authData?.session?.access_token && authData?.session?.refresh_token) {
       try {
         const supabase = await createClient();
         await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
         });
+
+        if (authData?.user?.id) {
+          if (authData.user.email === 'subhamkumar16072006@gmail.com') {
+            adminDestination = '/dashboard';
+          } else {
+            const { data: organizerApplication } = await supabase
+              .from('organizer_applications')
+              .select('status')
+              .eq('user_id', authData.user.id)
+              .maybeSingle();
+
+            if (!organizerApplication) {
+              adminDestination = '/auth/access-request';
+            } else if (organizerApplication.status === 'pending') {
+              adminDestination = '/auth/pending';
+            } else if (organizerApplication.status === 'rejected') {
+              adminDestination = '/auth/rejected';
+            } else if (organizerApplication.status === 'approved') {
+              adminDestination = '/dashboard';
+            } else {
+              adminDestination = '/auth/unauthorized?reason=unknown';
+            }
+          }
+        }
       } catch {
         // Session error handled gracefully
       }
     }
 
-    return NextResponse.json(data, { status });
+    return NextResponse.json(
+      { message: data?.message, ...authData, adminDestination },
+      { status }
+    );
   } catch {
     // Auth verify OTP error handled
     return NextResponse.json({ error: 'INTERNAL_ERROR', message: 'Unable to verify OTP.' }, { status: 500 });

@@ -48,14 +48,20 @@ export async function GET(request: NextRequest) {
 
         // Parse and validate query parameters
         const { searchParams } = new URL(request.url);
+        const actionParam = searchParams.get('action');
+        const actorIdParam = searchParams.get('actor_id');
+        const resourceTypeParam = searchParams.get('resource_type');
+        const fromDateParam = searchParams.get('from_date');
+        const toDateParam = searchParams.get('to_date');
+
         const parseResult = querySchema.safeParse({
             page: searchParams.get('page') || '1',
             limit: searchParams.get('limit') || '50',
-            action: searchParams.get('action'),
-            actor_id: searchParams.get('actor_id'),
-            resource_type: searchParams.get('resource_type'),
-            from_date: searchParams.get('from_date'),
-            to_date: searchParams.get('to_date'),
+            action: !actionParam ? undefined : actionParam,
+            actor_id: !actorIdParam ? undefined : actorIdParam,
+            resource_type: !resourceTypeParam ? undefined : resourceTypeParam,
+            from_date: !fromDateParam ? undefined : fromDateParam,
+            to_date: !toDateParam ? undefined : toDateParam,
         });
 
         if (!parseResult.success) {

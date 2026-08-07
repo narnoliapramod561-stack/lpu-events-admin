@@ -21,6 +21,7 @@
     "@sentry/react": "^10.68.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
+    "html5-qrcode": "^2.3.8",
     "next": "^16.2.12",
     "posthog-js": "^1.407.5",
     "react": "^19.2.7",

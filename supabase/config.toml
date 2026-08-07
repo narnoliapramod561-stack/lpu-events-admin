@@ -24,3 +24,16 @@ enable_signup = true
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+
+[cron]
+enabled = true
+
+[[cron.jobs]]
+name = "outbox-processor"
+schedule = "*/30 * * * *"  # Every 30 seconds
+payload = "{}"
+
+[[cron.jobs]]
+name = "scheduled-cache-refresh"
+schedule = "0 0 * * *"  # Midnight daily (UTC)
+payload = "{}"

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { validateSuperAdmin } from '@/lib/auth/admin-guard';
+import { adminApiGuard } from '@/lib/auth/admin-api-guard';
 import { createClient } from '@/lib/supabase/server';
 
 const approveSchema = z.object({
@@ -14,34 +14,25 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-        // Get user session
+        
+        // Use admin API guard for authentication and authorization
+        const guardResult = await adminApiGuard(request);
+        if (guardResult.error) {
+            return guardResult.response;
+        }
+
+        // Check if user is Super Admin
+        if (!guardResult.isSuperAdmin) {
+            return NextResponse.json(
+                {
+                    error: 'FORBIDDEN',
+                    message: 'Access denied. Only Super Admin can approve organizer requests.',
+                },
+                { status: 403 }
+            );
+        }
+
         const supabase = await createClient();
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            return NextResponse.json(
-                {
-                    error: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                },
-                { status: 401 }
-            );
-        }
-
-        // Validate Super Admin role
-        const authResult = await validateSuperAdmin(user.id);
-        if (authResult.status !== 200) {
-            return NextResponse.json(
-                {
-                    error: authResult.error,
-                    message: authResult.message,
-                },
-                { status: authResult.status }
-            );
-        }
 
         // Parse and validate request body
         const body = await request.json();
@@ -66,7 +57,7 @@ export async function POST(
             'approve_organizer',
             {
                 p_application_id: applicationId,
-                p_admin_id: user.id,
+                p_admin_id: guardResult.user.id,
                 p_notes: notes || null,
             }
         );

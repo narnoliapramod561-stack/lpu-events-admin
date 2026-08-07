@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SignOutButton } from '@/components/auth/sign-out-button';
+import { DatePicker } from '@/components/dashboard/date-picker';
+import { TimePicker } from '@/components/dashboard/time-picker';
 
 interface Category {
   id: string;
@@ -37,6 +39,8 @@ export default function NewEventPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [requiresApproval, setRequiresApproval] = useState(false);
 
   // Form fields
   const [title, setTitle] = useState('');
@@ -46,10 +50,32 @@ export default function NewEventPage() {
   const [subcategoryId, setSubcategoryId] = useState('');
   const [venue, setVenue] = useState('');
   const [venueAddress, setVenueAddress] = useState('');
-  
-  const [startsAt, setStartsAt] = useState('');
-  const [endsAt, setEndsAt] = useState('');
 
+  // Refs for auto-resizing textareas
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const termsRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textareas when content changes
+  useEffect(() => {
+    const textarea = descriptionRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [description]);
+
+  // Auto-resize terms textarea when content changes (moved below after state definitions)
+
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [startPeriod, setStartPeriod] = useState<'AM' | 'PM'>('AM');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [endPeriod, setEndPeriod] = useState<'AM' | 'PM'>('AM');
+
+  const [registrationRequired, setRegistrationRequired] = useState<boolean>(true);
+  const [registrationType, setRegistrationType] = useState<'free' | 'paid'>('free');
+  const [registrationPlatform, setRegistrationPlatform] = useState<'lpu_events' | 'external_link'>('lpu_events');
   const [registrationMode, setRegistrationMode] = useState<'individual' | 'team'>('individual');
   const [teamMinSize, setTeamMinSize] = useState<number>(2);
   const [teamMaxSize, setTeamMaxSize] = useState<number>(4);
@@ -142,9 +168,11 @@ export default function NewEventPage() {
       if (!categoryId) return setError('Please select a category.');
       if (!venue) return setError('Venue name is required.');
     } else if (step === 2) {
-      if (!startsAt || !endsAt) return setError('Please specify both start and end date-times.');
-      if (new Date(endsAt) <= new Date(startsAt)) return setError('End date-time must be after the start date-time.');
-      if (new Date(startsAt) <= new Date()) return setError('Start date-time must be in the future.');
+      if (!startDate || !startTime || !endDate || !endTime) return setError('Please specify both start and end dates and times.');
+      const startDT = new Date(`${startDate}T${startTime}`);
+      const endDT = new Date(`${endDate}T${endTime}`);
+      if (endDT <= startDT) return setError('End date-time must be after the start date-time.');
+      if (startDT <= new Date()) return setError('Start date-time must be in the future.');
     } else if (step === 3) {
       for (const tier of ticketTiers) {
         if (!tier.name) return setError('Ticket tier name is required.');
@@ -170,59 +198,74 @@ export default function NewEventPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User session not found. Please log in.');
 
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-      if (!profile || (profile.role !== 'organizer' && profile.role !== 'super_admin' && profile.role !== 'admin')) {
-        throw new Error('Only authorized organizers or administrators can create events.');
-      }
-
       const eventSlug = sanitizeSlug(title) + '-' + Date.now().toString(36);
-      
-      const eventPayload: Record<string, unknown> = {
-        organizer_id: user.id,
+
+      // Domain 2 lock: creation goes ONLY through POST /api/organizer/events.
+      // Server validates with the canonical EventValidator and initializes
+      // inventory atomically in EventService.createEvent.
+      const payload: Record<string, unknown> = {
         category_id: categoryId,
-        subcategory_id: subcategoryId || null,
         title: title.trim(),
         slug: eventSlug,
         description: description.trim(),
         short_description: shortDescription.trim() || null,
         venue: venue.trim(),
         venue_address: venueAddress.trim() || null,
-        starts_at: new Date(startsAt).toISOString(),
-        ends_at: new Date(endsAt).toISOString(),
-        is_free: ticketTiers.every(t => t.price === 0),
+        starts_at: new Date(`${startDate}T${startTime}`).toISOString(),
+        ends_at: new Date(`${endDate}T${endTime}`).toISOString(),
+        is_free: !registrationRequired || registrationType === 'free',
+        registration_required: registrationRequired,
+        registration_type: registrationType,
+        registration_platform: registrationPlatform,
         registration_mode: registrationMode,
         max_tickets: maxTickets,
         terms_and_conditions: termsAndConditions.trim() || null,
         contact_email: contactEmail.trim() || null,
         contact_phone: contactPhone.trim() || null,
-        status: publish ? 'pending_approval' : 'draft',
+        ticket_tiers: ticketTiers
+          .filter(t => t.name.trim())
+          .map(t => ({
+            name: t.name.trim(),
+            description: t.description.trim() || null,
+            price: t.price,
+            total_tickets: t.totalTickets,
+          })),
+        publish,
       };
 
       if (registrationMode === 'team') {
-        eventPayload.team_min_size = teamMinSize;
-        eventPayload.team_max_size = teamMaxSize;
-        eventPayload.team_pricing = teamPricing;
+        payload.team_min_size = teamMinSize;
+        payload.team_max_size = teamMaxSize;
+        payload.team_pricing = teamPricing;
+      }
+      if (registrationOpensAt) payload.registration_opens_at = new Date(registrationOpensAt).toISOString();
+      if (registrationClosesAt) payload.registration_closes_at = new Date(registrationClosesAt).toISOString();
+
+      const response = await fetch('/api/organizer/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(json?.message || json?.error || 'Failed to create event.');
       }
 
-      if (registrationOpensAt) {
-        eventPayload.registration_opens_at = new Date(registrationOpensAt).toISOString();
-      }
-      if (registrationClosesAt) {
-        eventPayload.registration_closes_at = new Date(registrationClosesAt).toISOString();
-      }
+      // The API returns the created event (draft path) or the publish RPC result
+      // (auto-publish path). Extract the event id from whichever shape came back.
+      const eventId: string =
+        json?.data?.id ||
+        json?.data?.event_id ||
+        json?.data?.eventId ||
+        '';
+      if (!eventId) throw new Error('Event was created but no ID was returned.');
 
-      const { data: createdEvent, error: eventError } = await supabase
-        .from('events')
-        .insert(eventPayload)
-        .select()
-        .single();
+      // Determine whether this event was auto-published or submitted for approval.
+      const approvalRequired: boolean = json?.data?.requires_approval === true;
+      const publishMessage: string | null = json?.data?.message ?? null;
 
-      if (eventError || !createdEvent) {
-        throw new Error(`Failed to create event: ${eventError?.message}`);
-      }
-
-      const eventId = createdEvent.id;
-
+      // Optional cover upload (storage write is independent of inventory).
       if (coverFile) {
         const fileExt = coverFile.name.split('.').pop();
         const storagePath = `events/${eventId}/cover-${Date.now()}.${fileExt}`;
@@ -231,71 +274,29 @@ export default function NewEventPage() {
           .from('event-media')
           .upload(storagePath, coverFile);
 
-        if (uploadError) {
-          await supabase.from('events').delete().eq('id', eventId);
-          throw new Error(`Failed to upload cover image: ${uploadError.message}`);
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('event-media')
+            .getPublicUrl(storagePath);
+          await supabase.from('events').update({ cover_image_url: publicUrl }).eq('id', eventId);
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('event-media')
-          .getPublicUrl(storagePath);
-
-        await supabase
-          .from('events')
-          .update({ cover_image_url: publicUrl })
-          .eq('id', eventId);
+        // On failure, keep the event (draft or pending) — organizer retries from edit screen.
       }
 
-      for (const tier of ticketTiers) {
-        if (!tier.name.trim()) continue;
-        const { data: createdTier, error: tierError } = await supabase
-          .from('ticket_types')
-          .insert({
-            event_id: eventId,
-            name: tier.name.trim(),
-            description: tier.description.trim() || null,
-            price: tier.price,
-            total_tickets: tier.totalTickets
-          })
-          .select()
-          .single();
-
-        if (tierError || !createdTier) {
-          throw new Error(`Failed to create ticket tier ${tier.name}: ${tierError?.message}`);
-        }
-
-        const { error: invError } = await supabase
-          .from('event_inventory')
-          .insert({
-            event_id: eventId,
-            ticket_type_id: createdTier.id,
-            total_tickets: tier.totalTickets,
-            available_tickets: tier.totalTickets,
-            reserved_tickets: 0,
-            sold_tickets: 0
-          });
-
-        if (invError) {
-          throw new Error(`Failed to register inventory for tier ${tier.name}: ${invError.message}`);
-        }
+      // Show the appropriate confirmation based on the automatic decision.
+      if (approvalRequired) {
+        setRequiresApproval(true);
+        setSuccessMessage(publishMessage || 'Your paid event has been submitted for Super Admin approval.');
+      } else {
+        setRequiresApproval(false);
+        setSuccessMessage(publishMessage || 'Event published successfully! Your event is now live.');
       }
 
-      if (publish) {
-        const { error: publishError } = await supabase
-          .rpc('publish_event', {
-            p_event_id: eventId,
-            p_organizer_user_id: user.id
-          });
-
-        if (publishError) {
-          throw new Error(`Failed to publish event: ${publishError.message}`);
-        }
-      }
-
+      // Briefly show the message, then redirect to Events page.
+      await new Promise((r) => setTimeout(r, 1200));
       router.push(`/dashboard/organizer/events/${eventId}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message || 'An error occurred during submission.');
+      setError(err instanceof Error ? err.message : 'An error occurred during submission.');
       setLoading(false);
     }
   };
@@ -341,6 +342,19 @@ export default function NewEventPage() {
         {error && (
           <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-sm">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 p-6 text-center">
+            <span className="material-symbols-outlined text-4xl block mb-2">celebration</span>
+            <h3 className="text-lg font-bold text-white font-display mb-1">
+              {requiresApproval ? 'Paid Event Submitted' : 'Event Published Successfully'}
+            </h3>
+            <p className="text-sm text-emerald-400/80">
+              {successMessage}
+            </p>
+            <p className="text-xs text-white/40 mt-2">Redirecting to Events...</p>
           </div>
         )}
 
@@ -401,6 +415,7 @@ export default function NewEventPage() {
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Full Description</label>
                 <textarea
+                  ref={descriptionRef}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
@@ -439,21 +454,37 @@ export default function NewEventPage() {
               <h2 className="text-lg font-bold text-white font-display">Date & Time Settings</h2>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={startsAt}
-                    onChange={(e) => setStartsAt(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event Start Date</label>
+                  <DatePicker
+                    value={startDate}
+                    onChange={setStartDate}
+                    label="Start Date"
+                    minDate={new Date().toISOString().split('T')[0]}
+                  />
+                <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block mt-2">Event Start Time</label>
+                  <TimePicker
+                    value={startTime}
+                    period={startPeriod}
+                    onChange={setStartTime}
+                    onPeriodChange={setStartPeriod}
+                    label="Start Time"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event End Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={endsAt}
-                    onChange={(e) => setEndsAt(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Event End Date</label>
+                  <DatePicker
+                    value={endDate}
+                    onChange={setEndDate}
+                    label="End Date"
+                    minDate={startDate || new Date().toISOString().split('T')[0]}
+                  />
+                <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block mt-2">Event End Time</label>
+                  <TimePicker
+                    value={endTime}
+                    period={endPeriod}
+                    onChange={setEndTime}
+                    onPeriodChange={setEndPeriod}
+                    label="End Time"
                   />
                 </div>
               </div>
@@ -570,6 +601,74 @@ export default function NewEventPage() {
             <div className="space-y-5">
               <h2 className="text-lg font-bold text-white font-display">Registration & Settings</h2>
               <div className="space-y-4">
+                {/* Registration Required */}
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Required?</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationRequired(true)}
+                      className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationRequired === true ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationRequired(false)}
+                      className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationRequired === false ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                {registrationRequired && (
+                  <>
+                    {/* Registration Type */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Type</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setRegistrationType('free')}
+                          className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationType === 'free' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                        >
+                          Free
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRegistrationType('paid')}
+                          className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationType === 'paid' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                        >
+                          Paid
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Registration Platform */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Platform</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setRegistrationPlatform('lpu_events')}
+                          className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationPlatform === 'lpu_events' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                        >
+                          LPU Events
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRegistrationPlatform('external_link')}
+                          className={`py-3 rounded-xl border text-sm font-semibold transition-all ${registrationPlatform === 'external_link' ? 'bg-[#ff914d]/10 border-[#ff914d]/30 text-[#ff914d]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                        >
+                          External Link
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Registration Mode */}
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Registration Mode</label>
                   <div className="grid grid-cols-2 gap-4">
@@ -669,6 +768,7 @@ export default function NewEventPage() {
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Terms & Conditions</label>
                   <textarea
+                    ref={termsRef}
                     value={termsAndConditions}
                     onChange={(e) => setTermsAndConditions(e.target.value)}
                     rows={3}
@@ -699,11 +799,11 @@ export default function NewEventPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Starts At</span>
-                    <span>{new Date(startsAt).toLocaleString()}</span>
+                    <span>{new Date(`${startDate}T${startTime}`).toLocaleString()}</span>
                   </div>
                   <div>
                     <span className="text-xs uppercase tracking-widest text-[#ffb36b] font-bold block">Ends At</span>
-                    <span>{new Date(endsAt).toLocaleString()}</span>
+                    <span>{new Date(`${endDate}T${endTime}`).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -761,19 +861,11 @@ export default function NewEventPage() {
               <div className="flex-grow flex gap-3">
                 <button
                   type="button"
-                  onClick={() => void persistEvent(false)}
-                  disabled={loading}
-                  className="flex-1 inline-flex h-12 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
-                >
-                  {loading ? 'Saving...' : 'Save as Draft'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => void persistEvent(true)}
                   disabled={loading}
-                  className="flex-1 inline-flex h-12 items-center justify-center rounded-xl bg-[#ff914d] hover:bg-[#e07530] text-sm font-semibold text-[#050507] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,145,77,0.3)]"
+                  className="flex-grow inline-flex h-12 items-center justify-center rounded-xl bg-[#ff914d] hover:bg-[#e07530] text-sm font-semibold text-[#050507] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,145,77,0.3)]"
                 >
-                  {loading ? 'Publishing...' : 'Save & Publish'}
+                  {loading ? 'Publishing...' : 'Publish Event'}
                 </button>
               </div>
             )}

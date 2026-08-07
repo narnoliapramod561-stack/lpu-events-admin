@@ -111,17 +111,24 @@ describe("Event Lifecycle Engine", () => {
             });
         });
 
-        describe("organizer role", () => {
-            test("should allow draft transitions when owner", () => {
-                expect(hasTransitionPermission("draft", "pending_approval", "organizer", true)).toBe(true);
-                expect(hasTransitionPermission("draft", "published", "organizer", true)).toBe(true);
-                expect(hasTransitionPermission("draft", "cancelled", "organizer", true)).toBe(true);
-            });
+    describe("pending role", () => {
+      test("should not allow any transitions", () => {
+        expect(hasTransitionPermission("draft", "published", "pending", true)).toBe(false);
+        expect(hasTransitionPermission("published", "ongoing", "pending", true)).toBe(false);
+      });
+    });
 
-            test("should not allow transitions when not owner", () => {
-                expect(hasTransitionPermission("draft", "published", "organizer", false)).toBe(false);
-                expect(hasTransitionPermission("published", "ongoing", "organizer", false)).toBe(false);
-            });
+    describe("organizer role", () => {
+      test("should allow draft transitions when owner", () => {
+        expect(hasTransitionPermission("draft", "pending_approval", "organizer", true)).toBe(true);
+        expect(hasTransitionPermission("draft", "published", "organizer", true)).toBe(true);
+        expect(hasTransitionPermission("draft", "cancelled", "organizer", true)).toBe(true);
+      });
+
+      test("should not allow transitions when not owner", () => {
+        expect(hasTransitionPermission("draft", "published", "organizer", false)).toBe(false);
+        expect(hasTransitionPermission("published", "ongoing", "organizer", false)).toBe(false);
+      });
 
             test("should allow withdrawal from pending_approval", () => {
                 expect(hasTransitionPermission("pending_approval", "draft", "organizer", true)).toBe(true);
@@ -233,13 +240,26 @@ describe("Event Lifecycle Engine", () => {
         test("should validate a valid transition with permission", () => {
             const context: TransitionContext = {
                 currentState: "draft",
-                newState: "published",
+                newState: "pending_approval",
                 userRole: "organizer",
                 isOwner: true,
             };
 
             const result = validateTransition(context);
             expect(result.allowed).toBe(true);
+        });
+
+        test("should reject direct publish (published must go through the RPC)", () => {
+            const context: TransitionContext = {
+                currentState: "draft",
+                newState: "published",
+                userRole: "organizer",
+                isOwner: true,
+            };
+
+            const result = validateTransition(context);
+            expect(result.allowed).toBe(false);
+            expect(result.reason).toContain("publish_event RPC");
         });
 
         test("should reject invalid structural transition", () => {
@@ -257,8 +277,8 @@ describe("Event Lifecycle Engine", () => {
 
         test("should reject transition without permission", () => {
             const context: TransitionContext = {
-                currentState: "draft",
-                newState: "published",
+                currentState: "published",
+                newState: "ongoing",
                 userRole: "student",
                 isOwner: false,
             };

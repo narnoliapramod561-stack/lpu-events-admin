@@ -9,7 +9,7 @@
 -- All 12 canonical PostgreSQL enum types
 -- ============================================================
 
-CREATE TYPE public.user_role AS ENUM ('student', 'organizer', 'super_admin');
+CREATE TYPE public.user_role AS ENUM ('student', 'organizer', 'super_admin', 'admin', 'pending');
 
 CREATE TYPE public.organizer_app_status AS ENUM ('pending', 'approved', 'rejected');
 

@@ -5,6 +5,7 @@
 export type EventState =
     | "draft"
     | "pending_approval"
+    | "rejected"
     | "published"
     | "ongoing"
     | "completed"
@@ -14,7 +15,7 @@ export type EventState =
 /**
  * User Roles for Permission Validation
  */
-export type UserRole = "student" | "organizer" | "super_admin" | "admin";
+export type UserRole = "student" | "organizer" | "super_admin" | "admin" | "pending";
 
 /**
  * Transition Context
@@ -43,10 +44,14 @@ export interface TransitionResult {
 /**
  * Event State Transition Matrix
  * Defines all valid state transitions based on database schema
+ *
+ * Key: 'rejected' is a first-class FSM state (not just an approval_status).
+ * Organizers re-publish from 'rejected' → server re-evaluates approval.
  */
 export const EVENT_STATE_TRANSITIONS: Record<EventState, EventState[]> = {
     draft: ["pending_approval", "published", "cancelled"],
-    pending_approval: ["published", "draft", "cancelled"],
+    pending_approval: ["published", "rejected", "cancelled"],
+    rejected: ["pending_approval"],  // organizer re-submits; server decides final state
     published: ["ongoing", "cancelled"],
     ongoing: ["completed", "cancelled"],
     completed: ["archived"],
@@ -56,6 +61,11 @@ export const EVENT_STATE_TRANSITIONS: Record<EventState, EventState[]> = {
 
 /**
  * Role-Based Transition Permissions
+ *
+ * Note: 'rejected → pending_approval' for organizers means "re-submit for approval".
+ * The actual outcome (pending_approval vs published) is decided server-side by
+ * publish_event_v2 RPC based on registration configuration. The organizer never
+ * controls the final status.
  */
 export const ROLE_TRANSITION_PERMISSIONS: Record<
     UserRole,
@@ -64,6 +74,17 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
     student: {
         draft: [],
         pending_approval: [],
+        rejected: [],
+        published: [],
+        ongoing: [],
+        completed: [],
+        cancelled: [],
+        archived: [],
+    },
+    pending: {
+        draft: [],
+        pending_approval: [],
+        rejected: [],
         published: [],
         ongoing: [],
         completed: [],
@@ -72,7 +93,8 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
     },
     organizer: {
         draft: ["pending_approval", "published", "cancelled"],
-        pending_approval: ["draft"],
+        pending_approval: [],  // organizer cannot pull back from pending; admin decides
+        rejected: ["pending_approval"],  // re-submit; server re-evaluates approval
         published: ["ongoing", "cancelled"],
         ongoing: ["completed"],
         completed: [],
@@ -81,7 +103,8 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
     },
     super_admin: {
         draft: ["pending_approval", "published", "cancelled"],
-        pending_approval: ["published", "draft", "cancelled"],
+        pending_approval: ["published", "rejected", "cancelled"],
+        rejected: ["pending_approval", "published"],
         published: ["ongoing", "cancelled"],
         ongoing: ["completed", "cancelled"],
         completed: ["archived"],
@@ -90,7 +113,8 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
     },
     admin: {
         draft: ["pending_approval", "published", "cancelled"],
-        pending_approval: ["published", "draft", "cancelled"],
+        pending_approval: ["published", "rejected", "cancelled"],
+        rejected: ["pending_approval", "published"],
         published: ["ongoing", "cancelled"],
         ongoing: ["completed", "cancelled"],
         completed: ["archived"],
@@ -105,6 +129,7 @@ export const ROLE_TRANSITION_PERMISSIONS: Record<
 export const STATE_DESCRIPTIONS: Record<EventState, string> = {
     draft: "This event is still being prepared and is not visible to attendees.",
     pending_approval: "This event is awaiting approval from a Super Admin before it can be published.",
+    rejected: "This event was rejected by a Super Admin. Review the feedback, make changes, and re-submit for approval.",
     published: "This event is live and accepting registrations. It is visible in the event discovery system.",
     ongoing: "This event is currently in progress. Registration is closed but attendees can check in.",
     completed: "This event has concluded. No further registrations or check-ins are permitted.",
@@ -185,10 +210,30 @@ export function validateCancellation(
 /**
  * Validates a complete state transition
  */
+/** Domain 2 lock: states reachable ONLY via the publish_event RPC. */
+const RPC_ONLY_TARGETS: readonly EventState[] = ["published"];
+
+export function isRpcOnlyTarget(newState: EventState): boolean {
+    return RPC_ONLY_TARGETS.includes(newState);
+}
+
+/**
+ * Validates a complete state transition
+ */
 export function validateTransition(
     context: TransitionContext
 ): TransitionResult {
     const { currentState, newState, userRole, isOwner } = context;
+
+    // Domain 2 lock: any transition INTO `published` must go through the
+    // publish_event RPC, never a direct update. Direct update is rejected here.
+    if (isRpcOnlyTarget(newState)) {
+        return {
+            allowed: false,
+            reason: `Transition to '${newState}' must go through the publish_event RPC (EventService.publishEvent).`,
+            requiresApproval: true,
+        };
+    }
 
     if (!isValidTransition(currentState, newState)) {
         return {
@@ -277,7 +322,9 @@ export function canEditEvent(state: EventState, userRole: UserRole): boolean {
   }
 
   if (userRole === 'organizer') {
-    return state === 'draft' || state === 'pending_approval';
+    // Organizers can edit draft, rejected events (to fix issues and re-submit)
+    // pending_approval is locked while under review
+    return state === 'draft' || state === 'rejected';
   }
 
   return false;
@@ -290,6 +337,7 @@ export function getLifecycleStage(state: EventState): string {
     switch (state) {
         case "draft":
         case "pending_approval":
+        case "rejected":
             return "preparation";
         case "published":
             return "active";

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { trackAdminEventView, trackAdminSearch } from '@/components/observability/analytics-provider';
+import { DatePicker } from '@/components/dashboard/date-picker';
+import { TimePicker } from '@/components/dashboard/time-picker';
 
 const CATEGORY_MAP: Record<string, string[]> = {
   Academics: ['Seminar', 'Guest Lecture', 'Workshop', 'Internship', 'Capstone', 'Others'],
@@ -106,6 +108,10 @@ interface EventDetail {
   ticketTiers?: TicketTier[];
   isFeatured?: boolean;
   isHidden?: boolean;
+  rejection_reason?: string | null;
+  organizerName?: string;
+  organizerEmail?: string;
+  organizerClub?: string;
 }
 
 interface EventsWorkspaceProps {
@@ -117,7 +123,9 @@ interface ApiEvent {
   title: string;
   category_id: string;
   is_free: boolean;
-  status: 'published' | 'draft' | 'cancelled';
+  status: 'published' | 'draft' | 'pending_approval' | 'cancelled';
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string | null;
   venue: string;
   starts_at: string;
   ends_at: string;
@@ -126,6 +134,10 @@ interface ApiEvent {
   description: string;
   is_featured: boolean;
   is_hidden: boolean;
+  organizer_id?: string;
+  organizer_name?: string | null;
+  organizer_email?: string | null;
+  organizer_club?: string | null;
 }
 
 export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
@@ -151,12 +163,77 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const [editCategory, setEditCategory] = useState('');
   const [editSubcategory, setEditSubcategory] = useState('');
   const [editFullDesc, setEditFullDesc] = useState('');
+  const [showEditCatSearch, setShowEditCatSearch] = useState(false);
+  const [editCatSearch, setEditCatSearch] = useState('');
+  const [showEditSubSearch, setShowEditSubSearch] = useState(false);
+  const [editSubSearch, setEditSubSearch] = useState('');
+  const [editCatSearchHighlight, setEditCatSearchHighlight] = useState(-1);
+  const [editSubSearchHighlight, setEditSubSearchHighlight] = useState(-1);
+  const editCatSearchRef = useRef<HTMLInputElement>(null);
+  const editSubSearchRef = useRef<HTMLInputElement>(null);
+
+  // Refs for auto-resizing textareas
+  const editShortDescRef = useRef<HTMLTextAreaElement>(null);
+  const editFullDescRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textareas when content changes
+  useEffect(() => {
+    const textarea = editShortDescRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [editShortDesc]);
+
+  useEffect(() => {
+    const textarea = editFullDescRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [editFullDesc]);
 
   const [editStartDate, setEditStartDate] = useState('');
-  const [editEndDate, setEditEndDate] = useState('');
   const [editStartTime, setEditStartTime] = useState('');
+  const [editStartPeriod, setEditStartPeriod] = useState<'AM' | 'PM'>('AM');
+  const [editEndDate, setEditEndDate] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  const [editEndPeriod, setEditEndPeriod] = useState<'AM' | 'PM'>('AM');
   const [editLocation, setEditLocation] = useState('');
+  const [editVenueType, setEditVenueType] = useState('');
+  const [editBlockNo, setEditBlockNo] = useState('');
+  const [editRoomNo, setEditRoomNo] = useState('');
+  const [editOtherVenue, setEditOtherVenue] = useState('');
+  const [showEditVenueDropdown, setShowEditVenueDropdown] = useState(false);
+  const editVenueDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (editVenueType === 'Shanti Devi Mittal Auditorium' || editVenueType === 'Baldev Raj Mittal Auditorium') {
+      setEditLocation(editVenueType);
+    } else if (editVenueType === 'Block & Room') {
+      if (editBlockNo.trim() && editRoomNo.trim()) {
+        setEditLocation(`Block ${editBlockNo.trim()}, Room ${editRoomNo.trim()}`);
+      } else {
+        setEditLocation('');
+      }
+    } else if (editVenueType === 'Other Venue') {
+      setEditLocation(editOtherVenue.trim());
+    } else {
+      setEditLocation('');
+    }
+  }, [editVenueType, editBlockNo, editRoomNo, editOtherVenue]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (editVenueDropdownRef.current && !editVenueDropdownRef.current.contains(event.target as Node)) {
+        setShowEditVenueDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const [editRegRequired, setEditRegRequired] = useState('yes');
   const [editStudentFieldOptions, setEditStudentFieldOptions] = useState(STUDENT_FIELD_OPTIONS);
@@ -173,13 +250,18 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
     try {
       const response = await fetch('/api/organizer/events');
       if (response.ok) {
-        const data = await response.json();
-        const mapped: EventDetail[] = (Array.isArray(data) ? data : []).map((evt: ApiEvent) => ({
+        const resJson = await response.json();
+        const eventsArray = Array.isArray(resJson) ? resJson : (resJson.data && Array.isArray(resJson.data) ? resJson.data : []);
+        const mapped: EventDetail[] = eventsArray.map((evt: ApiEvent) => ({
           id: evt.id,
           title: evt.title,
           category: evt.category_id || 'Uncategorized',
           priceType: evt.is_free ? 'Free' : 'Paid',
-          statusLabel: evt.status === 'published' ? 'Registration Open' : evt.status === 'draft' ? 'Draft' : evt.status,
+          statusLabel: evt.status === 'published' ? 'Registration Open' 
+            : evt.status === 'pending_approval' ? 'Pending Super Admin Approval'
+            : evt.status === 'draft' && evt.approval_status === 'rejected' ? 'Rejected'
+            : evt.status === 'draft' ? 'Draft' 
+            : evt.status,
           location: evt.venue || '',
           dates: `${new Date(evt.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(evt.ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
           time: `${new Date(evt.starts_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(evt.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
@@ -194,18 +276,22 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
           upcomingTasks: [],
           isFeatured: !!evt.is_featured,
           isHidden: !!evt.is_hidden,
+          rejection_reason: evt.rejection_reason ?? null,
+          organizerName: evt.organizer_name ?? undefined,
+          organizerEmail: evt.organizer_email ?? undefined,
+          organizerClub: evt.organizer_club ?? undefined,
         }));
         setEvents(mapped);
         setFeaturedEvents((prev) => {
           const next = { ...prev };
-          data.forEach((evt: ApiEvent) => {
+          eventsArray.forEach((evt: ApiEvent) => {
             if (evt.is_featured) next[evt.id] = true;
           });
           return next;
         });
         setHiddenEvents((prev) => {
           const next = { ...prev };
-          data.forEach((evt: ApiEvent) => {
+          eventsArray.forEach((evt: ApiEvent) => {
             if (evt.is_hidden) next[evt.id] = true;
           });
           return next;
@@ -271,13 +357,24 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
     }
   }, [selectedEventId, selectedEvent]);
 
+  // Derive the list of distinct organizers from the loaded events so the
+  // filter only shows organizers that actually own a listed event.
+  const organizerOptions = useMemo(() => {
+    const names = new Set<string>();
+    events.forEach((evt) => {
+      if (evt.organizerName) names.add(evt.organizerName);
+    });
+    return Array.from(names).sort();
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {
       const matchesSearch =
         evt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        evt.location.toLowerCase().includes(searchQuery.toLowerCase());
+        evt.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (evt.organizerName ?? '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter === 'All' || evt.category === categoryFilter;
-      const matchesOrganizer = organizerFilter === 'All'; // Dynamic match when expanded
+      const matchesOrganizer = organizerFilter === 'All' || evt.organizerName === organizerFilter;
       return matchesSearch && matchesCategory && matchesOrganizer;
     });
   }, [events, searchQuery, categoryFilter, organizerFilter]);
@@ -287,7 +384,33 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
     (async () => {
       if (selectedEvent) {
         setEditTitle(selectedEvent.title);
-        setEditLocation(selectedEvent.location);
+        
+        const loc = selectedEvent.location || '';
+        if (loc === 'Shanti Devi Mittal Auditorium' || loc === 'Baldev Raj Mittal Auditorium') {
+          setEditVenueType(loc);
+          setEditBlockNo('');
+          setEditRoomNo('');
+          setEditOtherVenue('');
+        } else {
+          const match = loc.match(/^Block\s+(.*?),\s*Room\s+(.*?)$/i);
+          if (match) {
+            setEditVenueType('Block & Room');
+            setEditBlockNo(match[1]);
+            setEditRoomNo(match[2]);
+            setEditOtherVenue('');
+          } else if (loc) {
+            setEditVenueType('Other Venue');
+            setEditOtherVenue(loc);
+            setEditBlockNo('');
+            setEditRoomNo('');
+          } else {
+            setEditVenueType('');
+            setEditBlockNo('');
+            setEditRoomNo('');
+            setEditOtherVenue('');
+          }
+        }
+
         setEditCategory(selectedEvent.category);
         setEditShortDesc(selectedEvent.description || '');
         setEditFullDesc(selectedEvent.description || '');
@@ -298,10 +421,25 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
         const startTime = timeParts[0] ? timeParts[0].replace(/[^\d:]/g, '') : '';
         const endTime = timeParts[1] ? timeParts[1].replace(/[^\d:]/g, '') : '';
 
-        setEditStartDate(startDate || '');
-        setEditEndDate(endDate || '');
-        setEditStartTime(startTime);
-        setEditEndTime(endTime);
+        const startDateObj = new Date(startDate + ' ' + startTime);
+        const endDateObj = new Date(endDate + ' ' + endTime);
+
+        if (!isNaN(startDateObj.getTime())) {
+          const iso = startDateObj.toISOString();
+          setEditStartDate(iso.split('T')[0]);
+          setEditStartTime(iso.split('T')[1].slice(0,5)); // HH:MM
+        } else {
+          setEditStartDate('');
+          setEditStartTime('');
+        }
+        if (!isNaN(endDateObj.getTime())) {
+          const iso = endDateObj.toISOString();
+          setEditEndDate(iso.split('T')[0]);
+          setEditEndTime(iso.split('T')[1].slice(0,5));
+        } else {
+          setEditEndDate('');
+          setEditEndTime('');
+        }
         setEditSubcategory('');
         setEditRegRequired('yes');
         setEditRegPlatform('lpu_events');
@@ -318,13 +456,28 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const handleSaveSettings = async () => {
     if (!selectedEventId || !selectedEvent) return;
 
+    const convertTo24Hour = (time12h: string, period: 'AM' | 'PM') => {
+      const [hoursStr, minutesStr] = time12h.split(':');
+      let hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    };
+
     const updates: Partial<ApiEvent> = {};
     if (editTitle !== selectedEvent.title) updates.title = editTitle;
     if (editLocation !== selectedEvent.location) updates.venue = editLocation;
     if (editCategory !== selectedEvent.category) updates.category_id = editCategory;
     if (editFullDesc !== selectedEvent.description) updates.description = editFullDesc || editShortDesc;
-    if (editStartDate) updates.starts_at = new Date(`${editStartDate}T${editStartTime || '00:00'}`).toISOString();
-    if (editEndDate) updates.ends_at = new Date(`${editEndDate}T${editEndTime || '23:59'}`).toISOString();
+    if (editStartDate && editStartTime) {
+      const start24 = convertTo24Hour(editStartTime, editStartPeriod);
+      updates.starts_at = new Date(`${editStartDate}T${start24}`).toISOString();
+    }
+    if (editEndDate && editEndTime) {
+      const end24 = convertTo24Hour(editEndTime, editEndPeriod);
+      updates.ends_at = new Date(`${editEndDate}T${end24}`).toISOString();
+    }
     if (editRegType === 'free') updates.is_free = true;
     if (editRegType === 'paid') updates.is_free = false;
 
@@ -358,6 +511,31 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
   const handleEditCategoryChange = (val: string) => {
     setEditCategory(val);
     setEditSubcategory('');
+    setShowEditCatSearch(false);
+    setEditCatSearch('');
+    setEditCatSearchHighlight(-1);
+  };
+
+  const handleEditCatSearchSelect = (catName: string) => {
+    setEditCategory(catName);
+    setEditSubcategory('');
+    setShowEditCatSearch(false);
+    setEditCatSearch('');
+    setEditCatSearchHighlight(-1);
+  };
+
+  const handleEditSubSearchSelect = (subName: string) => {
+    setEditSubcategory(subName);
+    // Auto-select category from the selected subcategory
+    for (const [cat, subs] of Object.entries(CATEGORY_MAP)) {
+      if (subs.includes(subName)) {
+        setEditCategory(cat);
+        break;
+      }
+    }
+    setShowEditSubSearch(false);
+    setEditSubSearch('');
+    setEditSubSearchHighlight(-1);
   };
 
   const handleEditRegTypeChange = (type: string) => {
@@ -392,15 +570,11 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
               <option value="All" className="bg-[#050507]">
                 All Organizers
               </option>
-              <option value="School of CSE" className="bg-[#050507]">
-                School of CSE
-              </option>
-              <option value="Robotics Club" className="bg-[#050507]">
-                Robotics Club
-              </option>
-              <option value="Cultural Council" className="bg-[#050507]">
-                Cultural Council
-              </option>
+              {organizerOptions.map((name) => (
+                <option key={name} value={name} className="bg-[#050507]">
+                  {name}
+                </option>
+              ))}
             </select>
 
             <select
@@ -411,6 +585,10 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
               <option value="All" className="bg-[#050507]">
                 All Categories
               </option>
+              {/* Spacer comment intentionally removed in cleanup*/}
+              {/* end */}
+              {/* spacing-original */}
+              {/* trimmed */}
               {Object.keys(CATEGORY_MAP).map((cat) => (
                 <option key={cat} value={cat} className="bg-[#050507]">
                   {cat}
@@ -472,14 +650,16 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                   {/* Left: Poster */}
                   <div className="xl:w-2/5 h-64 xl:h-auto relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050507] to-transparent opacity-60 z-10"></div>
-                    <img
-                      alt={evt.title}
-                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
-                      src={evt.imageUrl}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    {evt.imageUrl && (
+                      <img
+                        alt={evt.title}
+                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
+                        src={evt.imageUrl}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
                     <div className="absolute top-4 left-4 z-20 flex flex-wrap gap-2">
                       <span
                         className={`px-3 py-1 rounded-full bg-surface-dim/80 backdrop-blur-md border border-white/15 text-white text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5`}
@@ -719,12 +899,16 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
       {/* 2. Event Hero Banner */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group transition-all duration-300">
         <div className="absolute inset-0 bg-gradient-to-r from-[#ff914d]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-        <div className="w-full md:w-64 h-48 md:h-40 shrink-0 rounded-lg overflow-hidden border border-white/10 relative">
-          <img
-            className="w-full h-full object-cover"
-            src={selectedEvent.imageUrl}
-            alt={selectedEvent.title}
-          />
+        <div className="w-full md:w-64 h-48 md:h-40 shrink-0 rounded-lg overflow-hidden border border-white/10 relative bg-white/5 flex items-center justify-center">
+          {selectedEvent.imageUrl ? (
+            <img
+              className="w-full h-full object-cover"
+              src={selectedEvent.imageUrl}
+              alt={selectedEvent.title}
+            />
+          ) : (
+            <span className="material-symbols-outlined text-5xl text-white/20">event</span>
+          )}
           {selectedEvent.isLive && (
             <div className="absolute top-3 left-3 bg-[#ff914d] text-[#050507] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> LIVE
@@ -861,6 +1045,88 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                   </p>
                 </div>
               </button>
+
+              {/* Card 1b: Approval Status — pending approval */}
+              {selectedEvent.statusLabel === 'Pending Super Admin Approval' && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400">
+                    <span className="material-symbols-outlined">hourglass_top</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-amber-400 mb-1">🟡 Pending Super Admin Approval</h4>
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Waiting for Super Admin review. You will be notified once it is reviewed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Card 1c: Rejected event */}
+              {selectedEvent.statusLabel === 'Rejected' && (
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 flex gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 text-rose-400">
+                    <span className="material-symbols-outlined">cancel</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-rose-400 mb-1">🔴 Rejected</h4>
+                    <p className="text-xs text-white/50 leading-relaxed mb-3">
+                      Reason: {selectedEvent.rejection_reason || 'No reason provided.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          if (onNavigateToTab) {
+                            onNavigateToTab('create-event', selectedEvent.id);
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        Edit Event
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/organizer/events/${selectedEvent.id}/publish`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                            });
+                            if (response.ok) {
+                              const result = await response.json().catch(() => ({}));
+                              if (result.requires_approval) {
+                                setEvents((prev) =>
+                                  prev.map((evt) =>
+                                    evt.id === selectedEvent.id
+                                      ? { ...evt, statusLabel: 'Pending Super Admin Approval' }
+                                      : evt
+                                  )
+                                );
+                                alert('Your paid event has been resubmitted for Super Admin approval.');
+                              } else {
+                                setEvents((prev) =>
+                                  prev.map((evt) =>
+                                    evt.id === selectedEvent.id
+                                      ? { ...evt, statusLabel: 'Registration Open' }
+                                      : evt
+                                  )
+                                );
+                                alert('Event published successfully! It is now visible to students.');
+                              }
+                            } else {
+                              const result = await response.json().catch(() => ({}));
+                              alert(result.message || result.error || 'Failed to resubmit event');
+                            }
+                          } catch {
+                            alert('Network error. Please try again.');
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#ff914d]/20 border border-[#ff914d]/30 text-[#ff914d] text-xs font-semibold hover:bg-[#ff914d]/30 transition-all"
+                      >
+                        Resubmit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Card 2: Manage Attendees */}
               <button
@@ -1448,6 +1714,7 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                           Short Description
                         </label>
                         <textarea
+                          ref={editShortDescRef}
                           className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all resize-none"
                           placeholder="Briefly describe your event..."
                           rows={2}
@@ -1458,46 +1725,214 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                       <div className="grid grid-cols-2 gap-4">
                         {/* Category Dropdown */}
                         <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                            Category
-                          </label>
-                          <select
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
-                            value={editCategory}
-                            onChange={(e) => handleEditCategoryChange(e.target.value)}
-                          >
-                            <option value="" disabled>
-                              Select category...
-                            </option>
-                            {Object.keys(CATEGORY_MAP).map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                              Category
+                            </label>
+                            <button
+                              type="button"
+                              className="p-1 hover:scale-110 transition-transform"
+                              onClick={() => {
+                                setShowEditCatSearch(true);
+                                setEditCatSearch('');
+                                setEditCatSearchHighlight(-1);
+                                setTimeout(() => editCatSearchRef.current?.focus(), 0);
+                              }}
+                              aria-label="Search categories"
+                            >
+                              <span className="material-symbols-outlined text-white/60 text-[18px]">search</span>
+                            </button>
+                          </div>
+                          {showEditCatSearch ? (
+                            <div className="relative">
+                              <input
+                                ref={editCatSearchRef}
+                                type="text"
+                                placeholder="Search category..."
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all"
+                                value={editCatSearch}
+                                onChange={(e) => {
+                                  setEditCatSearch(e.target.value);
+                                  setEditCatSearchHighlight(-1);
+                                }}
+                                onKeyDown={(e) => {
+                                  const filtered = Object.keys(CATEGORY_MAP).filter((cat) =>
+                                    cat.toLowerCase().includes(editCatSearch.toLowerCase())
+                                  );
+                                  if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setEditCatSearchHighlight((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+                                  } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setEditCatSearchHighlight((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+                                  } else if (e.key === 'Enter' && editCatSearchHighlight >= 0 && filtered[editCatSearchHighlight]) {
+                                    e.preventDefault();
+                                    handleEditCatSearchSelect(filtered[editCatSearchHighlight]);
+                                  } else if (e.key === 'Escape') {
+                                    setShowEditCatSearch(false);
+                                    setEditCatSearch('');
+                                    setEditCatSearchHighlight(-1);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setShowEditCatSearch(false);
+                                    setEditCatSearch('');
+                                    setEditCatSearchHighlight(-1);
+                                  }, 200);
+                                }}
+                              />
+                              <div className="absolute z-50 w-full mt-1 bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                {Object.keys(CATEGORY_MAP)
+                                  .filter((cat) => cat.toLowerCase().includes(editCatSearch.toLowerCase()))
+                                  .map((cat, idx) => (
+                                    <button
+                                      key={cat}
+                                      type="button"
+                                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                                        idx === editCatSearchHighlight
+                                          ? 'bg-[#ff914d]/20 text-white'
+                                          : 'text-white/80 hover:bg-white/5'
+                                      }`}
+                                      onMouseDown={() => handleEditCatSearchSelect(cat)}
+                                    >
+                                      {cat}
+                                    </button>
+                                  ))}
+                                {Object.keys(CATEGORY_MAP).filter((cat) =>
+                                  cat.toLowerCase().includes(editCatSearch.toLowerCase())
+                                ).length === 0 && (
+                                  <div className="px-4 py-3 text-sm text-white/40">No results found</div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <select
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                              value={editCategory}
+                              onChange={(e) => handleEditCategoryChange(e.target.value)}
+                            >
+                              <option value="" disabled>
+                                Select category...
                               </option>
-                            ))}
-                          </select>
+                              {Object.keys(CATEGORY_MAP).map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
 
                         {/* Subcategory Dropdown */}
                         <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                            Subcategory
-                          </label>
-                          <select
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                            value={editSubcategory}
-                            onChange={(e) => setEditSubcategory(e.target.value)}
-                            disabled={!editCategory}
-                          >
-                            <option value="" disabled>
-                              {editCategory ? 'Select subcategory...' : 'Choose category first'}
-                            </option>
-                            {editCategory &&
-                              CATEGORY_MAP[editCategory]?.map((sub) => (
-                                <option key={sub} value={sub}>
-                                  {sub}
-                                </option>
-                              ))}
-                          </select>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                              Subcategory
+                            </label>
+                            <button
+                              type="button"
+                              className="p-1 hover:scale-110 transition-transform"
+                              onClick={() => {
+                                setShowEditSubSearch(true);
+                                setEditSubSearch('');
+                                setEditSubSearchHighlight(-1);
+                                setTimeout(() => editSubSearchRef.current?.focus(), 0);
+                              }}
+                              aria-label="Search subcategories"
+                            >
+                              <span className="material-symbols-outlined text-white/60 text-[18px]">search</span>
+                            </button>
+                          </div>
+                          {showEditSubSearch ? (
+                            <div className="relative">
+                              <input
+                                ref={editSubSearchRef}
+                                type="text"
+                                placeholder="Search subcategory..."
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all"
+                                value={editSubSearch}
+                                onChange={(e) => {
+                                  setEditSubSearch(e.target.value);
+                                  setEditSubSearchHighlight(-1);
+                                }}
+                                onKeyDown={(e) => {
+                                  const allSubs = Object.entries(CATEGORY_MAP).flatMap(([cat, subs]) =>
+                                    subs.map((sub) => ({ sub, cat }))
+                                  );
+                                  const filtered = allSubs.filter(({ sub }) =>
+                                    sub.toLowerCase().includes(editSubSearch.toLowerCase())
+                                  );
+                                  if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setEditSubSearchHighlight((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+                                  } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setEditSubSearchHighlight((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+                                  } else if (e.key === 'Enter' && editSubSearchHighlight >= 0 && filtered[editSubSearchHighlight]) {
+                                    e.preventDefault();
+                                    handleEditSubSearchSelect(filtered[editSubSearchHighlight].sub);
+                                  } else if (e.key === 'Escape') {
+                                    setShowEditSubSearch(false);
+                                    setEditSubSearch('');
+                                    setEditSubSearchHighlight(-1);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setShowEditSubSearch(false);
+                                    setEditSubSearch('');
+                                    setEditSubSearchHighlight(-1);
+                                  }, 200);
+                                }}
+                              />
+                              <div className="absolute z-50 w-full mt-1 bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                {Object.entries(CATEGORY_MAP)
+                                  .flatMap(([cat, subs]) => subs.map((sub) => ({ sub, cat })))
+                                  .filter(({ sub }) => sub.toLowerCase().includes(editSubSearch.toLowerCase()))
+                                  .map(({ sub, cat }, idx) => (
+                                    <button
+                                      key={`${cat}-${sub}`}
+                                      type="button"
+                                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                                        idx === editSubSearchHighlight
+                                          ? 'bg-[#ff914d]/20 text-white'
+                                          : 'text-white/80 hover:bg-white/5'
+                                      }`}
+                                      onMouseDown={() => handleEditSubSearchSelect(sub)}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span>{sub}</span>
+                                        <span className="text-xs text-white/40">{cat}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                {Object.entries(CATEGORY_MAP)
+                                  .flatMap(([cat, subs]) => subs.map((sub) => ({ sub, cat })))
+                                  .filter(({ sub }) => sub.toLowerCase().includes(editSubSearch.toLowerCase()))
+                                  .length === 0 && (
+                                  <div className="px-4 py-3 text-sm text-white/40">No results found</div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <select
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              value={editSubcategory}
+                              onChange={(e) => setEditSubcategory(e.target.value)}
+                              disabled={!editCategory}
+                            >
+                              <option value="" disabled>
+                                {editCategory ? 'Select subcategory...' : 'Choose category first'}
+                              </option>
+                              {editCategory &&
+                                CATEGORY_MAP[editCategory]?.map((sub) => (
+                                  <option key={sub} value={sub}>
+                                    {sub}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1508,6 +1943,7 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
                         Full Description
                       </label>
                       <textarea
+                        ref={editFullDescRef}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] focus:ring-1 focus:ring-[#ff914d]/20 transition-all resize-none"
                         placeholder="Provide detailed information about the schedule, speakers, requirements..."
                         rows={6}
@@ -1545,8 +1981,8 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
               >
                 <div className="flex items-center gap-4">
                   {editStartDate !== '' &&
-                  editEndDate !== '' &&
                   editStartTime !== '' &&
+                  editEndDate !== '' &&
                   editEndTime !== '' &&
                   editLocation.trim() !== '' ? (
                     <div className="w-8 h-8 rounded-full bg-[#4ade80]/10 flex items-center justify-center text-[#4ade80] border border-[#4ade80]/20 animate-scaleIn">
@@ -1579,97 +2015,132 @@ export function EventsWorkspace({ onNavigateToTab }: EventsWorkspaceProps) {
               {editActiveSection === 2 && (
                 <div className="pt-6 border-t border-white/5 animate-fadeIn">
                   <div className="flex flex-col gap-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {/* Start Date */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                          Start Date
-                        </label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                            calendar_month
-                          </span>
-                          <input
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                            type="date"
-                            value={editStartDate}
-                            onChange={(e) => setEditStartDate(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* End Date */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                          End Date
-                        </label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                            calendar_month
-                          </span>
-                          <input
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                            type="date"
-                            value={editEndDate}
-                            onChange={(e) => setEditEndDate(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Start Time */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                          Start Time
-                        </label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                            schedule
-                          </span>
-                          <input
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                            type="time"
-                            value={editStartTime}
-                            onChange={(e) => setEditStartTime(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* End Time */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                          End Time
-                        </label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px] pointer-events-none">
-                            schedule
-                          </span>
-                          <input
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all [color-scheme:dark]"
-                            type="time"
-                            value={editEndTime}
-                            onChange={(e) => setEditEndTime(e.target.value)}
-                          />
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <DatePicker
+                        value={editStartDate}
+                        onChange={setEditStartDate}
+                        label="Start Date"
+                        minDate={new Date().toISOString().split('T')[0]}
+                      />
+                      <TimePicker
+                        value={editStartTime}
+                        period={editStartPeriod}
+                        onChange={setEditStartTime}
+                        onPeriodChange={setEditStartPeriod}
+                        label="Start Time"
+                      />
+                      <DatePicker
+                        value={editEndDate}
+                        onChange={setEditEndDate}
+                        label="End Date"
+                        minDate={editStartDate || new Date().toISOString().split('T')[0]}
+                      />
+                      <TimePicker
+                        value={editEndTime}
+                        period={editEndPeriod}
+                        onChange={setEditEndTime}
+                        onPeriodChange={setEditEndPeriod}
+                        label="End Time"
+                      />
                     </div>
 
-                    {/* Venue Location */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                        Venue Location
-                      </label>
-                      <div className="relative">
-                        <span className="material-symbols-outlined absolute right-3 top-3.5 text-white/40 text-[18px]">
-                          location_on
-                        </span>
-                        <input
-                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
-                          placeholder="Search for a venue..."
-                          type="text"
-                          value={editLocation}
-                          onChange={(e) => setEditLocation(e.target.value)}
-                        />
+                    {/* Venue Location Dropdown */}
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                          Venue Location
+                        </label>
+                        <div className="relative" ref={editVenueDropdownRef}>
+                          <button
+                            type="button"
+                            onClick={() => setShowEditVenueDropdown(!showEditVenueDropdown)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-10 py-3 text-sm text-white text-left focus:outline-none focus:border-[#ff914d] transition-all flex items-center justify-between"
+                          >
+                            <span className={editVenueType ? 'text-white' : 'text-white/40'}>
+                              {editVenueType || 'Select Venue...'}
+                            </span>
+                            <span className="absolute right-3 top-3.5 text-white/40 text-xs select-none">▼</span>
+                          </button>
+
+                          {showEditVenueDropdown && (
+                            <div className="absolute z-50 mt-1 w-full bg-[#1a1a24] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+                              <ul>
+                                {[
+                                  'Shanti Devi Mittal Auditorium',
+                                  'Baldev Raj Mittal Auditorium',
+                                  'Block & Room',
+                                  'Other Venue',
+                                ].map((option) => (
+                                  <li key={option}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditVenueType(option);
+                                        setShowEditVenueDropdown(false);
+                                        if (option !== 'Block & Room') {
+                                          setEditBlockNo('');
+                                          setEditRoomNo('');
+                                        }
+                                        if (option !== 'Other Venue') {
+                                          setEditOtherVenue('');
+                                        }
+                                      }}
+                                      className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                                    >
+                                      {option}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Conditional Fields */}
+                      {editVenueType === 'Block & Room' && (
+                        <div className="flex flex-col sm:flex-row gap-4 animate-fadeIn">
+                          <div className="flex flex-col flex-1 gap-2">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                              Block No. <span className="text-[#ff914d]">*</span>
+                            </label>
+                            <input
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                              placeholder="e.g. 34"
+                              type="text"
+                              value={editBlockNo}
+                              onChange={(e) => setEditBlockNo(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex flex-col flex-1 gap-2">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                              Room No. <span className="text-[#ff914d]">*</span>
+                            </label>
+                            <input
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                              placeholder="e.g. 102"
+                              type="text"
+                              value={editRoomNo}
+                              onChange={(e) => setEditRoomNo(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {editVenueType === 'Other Venue' && (
+                        <div className="flex flex-col gap-2 animate-fadeIn">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                            Venue Name <span className="text-[#ff914d]">*</span>
+                          </label>
+                          <input
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff914d] transition-all"
+                            placeholder="Enter custom venue name..."
+                            type="text"
+                            value={editOtherVenue}
+                            onChange={(e) => setEditOtherVenue(e.target.value)}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex justify-between mt-8">

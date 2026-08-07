@@ -8,8 +8,9 @@ async function handleSignOut(request: NextRequest) {
   // Sign out from Supabase Auth
   await supabase.auth.signOut();
 
-  // Redirect to sign-in page
-  const redirectUrl = new URL('/auth/sign-in', request.url);
+  // Support custom redirect via query parameter
+  const redirectTo = request.nextUrl.searchParams.get('redirect') || '/auth/sign-in';
+  const redirectUrl = new URL(redirectTo, request.url);
   return NextResponse.redirect(redirectUrl, {
     status: 302,
   });

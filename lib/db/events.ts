@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getCategoryBySlug } from '@/lib/db/categories';
 
 export interface EventSummary {
@@ -238,8 +237,7 @@ function normalizeSummary(row: EventRow): EventSummary {
 }
 
 export async function getFeaturedEvents(): Promise<EventSummary[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('events')
     .select(EVENT_SUMMARY_SELECT)
     .eq('status', 'published')
@@ -255,14 +253,13 @@ export async function getFeaturedEvents(): Promise<EventSummary[]> {
 }
 
 export async function getTodayEvents(): Promise<EventSummary[]> {
-  const supabase = await createClient();
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date();
   end.setDate(end.getDate() + 1);
   end.setHours(23, 59, 59, 999);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('events')
     .select(EVENT_SUMMARY_SELECT)
     .eq('status', 'published')
@@ -327,37 +324,40 @@ export async function getEvents(options: {
 }
 
 export async function getEventBySlug(slug: string): Promise<EventDetail | null> {
-  const supabase = createServiceRoleClient();
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('events')
     .select(
       `
-      id,
-      slug,
-      status,
-      title,
-      short_description,
-      description,
-      cover_image_url,
-      starts_at,
-      ends_at,
-      registration_opens_at,
-      registration_closes_at,
-      venue,
-      venue_address,
-      venue_building,
-      venue_room,
-      max_capacity,
-      terms_and_conditions,
-      instructions,
-      category:categories!events_category_id_fkey(id, name, slug, icon_name),
-      organizer:organizers!events_organizer_id_fkey(name, slug),
-      event_tags_mapping(tag:event_tags(name)),
-      event_faqs(question, answer, display_order),
-      event_gallery(image_url, display_order),
-      event_documents(title, file_url, file_type),
-      ticket_types(id, name, description, price, stock_available, max_per_user, sale_end_at)
-    `
+        id,
+        slug,
+        status,
+        title,
+        short_description,
+        description,
+        banner_url,
+        start_date,
+        end_date,
+        registration_start_at,
+        registration_end_at,
+        venue_name,
+        venue_address,
+        venue_building,
+        venue_room,
+        max_capacity,
+        terms,
+        instructions,
+        tags,
+        faqs,
+        is_featured,
+        category_id,
+        organizer_id,
+        tickets (
+          id,
+          price,
+          quantity,
+          is_available
+        )
+      `
     )
     .eq('slug', slug)
     .in('status', PUBLIC_EVENT_STATUSES)
@@ -372,58 +372,43 @@ export async function getEventBySlug(slug: string): Promise<EventDetail | null> 
     return null;
   }
 
-  const summary = normalizeSummary(data);
+  const category = await getCategoryBySlug(data.category_id);
+  const organizer = await getOrganizerById(data.organizer_id);
+
+  const minPrice = data.tickets.reduce((min, ticket) => Math.min(min, ticket.price), Infinity);
+  const hasAvailableTickets = data.tickets.some(ticket => ticket.is_available);
 
   return {
-    ...summary,
-    registrationStartAt: data.registration_opens_at,
-    venueAddress: data.venue_address ?? null,
-    venueBuilding: data.venue_building ?? null,
-    venueRoom: data.venue_room ?? null,
-    maxCapacity: data.max_capacity ?? null,
-    terms: data.terms_and_conditions ?? null,
-    instructions: data.instructions ?? null,
-    tags: (data.event_tags_mapping ?? [])
-      .map((entry) => getSingleRelation(entry.tag)?.name)
-      .filter((tag): tag is string => Boolean(tag)),
-    faqs: (data.event_faqs ?? [])
-      .slice()
-      .sort((left, right) => left.display_order - right.display_order)
-      .map((faq) => ({
-        question: faq.question,
-        answer: faq.answer,
-        displayOrder: faq.display_order,
-      })),
-    gallery: (data.event_gallery ?? [])
-      .slice()
-      .sort((left, right) => left.display_order - right.display_order)
-      .map((item) => ({
-        url: item.image_url,
-        displayOrder: item.display_order,
-      })),
-    documents: (data.event_documents ?? []).map((doc) => ({
-      name: doc.title,
-      url: doc.file_url,
-      fileType: doc.file_type,
-    })),
-    ticketTiers: (data.ticket_types ?? [])
-      .slice()
-      .sort((left, right) => (left.name ?? '').localeCompare(right.name ?? ''))
-      .map((tier) => ({
-        id: tier.id ?? '',
-        name: tier.name ?? 'Ticket',
-        description: tier.description ?? null,
-        price: toNumber(tier.price),
-        stockAvailable: tier.stock_available ?? 0,
-        maxPerUser: tier.max_per_user ?? 1,
-        saleEnd: tier.sale_end_at ?? null,
-      })),
+    id: data.id,
+    slug: data.slug,
+    status: data.status,
+    title: data.title,
+    shortDescription: data.short_description,
+    description: data.description,
+    bannerUrl: data.banner_url,
+    startDate: data.start_date,
+    endDate: data.end_date,
+    registrationStartAt: data.registration_start_at,
+    registrationEndAt: data.registration_end_at,
+    venueName: data.venue_name,
+    venueAddress: data.venue_address,
+    venueBuilding: data.venue_building,
+    venueRoom: data.venue_room,
+    maxCapacity: data.max_capacity,
+    terms: data.terms,
+    instructions: data.instructions,
+    tags: data.tags,
+    faqs: data.faqs,
+    isFeatured: data.is_featured,
+    category: category || null,
+    organizer: organizer || null,
+    minPrice: minPrice === Infinity ? null : minPrice,
+    hasAvailableTickets,
   };
 }
 
 export async function getAllPublishedSlugs(): Promise<string[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('events')
     .select('slug')
     .eq('status', 'published')
@@ -455,4 +440,119 @@ export async function getAllPublishedSlugsForBuild(): Promise<string[]> {
   }
 
   return (data ?? []).map((row: { slug: string }) => row.slug);
+}
+
+export async function getEventById(id: string): Promise<EventDetail | null> {
+  const { data: event, error } = await supabaseAdmin
+    .from('events')
+    .select(
+      `
+        id,
+        slug,
+        status,
+        title,
+        short_description,
+        description,
+        cover_image_url,
+        starts_at,
+        ends_at,
+        registration_opens_at,
+        registration_closes_at,
+        venue,
+        is_featured,
+        registration_starts_at,
+        venue_address,
+        venue_building,
+        venue_room,
+        max_capacity,
+        terms,
+        instructions,
+        tags,
+        faqs (
+          question,
+          answer,
+          display_order
+        ),
+        gallery (
+          url,
+          display_order
+        ),
+        documents (
+          name,
+          url,
+          file_type
+        ),
+        ticket_tiers (
+          id,
+          name,
+          description,
+          price,
+          stock_available,
+          max_per_user,
+          sale_end_at
+        )
+      `
+    )
+    .eq('id', id)
+    .single();
+
+  if (error || !event) {
+    return null;
+  }
+
+  const category = await getCategoryBySlug(event.category_slug);
+  const organizer = await getOrganizerById(event.organizer_id);
+
+  const minPrice = event.ticket_tiers.reduce((min, tier) => Math.min(min, tier.price), Infinity);
+  const hasAvailableTickets = event.ticket_tiers.some(tier => tier.stock_available > 0);
+
+  return {
+    id: event.id,
+    slug: event.slug,
+    status: event.status,
+    title: event.title,
+    shortDescription: event.short_description,
+    description: event.description,
+    bannerUrl: event.cover_image_url,
+    startDate: event.starts_at,
+    endDate: event.ends_at,
+    registrationEndAt: event.registration_closes_at,
+    venueName: event.venue,
+    isFeatured: event.is_featured,
+    registrationStartAt: event.registration_starts_at,
+    venueAddress: event.venue_address,
+    venueBuilding: event.venue_building,
+    venueRoom: event.venue_room,
+    maxCapacity: event.max_capacity,
+    terms: event.terms,
+    instructions: event.instructions,
+    tags: event.tags,
+    faqs: event.faqs.map(faq => ({
+      question: faq.question,
+      answer: faq.answer,
+      displayOrder: faq.display_order,
+    })),
+    gallery: event.gallery.map(image => ({
+      url: image.url,
+      displayOrder: image.display_order,
+    })),
+    documents: event.documents.map(doc => ({
+      name: doc.name,
+      url: doc.url,
+      fileType: doc.file_type,
+    })),
+    ticketTiers: event.ticket_tiers.map(tier => ({
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      price: tier.price,
+      stockAvailable: tier.stock_available,
+      maxPerUser: tier.max_per_user,
+      saleEnd: tier.sale_end_at,
+    })),
+    category,
+    organizer,
+    minPrice: minPrice === Infinity ? null : minPrice,
+    hasAvailableTickets,
+  };
 }

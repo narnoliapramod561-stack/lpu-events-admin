@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+    <title>LPU Events — Super Admin Portal</title>
+
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Google Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS with custom styling -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#ff6b00",
+              "primary-hover": "#a04100",
+              "primary-container": "#ff6b00",
+              "on-primary-container": "#ffffff",
+              secondary: "#a04100",
+              "secondary-container": "#fc721e",
+              background: "#fff8f6",
+              surface: "#ffffff",
+              "surface-bright": "#fff8f6",
+              "surface-container": "#ffeae1",
+              "surface-container-high": "#fee3d8",
+              "surface-container-highest": "#f8ddd2",
+              "surface-container-low": "#fff1eb",
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#261812",
+              "on-surface-variant": "#5a4136",
+              "outline-variant": "#e2bfb0",
+              outline: "#8e7164",
+              tertiary: "#0062a1",
+              "tertiary-container": "#059eff",
+              error: "#ba1a1a",
+              "error-container": "#ffdad6"
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Outfit', 'sans-serif'],
+              heading: ['Outfit', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        vertical-align: middle;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body data-clarity-mask="True">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

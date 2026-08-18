@@ -1,0 +1,5 @@
+# robots.txt for LPU Events Administrative Portal
+# Strictly prohibit indexing and crawling of admin surfaces
+
+User-agent: *
+Disallow: /

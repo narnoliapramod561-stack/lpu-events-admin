@@ -20,6 +20,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [pricingFilter, setPricingFilter] = useState<'ALL' | 'FREE' | 'PAID'>('ALL');
   const [categories, setCategories] = useState<any[]>([]);
+  const [trendingIds, setTrendingIds] = useState<Set<string>>(new Set());
   // Default to rich visual 'grid' view with banner images
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [previewEvent, setPreviewEvent] = useState<any | null>(null);
@@ -33,17 +34,21 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
   const fetchEventsAndTaxonomy = async () => {
     setLoading(true);
     try {
-      const [eventsRes, catsRes] = await Promise.all([
+      const [eventsRes, catsRes, trendingRes] = await Promise.all([
         supabase
           .from('events')
           .select('*, organizations(id, name), categories(id, name), event_content_sections(*)')
           .order('start_at', { ascending: isPastMode ? false : true }),
-        supabase.from('categories').select('id, name, key').eq('is_active', true)
+        supabase.from('categories').select('id, name, key').eq('is_active', true),
+        supabase.from('trending_events').select('event_id')
       ]);
 
       if (eventsRes.error) throw eventsRes.error;
       setEvents(eventsRes.data || []);
       if (catsRes.data) setCategories(catsRes.data);
+      if (trendingRes.data) {
+        setTrendingIds(new Set(trendingRes.data.map((t: any) => t.event_id)));
+      }
     } catch (err: any) {
       console.error('Failed to load events in ManageEventsPanel:', err);
     } finally {
@@ -88,6 +93,47 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
     const url = `${window.location.origin.replace('5174', '5173')}/events/${id}`;
     navigator.clipboard.writeText(url);
     showToast('Student link copied to clipboard!');
+  };
+
+  const handleToggleTrending = async (evt: any) => {
+    const isTrending = trendingIds.has(evt.id);
+    try {
+      if (isTrending) {
+        const { error } = await supabase.from('trending_events').delete().eq('event_id', evt.id);
+        if (error) throw error;
+        setTrendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(evt.id);
+          return next;
+        });
+        showToast(`Removed "${evt.name}" from Trending.`);
+      } else {
+        const user = (await supabase.auth.getUser()).data.user;
+        const { data: adminRow } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('auth_user_id', user?.id)
+          .maybeSingle();
+        const adminId = adminRow?.id;
+        if (!adminId) throw new Error('Admin profile not found');
+
+        const { count } = await supabase
+          .from('trending_events')
+          .select('*', { count: 'exact', head: true });
+
+        const { error } = await supabase.from('trending_events').insert({
+          event_id: evt.id,
+          sort_order: (count || 0) + 1,
+          created_by: adminId
+        });
+        if (error) throw error;
+        setTrendingIds((prev) => new Set([...prev, evt.id]));
+        showToast(`Added "${evt.name}" to Trending!`);
+      }
+    } catch (err: any) {
+      console.error('Failed to toggle trending:', err);
+      alert('Failed to update trending: ' + (err.message || 'Unknown error'));
+    }
   };
 
   // Strictly filter active vs past
@@ -424,6 +470,12 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                     </span>
 
                     <div className="flex items-center gap-1.5">
+                      {trendingIds.has(evt.id) && (
+                        <span className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white text-[10px] font-black tracking-wide shadow-md flex items-center gap-1">
+                          <span>🔥</span>
+                          <span>TRENDING</span>
+                        </span>
+                      )}
                       {isCancelled && (
                         <span className="px-2.5 py-1 rounded-xl bg-red-600/90 text-white text-[10px] font-bold backdrop-blur-md">
                           CANCELLED
@@ -535,6 +587,23 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                     </button>
 
                     <div className="flex items-center gap-1.5">
+                      {!isEnded && !isCancelled && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTrending(evt)}
+                          className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1 text-xs font-bold ${
+                            trendingIds.has(evt.id)
+                              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-500 shadow-xs'
+                              : 'border-[#e2bfb0] dark:border-[#5a4136] text-[#5a4136] dark:text-[#ffb693] hover:border-[#ff6b00] hover:text-[#ff6b00]'
+                          }`}
+                          title={trendingIds.has(evt.id) ? 'Remove from Trending' : 'Mark as Trending'}
+                        >
+                          <span className="material-symbols-outlined text-[17px]">
+                            {trendingIds.has(evt.id) ? 'local_fire_department' : 'whatshot'}
+                          </span>
+                        </button>
+                      )}
+
                       {onEditClick && (
                         <button
                           type="button"
@@ -615,9 +684,14 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                             <button
                               type="button"
                               onClick={() => setPreviewEvent(evt)}
-                              className="font-bold text-sm text-[#261812] dark:text-[#ffede6] hover:text-[#ff6b00] text-left line-clamp-1 cursor-pointer transition-colors"
+                              className="font-bold text-sm text-[#261812] dark:text-[#ffede6] hover:text-[#ff6b00] text-left line-clamp-1 cursor-pointer transition-colors flex items-center gap-1.5"
                             >
-                              {evt.name}
+                              <span>{evt.name}</span>
+                              {trendingIds.has(evt.id) && (
+                                <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 text-[9px] font-black">
+                                  🔥
+                                </span>
+                              )}
                             </button>
                             <div className="text-[11px] text-[#5a4136] dark:text-[#ffb693] line-clamp-1">
                               {evt.organizations?.name || 'Institutional Organizer'}
@@ -707,6 +781,23 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                           >
                             <span className="material-symbols-outlined text-[18px]">visibility</span>
                           </button>
+
+                          {!isEnded && !isCancelled && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTrending(evt)}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                trendingIds.has(evt.id)
+                                  ? 'text-orange-500 bg-orange-50 dark:bg-orange-950'
+                                  : 'text-[#5a4136] hover:text-[#ff6b00] hover:bg-[#fee3d8] dark:hover:bg-[#3d2d26]'
+                              }`}
+                              title={trendingIds.has(evt.id) ? 'Remove from Trending' : 'Mark as Trending'}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                {trendingIds.has(evt.id) ? 'local_fire_department' : 'whatshot'}
+                              </span>
+                            </button>
+                          )}
 
                           {onEditClick && (
                             <button

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, lpuClient } from '../../supabase';
 import { 
   FolderTree, 
@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   CornerDownRight,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
@@ -16,6 +17,7 @@ export const CategoriesPanel: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -127,6 +129,17 @@ export const CategoriesPanel: React.FC = () => {
     }
   };
 
+  const cleanSearch = searchTerm.trim().toLowerCase();
+
+  const filteredCategories = useMemo(() => {
+    if (!cleanSearch) return categories;
+    return categories.filter(cat => {
+      const catMatches = cat.name.toLowerCase().includes(cleanSearch) || (cat.key || '').toLowerCase().includes(cleanSearch);
+      const subMatches = subcategories.some(s => s.category_id === cat.id && (s.name.toLowerCase().includes(cleanSearch) || (s.key || '').toLowerCase().includes(cleanSearch)));
+      return catMatches || subMatches;
+    });
+  }, [categories, subcategories, cleanSearch]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -163,10 +176,31 @@ export const CategoriesPanel: React.FC = () => {
 
       {/* Main Table Card */}
       <div className="card-box">
-        <div className="card-box-header">
+        <div className="card-box-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h3 className="card-box-title">Taxonomy Hierarchy</h3>
-            <span className="badge badge-purple">{categories.length} Categories</span>
+            <span className="badge badge-purple">{filteredCategories.length} Categories</span>
+          </div>
+
+          <div style={{ position: 'relative', width: '280px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search category or subcategory..."
+              className="form-input"
+              style={{ paddingLeft: '32px', fontSize: '12.5px', height: '34px' }}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="btn btn-ghost btn-icon"
+                style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', padding: '2px' }}
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -194,8 +228,14 @@ export const CategoriesPanel: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {categories.map(cat => {
-                  const subs = subcategories.filter(s => s.category_id === cat.id);
+                {filteredCategories.map(cat => {
+                  const subs = subcategories.filter(s => {
+                    if (s.category_id !== cat.id) return false;
+                    if (!cleanSearch) return true;
+                    const catMatches = cat.name.toLowerCase().includes(cleanSearch) || (cat.key || '').toLowerCase().includes(cleanSearch);
+                    if (catMatches) return true;
+                    return s.name.toLowerCase().includes(cleanSearch) || (s.key || '').toLowerCase().includes(cleanSearch);
+                  });
 
                   return (
                     <React.Fragment key={cat.id}>

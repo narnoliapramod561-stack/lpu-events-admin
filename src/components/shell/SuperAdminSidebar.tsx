@@ -12,6 +12,7 @@ export type AdminNavTab =
   | 'past-events'
   | 'old-events'
   | 'featured-events'
+  | 'trending-events'
   | 'advertisements'
   | 'memories'
   | 'carousel'
@@ -84,6 +85,7 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       items: [
         { id: 'hero-carousel', label: 'Hero Carousel', icon: 'view_carousel' },
         { id: 'happening-today', label: 'Happening Today', icon: 'event_available' },
+        { id: 'trending-events', label: 'Trending Events', icon: 'local_fire_department' },
         { id: 'featured-events', label: 'Featured Events', icon: 'star' },
         { id: 'advertisements', label: 'Advertisements', icon: 'ads_click' },
         { id: 'memories', label: 'Past Events Carousel', icon: 'history_toggle_off' },

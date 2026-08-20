@@ -18,6 +18,7 @@ import { SystemHealthPanel } from './components/superadmin/SystemHealthPanel';
 import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselManagerPanel';
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
+import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
 
 interface SuperAdminAppProps {
   onLogout?: () => void;
@@ -96,6 +97,8 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
         );
       case 'featured-events':
         return <FeaturedEventsPanel />;
+      case 'trending-events':
+        return <TrendingEventsPanel />;
       case 'hero-carousel':
         return <HeroCarouselManagerPanel />;
       case 'happening-today':

@@ -5,6 +5,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
   const [stats, setStats] = useState({
     totalEvents: 0,
     publishedEvents: 0,
+    trendingEvents: 0,
     pendingAccessRequests: 0,
     activeAds: 0
   });
@@ -16,12 +17,14 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
         const [
           { count: totalCount },
           { count: pubCount },
+          { count: trendCount },
           { count: pendingReqCount },
           { count: adCount },
           { data: recentReqs }
         ] = await Promise.all([
           supabase.from('events').select('*', { count: 'exact', head: true }),
           supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'PUBLISHED'),
+          supabase.from('trending_events').select('*', { count: 'exact', head: true }),
           supabase.from('organizer_access_requests').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
           supabase.from('advertisements').select('*', { count: 'exact', head: true }).eq('status', 'active'),
           supabase
@@ -35,6 +38,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
         setStats({
           totalEvents: totalCount || 0,
           publishedEvents: pubCount || 0,
+          trendingEvents: trendCount || 0,
           pendingAccessRequests: pendingReqCount || 0,
           activeAds: adCount || 0
         });
@@ -209,6 +213,24 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
                 <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-[#ffede6]">3 <span className="text-sm font-normal text-[#5a4136] dark:text-[#ffb693]">/ 5 Active</span></div>
                 <div className="w-full bg-[#fee3d8] dark:bg-[#3d2d26] h-1.5 rounded-full mt-3 overflow-hidden">
                   <div className="bg-[#ff6b00] h-full rounded-full w-[60%]" />
+                </div>
+              </div>
+
+              {/* Trending Events Metric */}
+              <div 
+                onClick={() => onNavigate('trending-events')}
+                className="bg-[#fff8f6] dark:bg-[#1a120e] rounded-xl p-4 border border-[#e2bfb0] dark:border-[#5a4136] hover:border-[#ff6b00] transition-colors cursor-pointer group"
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-[#5a4136] dark:text-[#ffb693] flex items-center gap-1 group-hover:text-[#ff6b00] transition-colors">
+                    <span className="material-symbols-outlined text-[16px] text-[#ff6b00]">local_fire_department</span> Trending Events
+                  </span>
+                  <span className="text-[10px] font-bold bg-[#fee3d8] dark:bg-[#3d2d26] text-[#ff6b00] px-2 py-0.5 rounded">
+                    Curated
+                  </span>
+                </div>
+                <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                  {stats.trendingEvents} <span className="text-sm font-normal text-[#5a4136] dark:text-[#ffb693]">Marked</span>
                 </div>
               </div>
 

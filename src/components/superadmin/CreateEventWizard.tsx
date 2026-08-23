@@ -49,6 +49,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   const [bannerFileName, setBannerFileName] = useState('');
   const [bannerMediaId, setBannerMediaId] = useState<string | null>(null);
   const [optimizingImage, setOptimizingImage] = useState(false);
+  const [uploadProgressStep, setUploadProgressStep] = useState<string>('');
+  const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
   const [imageStats, setImageStats] = useState<{
     originalSize: number;
     optimizedSize: number;
@@ -299,13 +301,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     }
   };
 
-  // Handle direct file image upload for banner with automated optimization & enhancement
+  // Handle direct file image upload for banner with automated optimization & Cloudflare R2 upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setError('');
     setOptimizingImage(true);
+    setUploadProgressStep('Validating image headers...');
+    setUploadProgressPercent(20);
     setBannerFileName(file.name);
 
     try {
@@ -313,7 +317,26 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         supabase,
         file,
         context: 'event-banner',
-        adminUserId: profile?.id
+        adminUserId: profile?.id,
+        entityId: editEventId || undefined,
+        onProgress: (step) => {
+          if (step === 'validating') {
+            setUploadProgressStep('Validating format & magic bytes...');
+            setUploadProgressPercent(25);
+          } else if (step === 'enhancing') {
+            setUploadProgressStep('Enhancing fidelity & typography...');
+            setUploadProgressPercent(50);
+          } else if (step === 'compressing') {
+            setUploadProgressStep('Generating WebP responsive variants...');
+            setUploadProgressPercent(75);
+          } else if (step === 'uploading') {
+            setUploadProgressStep('Storing into Cloudflare R2...');
+            setUploadProgressPercent(90);
+          } else if (step === 'completed') {
+            setUploadProgressStep('Upload complete!');
+            setUploadProgressPercent(100);
+          }
+        }
       });
 
       setBannerUrl(result.publicUrl || result.dataUrl);
@@ -339,6 +362,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       reader.readAsDataURL(file);
     } finally {
       setOptimizingImage(false);
+      setUploadProgressStep('');
+      setUploadProgressPercent(0);
     }
   };
 
@@ -816,14 +841,21 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                 </label>
 
                 {optimizingImage ? (
-                  <div className="w-full rounded-2xl border-2 border-dashed border-[#ff6b00]/40 bg-[#fff8f6] dark:bg-[#1a120e] p-8 flex flex-col items-center justify-center gap-3">
+                  <div className="w-full rounded-2xl border-2 border-dashed border-[#ff6b00]/40 bg-[#fff8f6] dark:bg-[#1a120e] p-6 flex flex-col items-center justify-center gap-3">
                     <div className="w-8 h-8 border-3 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
-                    <div className="text-center">
+                    <div className="text-center w-full max-w-xs space-y-2">
                       <p className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">
-                        Optimizing & Enhancing Image...
+                        {uploadProgressStep || 'Processing Image...'}
                       </p>
-                      <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-0.5">
-                        Applying high-pass sharpening, contrast leveling, and WebP compression
+                      {/* Animated Progress Bar */}
+                      <div className="w-full bg-[#fee3d8] dark:bg-[#3d2d26] h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-[#ff6b00] h-full rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${uploadProgressPercent || 30}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">
+                        Cloudflare R2 Object Pipeline • Auto-Enhanced WebP
                       </p>
                     </div>
                   </div>

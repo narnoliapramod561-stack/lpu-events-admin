@@ -12,7 +12,7 @@ import {
   getStudentEventUrl, 
   generateQrDataUrl, 
   downloadQrCode 
-} from '../../shared';
+} from '@lpu-events/shared';
 
 interface EventQrCardProps {
   eventId: string;
@@ -33,13 +33,13 @@ export const EventQrCard: React.FC<EventQrCardProps> = ({ eventId, eventName }) 
 
     setLoading(true);
     generateQrDataUrl(eventUrl, { width: 400, margin: 2 })
-      .then((dataUrl) => {
+      .then((dataUrl: string) => {
         if (isMounted) {
           setQrDataUrl(dataUrl);
           setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error('Failed to generate QR code:', err);
         if (isMounted) setLoading(false);
       });

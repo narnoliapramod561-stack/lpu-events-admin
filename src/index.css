@@ -720,3 +720,9 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
 }
+
+@media (max-width: 980px) {
+  .hidden-on-mobile {
+    display: none !important;
+  }
+}

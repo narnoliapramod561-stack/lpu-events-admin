@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, lpuClient } from '../../supabase';
 import { getEventImage } from '../../utils/images';
+import { EventQrCard } from '../organizer/EventQrCard';
 
 interface ManageEventsPanelProps {
   mode?: 'active' | 'past' | 'all';
@@ -551,8 +552,8 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                         schedule
                       </span>
                       <span className="font-semibold text-[#261812] dark:text-[#ffede6]">
-                        {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr;{' '}
-                        {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr;{' '}
+                        {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
                       </span>
                     </div>
 
@@ -715,8 +716,8 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                           })}
                         </div>
                         <div className="text-[11px] text-[#5a4136] dark:text-[#ffb693]">
-                          {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr;{' '}
-                          {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr;{' '}
+                          {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
                         </div>
                       </td>
 
@@ -911,6 +912,9 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                   </p>
                 </div>
               </div>
+
+              {/* Event QR Code Section */}
+              <EventQrCard eventId={previewEvent.id} eventName={previewEvent.name} />
 
               {/* Description */}
               <div>

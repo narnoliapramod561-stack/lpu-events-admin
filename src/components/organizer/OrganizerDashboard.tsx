@@ -349,7 +349,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Clock size={13} color="var(--accent-primary)" />
                           <span>
-                            {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr; {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr; {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -504,7 +504,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '12.5px' }}>
                             <span style={{ color: 'var(--text-main)' }}>{new Date(evt.start_at).toLocaleDateString()}</span>
                             <span style={{ color: 'var(--text-dim)', fontSize: '11.5px' }}>
-                              {new Date(evt.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </span>
                           </div>
                         </td>

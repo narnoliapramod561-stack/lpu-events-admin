@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const initialAuthDoneRef = React.useRef(false);
 
   const fetchProfile = async (userId: string | undefined) => {
     if (!userId) {
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error fetching admin profile:', error);
       } else if (data) {
         setProfile((prev) => {
-          if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+          if (prev && JSON.stringify(prev) === JSON.stringify(data)) return prev;
           return data as AdminProfile;
         });
       }
@@ -52,39 +53,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+        await fetchProfile(session.user.id);
       }
+      initialAuthDoneRef.current = true;
+      setLoading(false);
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       if (currentSession?.user) {
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && !initialAuthDoneRef.current) {
           setLoading(true);
           await fetchProfile(currentSession.user.id);
+          initialAuthDoneRef.current = true;
           setLoading(false);
           trackAdminAction('auth_login_success', { success: true });
           await supabase.rpc('log_security_event', { p_action: 'LOGIN', p_status: 'SUCCESS' });
         } else {
-          // Token refreshed / window focus event: update profile quietly in background without unmounting components
+          // Token refreshed / window focus / tab switch: update quietly in background without unmounting or reloading UI
           await fetchProfile(currentSession.user.id);
         }
       } else {
         setProfile(null);
         setLoading(false);
         if (event === 'SIGNED_OUT') {
+          initialAuthDoneRef.current = false;
           trackAdminAction('auth_logout', { success: true });
           await supabase.rpc('log_security_event', { p_action: 'LOGOUT', p_status: 'SUCCESS' });
         }
       }
     });
-
 
     return () => {
       subscription.unsubscribe();

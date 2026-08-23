@@ -160,7 +160,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
       badge: 'LIVE TODAY',
       image: getEventImage(evt, 'hero'),
       date: new Date(evt.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
-      time: `${new Date(evt.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${new Date(evt.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      time: `${new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} – ${new Date(evt.end_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}`,
       venue: evt.venue_name,
       organizer: evt.organizations?.name || 'LPU Club',
       ctaText: 'View Details',

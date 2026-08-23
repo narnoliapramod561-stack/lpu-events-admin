@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { lpuClient } from '../../supabase';
 import { EventForm } from './EventForm';
+import { EventQrCard } from './EventQrCard';
 import { 
   ArrowLeft, 
   Edit3, 
@@ -250,6 +251,9 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
         {/* Right Column: Telemetry & Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* Card: Canonical Event QR Code */}
+          <EventQrCard eventId={event.id} eventName={event.name} />
+
           {/* Card: Live Telemetry */}
           <div className="card-box">
             <div className="card-box-header">

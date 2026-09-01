@@ -139,9 +139,9 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         .from('carousel_items')
         .select(`
           *,
-          events ( id, name, description, start_at, venue_name, banner_media_id ),
-          advertisements ( id, name, redirect_url, media_id ),
-          event_memories ( id, title, description, cover_media_id, media_assets:cover_media_id(id, object_key), events(id, name, description, venue_name, start_at, banner_media_id) )
+          events ( id, name, description, start_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket) ),
+          advertisements ( id, name, redirect_url, media_id, media_assets:media_id(id, object_key, bucket) ),
+          event_memories ( id, title, description, cover_media_id, media_assets:cover_media_id(id, object_key, bucket), events(id, name, description, venue_name, start_at, banner_media_id, media_assets:banner_media_id(id, object_key, bucket)) )
         `)
         .order('sort_order', { ascending: true });
       if (error) throw error;
@@ -158,7 +158,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     try {
       const { data: featData, error: featErr } = await supabase
         .from('featured_events')
-        .select('event_id, sort_order, events (*, organizations(name), categories(name))')
+        .select('event_id, sort_order, events (*, organizations(name), categories(name), media_assets:banner_media_id(id, object_key, bucket))')
         .order('sort_order', { ascending: true });
       if (featErr) console.error('Error loading curated featured events:', featErr);
       const curatedList: FeaturedEvent[] = (featData || [])
@@ -173,7 +173,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     try {
       const { data: evts, error: evtsErr } = await supabase
         .from('events')
-        .select('id, name, description, start_at, venue_name, banner_media_id, status')
+        .select('id, name, description, start_at, venue_name, banner_media_id, status, media_assets:banner_media_id(id, object_key, bucket)')
         .in('status', ['PUBLISHED', 'COMPLETED'])
         .order('start_at', { ascending: false })
         .limit(50);
@@ -187,7 +187,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     try {
       const { data: ads } = await supabase
         .from('advertisements')
-        .select('id, name, redirect_url, media_id, status')
+        .select('id, name, redirect_url, media_id, status, media_assets:media_id(id, object_key, bucket)')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(20);
@@ -199,7 +199,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     try {
       const { data: mems, error: memsErr } = await supabase
         .from('event_memories')
-        .select('id, title, description, cover_media_id, status, event_id, media_assets:cover_media_id(id, object_key), events(id, name, description, venue_name, start_at, banner_media_id)')
+        .select('id, title, description, cover_media_id, status, event_id, media_assets:cover_media_id(id, object_key, bucket), events(id, name, description, venue_name, start_at, banner_media_id, media_assets:banner_media_id(id, object_key, bucket))')
         .eq('status', 'PUBLISHED')
         .order('created_at', { ascending: false })
         .limit(30);

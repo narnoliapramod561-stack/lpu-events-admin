@@ -117,14 +117,10 @@ export const SponsorsPanel: React.FC = () => {
       });
       setImageUrl(result.publicUrl || result.dataUrl);
     } catch (err: any) {
-      console.warn('Logo optimization fallback:', err);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      console.error('Logo upload error:', err);
+      setError('Image upload failed: ' + (err.message || 'Upload failed.'));
+      setImageUrl('');
+      setSelectedFile(null);
     }
   };
 

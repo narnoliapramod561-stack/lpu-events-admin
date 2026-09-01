@@ -351,15 +351,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       setError('');
     } catch (err: any) {
       console.error('Image optimization upload error:', err);
-      setError('Image processing error: ' + (err.message || 'Validation failed.'));
-      // Fallback preview
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setBannerUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      setError('Image upload failed: ' + (err.message || 'Validation or network failed.'));
+      setBannerUrl('');
+      setBannerMediaId(null);
+      setBannerFileName('');
     } finally {
       setOptimizingImage(false);
       setUploadProgressStep('');

@@ -190,14 +190,10 @@ export const PastEventCarouselPanel: React.FC = () => {
       });
       setMemoryImageUrl(result.publicUrl || result.dataUrl);
     } catch (err: any) {
-      console.warn('Image optimization fallback:', err);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setMemoryImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      console.error('Image upload error:', err);
+      setError('Image upload failed: ' + (err.message || 'Upload failed.'));
+      setMemoryImageUrl('');
+      setSelectedFile(null);
     }
   };
 

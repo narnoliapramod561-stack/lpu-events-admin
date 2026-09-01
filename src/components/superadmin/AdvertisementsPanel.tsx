@@ -140,14 +140,10 @@ export const AdvertisementsPanel: React.FC = () => {
       });
       setImageUrl(result.publicUrl || result.dataUrl);
     } catch (err: any) {
-      console.warn('Ad image optimization fallback:', err);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      console.error('Ad image upload error:', err);
+      setFormError('Image upload failed: ' + (err.message || 'Upload failed.'));
+      setImageUrl('');
+      setSelectedFile(null);
     }
   };
 

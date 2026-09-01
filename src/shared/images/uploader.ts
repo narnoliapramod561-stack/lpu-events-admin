@@ -59,7 +59,7 @@ export interface ReplaceEntityMediaOptions {
 /**
  * Maps image context to MediaType enum
  */
-function contextToMediaType(context: ImageContext): string {
+export function contextToMediaType(context: ImageContext): string {
   switch (context) {
     case 'hero':
       return 'CAROUSEL_IMAGE';
@@ -85,7 +85,7 @@ function contextToMediaType(context: ImageContext): string {
 export async function uploadAndOptimizeImage(
   options: ImageUploadOptions
 ): Promise<UploadedMediaResult> {
-  const { supabase, file, context, adminUserId, entityId, bucketName = 'lpu-events-images', onProgress } = options;
+  const { supabase, file, context, entityId, onProgress } = options;
 
   // 1. Validate magic bytes, bounds, and limits
   if (onProgress) onProgress('validating');
@@ -98,199 +98,108 @@ export async function uploadAndOptimizeImage(
   if (onProgress) onProgress('enhancing');
   const processed: ImageProcessingResult = await processImageForContext(file, context);
 
-  // 3. Store into Cloudflare R2 / Storage via Authenticated Backend or Fallback
+  // 3. Authenticated Edge Function Upload to Cloudflare R2
   if (onProgress) onProgress('uploading');
 
-  let primaryPublicUrl = '';
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Administrative session required to upload image. Please log in again.');
+  }
 
-  // Check if authenticated session is available to invoke Edge Function
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).rest?.url?.replace(/\/rest\/v1\/?$/, '');
+  const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).rest?.url?.replace(/\/rest\/v1\/?$/, '');
+  if (!supabaseUrl) {
+    throw new Error('Supabase client URL is not configured.');
+  }
 
-    if (session && supabaseUrl) {
-      const edgeUrl = `${supabaseUrl}/functions/v1/r2-upload`;
-      const formData = new FormData();
-      formData.append('file', processed.primaryBlob, `${processed.checksum}_desktop.webp`);
-      formData.append('context', context);
-      formData.append('checksum', processed.checksum);
-      if (entityId) formData.append('entity_id', entityId);
-      formData.append(
-        'metadata',
-        JSON.stringify({
-          original_size_bytes: processed.originalSizeBytes,
-          optimized_size_bytes: processed.primarySizeBytes,
-          savings_percentage: processed.savingsPercentage,
-          compression_ratio: processed.compressionRatio,
-          variants: processed.variants.map((v) => ({
-            name: v.name,
-            object_key: v.objectKey,
-            width: v.width,
-            height: v.height,
-            file_size_bytes: v.fileSizeBytes
-          }))
-        })
-      );
+  const edgeUrl = `${supabaseUrl}/functions/v1/r2-upload`;
+  const formData = new FormData();
 
-      const edgeRes = await fetch(edgeUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: formData
-      });
+  // Attach primary (desktop) WebP file
+  formData.append('file', processed.primaryBlob, `${processed.checksum}_desktop.webp`);
+  formData.append('file_desktop', processed.primaryBlob, `${processed.checksum}_desktop.webp`);
 
-      if (edgeRes.ok) {
-        const edgeData = await edgeRes.json();
-        if (edgeData?.media_id) {
-          if (onProgress) onProgress('completed');
-          return {
-            mediaId: edgeData.media_id,
-            objectKey: edgeData.object_key || processed.primaryObjectKey,
-            publicUrl: edgeData.public_url || `${getStorageBaseUrl()}/${processed.primaryObjectKey}`,
-            dataUrl: processed.primaryDataUrl,
-            context,
-            pipelineVersion: IMAGE_PIPELINE_VERSION,
-            mimeType: processed.mimeType,
-            fileSizeBytes: processed.primarySizeBytes,
-            originalSizeBytes: processed.originalSizeBytes,
-            width: processed.primaryWidth,
-            height: processed.primaryHeight,
-            checksum: processed.checksum,
-            savingsPercentage: processed.savingsPercentage,
-            compressionRatio: processed.compressionRatio,
-            variants: processed.variants.map((v) => ({
-              name: v.name,
-              objectKey: v.objectKey,
-              width: v.width,
-              height: v.height,
-              fileSizeBytes: v.fileSizeBytes
-            }))
-          };
-        }
-      }
+  // Attach responsive variants (tablet & mobile) if present
+  for (const variant of processed.variants) {
+    if (variant.name === 'tablet') {
+      formData.append('file_tablet', variant.blob, `${processed.checksum}_tablet.webp`);
+    } else if (variant.name === 'mobile') {
+      formData.append('file_mobile', variant.blob, `${processed.checksum}_mobile.webp`);
     }
-  } catch (edgeErr) {
-    console.warn('Edge Function r2-upload notice (using direct database persistence fallback):', edgeErr);
   }
 
-  // Direct Supabase storage fallback for local/emulated environments
-  try {
-    await supabase.storage
-      .from('media')
-      .upload(processed.primaryObjectKey, processed.primaryBlob, {
-        contentType: processed.mimeType,
-        cacheControl: 'public, max-age=31536000, immutable',
-        upsert: true
-      });
-  } catch {
-    // Storage fallback suppression
-  }
-
-  // 4. Resolve Admin User ID
-  let resolvedAdminId = adminUserId;
-  if (!resolvedAdminId) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: adminRow } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-        if (adminRow?.id) resolvedAdminId = adminRow.id;
-      }
-    } catch {}
-  }
-  if (!resolvedAdminId) {
-    resolvedAdminId = '05680f86-a752-4792-9051-d091414d8e9f';
-  }
-
-  // 5. Register in PostgreSQL `media_assets`
-  const mediaType = contextToMediaType(context);
-  const finalObjectKey = processed.primaryObjectKey;
-  primaryPublicUrl = `${getStorageBaseUrl()}/${finalObjectKey}`;
-
-  const metadataPayload = {
-    pipeline_version: IMAGE_PIPELINE_VERSION,
-    context,
-    original_size_bytes: processed.originalSizeBytes,
-    optimized_size_bytes: processed.primarySizeBytes,
-    savings_percentage: processed.savingsPercentage,
-    compression_ratio: processed.compressionRatio,
-    variants: processed.variants.map((v) => ({
-      name: v.name,
-      object_key: v.objectKey,
-      width: v.width,
-      height: v.height,
-      file_size_bytes: v.fileSizeBytes
-    }))
-  };
-
-  const { data: mediaAsset, error: mediaErr } = await supabase
-    .from('media_assets')
-    .insert({
-      bucket: bucketName,
-      object_key: finalObjectKey,
-      media_type: mediaType,
-      mime_type: processed.mimeType,
-      file_size_bytes: processed.primarySizeBytes,
-      checksum: processed.checksum,
-      width: processed.primaryWidth,
-      height: processed.primaryHeight,
-      context,
-      metadata: metadataPayload,
-      status: 'READY',
-      created_by: resolvedAdminId,
-      verified_at: new Date().toISOString()
+  formData.append('context', context);
+  formData.append('checksum', processed.checksum);
+  if (entityId) formData.append('entity_id', entityId);
+  formData.append(
+    'metadata',
+    JSON.stringify({
+      original_size_bytes: processed.originalSizeBytes,
+      optimized_size_bytes: processed.primarySizeBytes,
+      savings_percentage: processed.savingsPercentage,
+      compression_ratio: processed.compressionRatio,
+      variants: processed.variants.map((v) => ({
+        name: v.name,
+        object_key: v.objectKey,
+        width: v.width,
+        height: v.height,
+        file_size_bytes: v.fileSizeBytes
+      }))
     })
-    .select('id, object_key')
-    .single();
+  );
 
-  if (mediaErr || !mediaAsset) {
-    // If insert encounters existing asset with exact same key (deduplication), resolve it
-    const { data: existingAsset } = await supabase
-      .from('media_assets')
-      .select('id, object_key')
-      .eq('object_key', finalObjectKey)
-      .maybeSingle();
+  const edgeRes = await fetch(edgeUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: formData
+  });
 
-    if (existingAsset) {
-      if (onProgress) onProgress('completed');
-      return {
-        mediaId: existingAsset.id,
-        objectKey: existingAsset.object_key,
-        publicUrl: primaryPublicUrl || existingAsset.object_key,
-        dataUrl: processed.primaryDataUrl,
-        context,
-        pipelineVersion: IMAGE_PIPELINE_VERSION,
-        mimeType: processed.mimeType,
-        fileSizeBytes: processed.primarySizeBytes,
-        originalSizeBytes: processed.originalSizeBytes,
-        width: processed.primaryWidth,
-        height: processed.primaryHeight,
-        checksum: processed.checksum,
-        savingsPercentage: processed.savingsPercentage,
-        compressionRatio: processed.compressionRatio,
-        variants: processed.variants.map((v) => ({
-          name: v.name,
-          objectKey: v.objectKey,
-          width: v.width,
-          height: v.height,
-          fileSizeBytes: v.fileSizeBytes
-        }))
-      };
+  if (!edgeRes.ok) {
+    let errorMsg = `Upload failed (HTTP ${edgeRes.status})`;
+    try {
+      const errJson = await edgeRes.json();
+      if (errJson?.message) {
+        errorMsg = errJson.message;
+      } else if (errJson?.error) {
+        errorMsg = errJson.error;
+      }
+    } catch {
+      try {
+        const errText = await edgeRes.text();
+        if (errText) errorMsg = errText;
+      } catch {}
     }
+    throw new Error(errorMsg);
+  }
 
-    throw new Error('Failed to register media asset: ' + (mediaErr?.message || 'Database error'));
+  const edgeData = await edgeRes.json();
+  if (!edgeData?.media_id) {
+    throw new Error('Upload succeeded but the server did not return a verified media record ID.');
   }
 
   if (onProgress) onProgress('completed');
 
+  const resolvedVariants = edgeData.variants && Array.isArray(edgeData.variants) && edgeData.variants.length > 0
+    ? edgeData.variants.map((v: any) => ({
+        name: v.name,
+        objectKey: v.object_key,
+        width: v.width,
+        height: v.height,
+        fileSizeBytes: v.file_size_bytes || 0
+      }))
+    : processed.variants.map((v) => ({
+        name: v.name,
+        objectKey: v.objectKey,
+        width: v.width,
+        height: v.height,
+        fileSizeBytes: v.fileSizeBytes
+      }));
+
   return {
-    mediaId: mediaAsset.id,
-    objectKey: mediaAsset.object_key,
-    publicUrl: primaryPublicUrl,
+    mediaId: edgeData.media_id,
+    objectKey: edgeData.object_key || processed.primaryObjectKey,
+    publicUrl: edgeData.public_url || `${getStorageBaseUrl()}/${processed.primaryObjectKey}`,
     dataUrl: processed.primaryDataUrl,
     context,
     pipelineVersion: IMAGE_PIPELINE_VERSION,
@@ -302,13 +211,7 @@ export async function uploadAndOptimizeImage(
     checksum: processed.checksum,
     savingsPercentage: processed.savingsPercentage,
     compressionRatio: processed.compressionRatio,
-    variants: processed.variants.map((v) => ({
-      name: v.name,
-      objectKey: v.objectKey,
-      width: v.width,
-      height: v.height,
-      fileSizeBytes: v.fileSizeBytes
-    }))
+    variants: resolvedVariants
   };
 }
 

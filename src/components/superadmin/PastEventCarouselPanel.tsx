@@ -188,7 +188,7 @@ export const PastEventCarouselPanel: React.FC = () => {
         file,
         context: 'memory'
       });
-      setMemoryImageUrl(result.publicUrl || result.dataUrl);
+      setMemoryImageUrl(result.dataUrl || result.publicUrl);
     } catch (err: any) {
       console.error('Image upload error:', err);
       setError('Image upload failed: ' + (err.message || 'Upload failed.'));

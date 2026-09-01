@@ -115,7 +115,7 @@ export const SponsorsPanel: React.FC = () => {
         file,
         context: 'sponsor-logo'
       });
-      setImageUrl(result.publicUrl || result.dataUrl);
+      setImageUrl(result.dataUrl || result.publicUrl);
     } catch (err: any) {
       console.error('Logo upload error:', err);
       setError('Image upload failed: ' + (err.message || 'Upload failed.'));

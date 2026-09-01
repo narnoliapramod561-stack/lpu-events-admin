@@ -339,7 +339,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         }
       });
 
-      setBannerUrl(result.publicUrl || result.dataUrl);
+      setBannerUrl(result.dataUrl || result.publicUrl);
       setBannerMediaId(result.mediaId);
       setImageStats({
         originalSize: result.originalSizeBytes,

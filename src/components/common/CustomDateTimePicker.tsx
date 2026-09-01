@@ -1,5 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+const toLocalDateString = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helpers for DD/MM/YYYY <-> YYYY-MM-DD conversion
 const isoToDisplayDate = (iso: string): string => {
   if (!iso) return '';
@@ -122,7 +129,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateString(new Date());
 
   const isDateDisabled = (year: number, month: number, day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -356,7 +363,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               type="button"
               onClick={() => {
                 const now = new Date();
-                const nowIso = now.toISOString().split('T')[0];
+                const nowIso = toLocalDateString(now);
                 if (!minDate || nowIso >= minDate) {
                   onChange(nowIso);
                   setInputText(isoToDisplayDate(nowIso));

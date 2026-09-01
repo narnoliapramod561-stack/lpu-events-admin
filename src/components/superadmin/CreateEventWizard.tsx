@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
-import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage } from '@lpu-events/shared';
+import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString } from '@lpu-events/shared';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -385,13 +385,13 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         }
         if (data.start_at) {
           const s = new Date(data.start_at);
-          setStartDate(s.toISOString().split('T')[0]);
-          setStartTime(s.toTimeString().slice(0, 5));
+          setStartDate(toLocalDateString(s));
+          setStartTime(`${String(s.getHours()).padStart(2, '0')}:${String(s.getMinutes()).padStart(2, '0')}`);
         }
         if (data.end_at) {
           const e = new Date(data.end_at);
-          setEndDate(e.toISOString().split('T')[0]);
-          setEndTime(e.toTimeString().slice(0, 5));
+          setEndDate(toLocalDateString(e));
+          setEndTime(`${String(e.getHours()).padStart(2, '0')}:${String(e.getMinutes()).padStart(2, '0')}`);
         }
         setVenueName(data.venue_name || '');
         setRegistrationMode(data.registration_mode || 'EXTERNAL');
@@ -428,21 +428,21 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         return false;
       }
       if (!categoryId) {
-        setError('Please select a category.');
+        setError('Please select a primary Category.');
         return false;
       }
-      if (!orgId) {
+      if (!orgId && !profile?.org_id) {
         setError('Please select an organizing entity.');
         return false;
       }
     }
     if (step === 2) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = toLocalDateString(new Date());
       if (!startDate) {
         setError('Please select an event Start Date.');
         return false;
       }
-      if (startDate < todayStr) {
+      if (!editEventId && startDate < todayStr) {
         setError('Event Start Date cannot be in the past (before today).');
         return false;
       }
@@ -958,7 +958,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                 icon="event"
                 required={true}
                 value={startDate}
-                minDate={new Date().toISOString().split('T')[0]}
+                minDate={!editEventId ? toLocalDateString(new Date()) : undefined}
                 onChange={(val) => {
                   setStartDate(val);
                   if (!endDate || endDate < val) {
@@ -974,7 +974,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                 icon="event_available"
                 required={true}
                 value={endDate}
-                minDate={startDate || new Date().toISOString().split('T')[0]}
+                minDate={startDate || (!editEventId ? toLocalDateString(new Date()) : undefined)}
                 onChange={(val) => setEndDate(val)}
               />
 

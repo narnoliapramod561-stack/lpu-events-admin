@@ -106,12 +106,6 @@ export async function uploadAndOptimizeImage(
     throw new Error('Administrative session required to upload image. Please log in again.');
   }
 
-  const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).rest?.url?.replace(/\/rest\/v1\/?$/, '');
-  if (!supabaseUrl) {
-    throw new Error('Supabase client URL is not configured.');
-  }
-
-  const edgeUrl = `${supabaseUrl}/functions/v1/r2-upload`;
   const formData = new FormData();
 
   // Attach primary (desktop) WebP file
@@ -147,33 +141,47 @@ export async function uploadAndOptimizeImage(
     })
   );
 
-  const edgeRes = await fetch(edgeUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`
-    },
-    body: formData
-  });
+  let edgeData: any = null;
 
-  if (!edgeRes.ok) {
-    let errorMsg = `Upload failed (HTTP ${edgeRes.status})`;
-    try {
-      const errJson = await edgeRes.json();
-      if (errJson?.message) {
-        errorMsg = errJson.message;
-      } else if (errJson?.error) {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      try {
-        const errText = await edgeRes.text();
-        if (errText) errorMsg = errText;
-      } catch {}
+  try {
+    const { data: invokeData, error: invokeErr } = await supabase.functions.invoke('r2-upload', {
+      body: formData,
+    });
+
+    if (invokeErr) {
+      throw invokeErr;
     }
-    throw new Error(errorMsg);
+    edgeData = invokeData;
+  } catch (invokeError: any) {
+    // Direct fetch fallback with explicit headers
+    const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).rest?.url?.replace(/\/rest\/v1\/?$/, '');
+    if (supabaseUrl) {
+      const edgeUrl = `${supabaseUrl}/functions/v1/r2-upload`;
+      const edgeRes = await fetch(edgeUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: (supabase as any).supabaseKey || (supabase as any).anonKey || 'sb_publishable_S9KH9_RTpx1MiPwyEBWxRQ_QkJVgzsA'
+        },
+        body: formData
+      });
+
+      if (edgeRes.ok) {
+        edgeData = await edgeRes.json();
+      } else {
+        let errorMsg = `Upload failed (HTTP ${edgeRes.status})`;
+        try {
+          const errJson = await edgeRes.json();
+          if (errJson?.message) errorMsg = errJson.message;
+          else if (errJson?.error) errorMsg = errJson.error;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+    } else {
+      throw new Error(invokeError?.message || 'Edge Function invocation failed.');
+    }
   }
 
-  const edgeData = await edgeRes.json();
   if (!edgeData?.media_id) {
     throw new Error('Upload succeeded but the server did not return a verified media record ID.');
   }

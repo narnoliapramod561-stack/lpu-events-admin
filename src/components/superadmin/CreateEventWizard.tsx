@@ -517,14 +517,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       venue_name: venueName.trim(),
       registration_mode: isExternal ? 'EXTERNAL' : 'NONE',
       external_registration_url: isExternal ? externalUrl.trim() : null,
-      registration_opens_at: null,
-      registration_closes_at: null,
       pricing_type: pricingType,
       price_amount: pricingType === 'PAID' ? Number(priceAmount) || 0 : 0,
       registration_format: registrationFormat || 'INDIVIDUAL',
       capacity_limit: capacityLimit ? Number(capacityLimit) : null,
-      capacity_counts_by: registrationFormat === 'TEAM' ? 'TEAMS' : 'STUDENTS',
-      team_pricing_mode: (pricingType === 'PAID' && registrationFormat === 'TEAM') ? 'FIXED_TEAM_PRICE' : null
     };
 
     try {

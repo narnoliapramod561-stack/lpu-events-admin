@@ -36,10 +36,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       case 'ads-management': return 'Advertisement Campaigns';
       case 'carousel-management': return 'Homepage Hero Carousel';
       case 'categories-management': return 'Taxonomy & Categories';
-      case 'memories-management': return 'Event Media & Memories';
       case 'settings-management': return 'Global System Configurations';
       case 'audit-logs': return 'Security & Audit Trail';
-      case 'outbox': return 'Transactional Outbox Dispatcher';
       case 'system-health': return 'System Telemetry & Health';
       default: return 'LPU Events Console';
     }

@@ -10,7 +10,6 @@ import {
   FolderTree,
   Sliders,
   FileSpreadsheet,
-  Send,
   Activity
 } from 'lucide-react';
 import { LpuLogo } from './common/LpuLogo';
@@ -29,10 +28,8 @@ export type AdminTab =
   | 'ads-management'
   | 'carousel-management'
   | 'categories-management'
-  | 'memories-management'
   | 'settings-management'
   | 'audit-logs'
-  | 'outbox'
   | 'system-health';
 
 interface SidebarProps {
@@ -193,14 +190,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab,
               >
                 <FileSpreadsheet size={17} />
                 <span>Audit Logs Trail</span>
-              </button>
-
-              <button
-                className={`admin-nav-item ${activeTab === 'outbox' ? 'active-purple' : ''}`}
-                onClick={() => handleTabClick('outbox')}
-              >
-                <Send size={17} />
-                <span>Outbox Dispatcher</span>
               </button>
 
               <button

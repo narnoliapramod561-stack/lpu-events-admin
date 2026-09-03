@@ -22,14 +22,14 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
           { count: adCount },
           { data: recentReqs }
         ] = await Promise.all([
-          supabase.from('events').select('*', { count: 'exact', head: true }),
-          supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'PUBLISHED'),
-          supabase.from('trending_events').select('*', { count: 'exact', head: true }),
-          supabase.from('organizer_access_requests').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
-          supabase.from('advertisements').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+          supabase.from('events').select('id', { count: 'exact', head: true }),
+          supabase.from('events').select('id', { count: 'exact', head: true }).eq('status', 'PUBLISHED'),
+          supabase.from('trending_events').select('event_id', { count: 'exact', head: true }),
+          supabase.from('organizer_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+          supabase.from('advertisements').select('id', { count: 'exact', head: true }).eq('status', 'active'),
           supabase
             .from('organizer_access_requests')
-            .select('*, admin_users!admin_user_id(email, display_name)')
+            .select('id, organization_name, created_at, status, admin_users!admin_user_id(email, display_name)')
             .eq('status', 'PENDING')
             .order('created_at', { ascending: false })
             .limit(5)

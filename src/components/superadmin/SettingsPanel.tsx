@@ -30,7 +30,7 @@ export const SettingsPanel: React.FC = () => {
     try {
       const { data, error: err } = await supabase
         .from('global_settings')
-        .select('*')
+        .select('key, value, description, updated_at')
         .order('key');
       if (err) throw err;
       setSettings(data || []);

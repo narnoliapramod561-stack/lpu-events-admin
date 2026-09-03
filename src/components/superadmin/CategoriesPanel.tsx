@@ -32,8 +32,8 @@ export const CategoriesPanel: React.FC = () => {
     setLoading(true);
     try {
       const [catRes, subRes] = await Promise.all([
-        supabase.from('categories').select('*').order('sort_order'),
-        supabase.from('subcategories').select('*').order('sort_order')
+        supabase.from('categories').select('id, key, name, is_active, sort_order').order('sort_order'),
+        supabase.from('subcategories').select('id, category_id, key, name, is_active, sort_order').order('sort_order')
       ]);
       if (catRes.error) throw catRes.error;
       setCategories(catRes.data || []);

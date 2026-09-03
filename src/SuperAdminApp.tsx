@@ -10,10 +10,8 @@ import { CreateEventWizard } from './components/superadmin/CreateEventWizard';
 import { AdvertisementsPanel } from './components/superadmin/AdvertisementsPanel';
 import { FeaturedEventsPanel } from './components/superadmin/FeaturedEventsPanel';
 import { AnalyticsPanel } from './components/superadmin/AnalyticsPanel';
-import { PastEventCarouselPanel } from './components/superadmin/PastEventCarouselPanel';
 import { CategoriesPanel } from './components/superadmin/CategoriesPanel';
 import { AuditLogsPanel } from './components/superadmin/AuditLogsPanel';
-import { OutboxEventsPanel } from './components/superadmin/OutboxEventsPanel';
 import { SystemHealthPanel } from './components/superadmin/SystemHealthPanel';
 import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselManagerPanel';
@@ -105,9 +103,6 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
         return <HappeningTodayManagerPanel />;
       case 'advertisements':
         return <AdvertisementsPanel />;
-      case 'memories':
-      case 'carousel':
-        return <PastEventCarouselPanel />;
       case 'categories':
         return <CategoriesPanel />;
       case 'ad-control':
@@ -116,8 +111,6 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
         return <AnalyticsPanel />;
       case 'audit-logs':
         return <AuditLogsPanel />;
-      case 'outbox':
-        return <OutboxEventsPanel />;
       case 'system-health':
         return <SystemHealthPanel />;
       case 'settings':

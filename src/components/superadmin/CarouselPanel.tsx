@@ -21,7 +21,7 @@ export const CarouselPanel: React.FC = () => {
     try {
       const { data, error: err } = await supabase
         .from('carousel_items')
-        .select('*, events(name), advertisements(name), event_memories(title)')
+        .select('id, item_type, event_id, advertisement_id, media_id, sort_order, is_active, start_at, end_at, custom_title, custom_subtitle, display_duration_ms, created_at, events(name), advertisements(name)')
         .order('sort_order');
       if (err) throw err;
       setItems(data || []);
@@ -64,8 +64,7 @@ export const CarouselPanel: React.FC = () => {
   const getItemLabel = (item: any): string => {
     if (item.item_type === 'EVENT') return item.events?.name || 'Featured Event';
     if (item.item_type === 'ADVERTISEMENT') return item.advertisements?.name || 'Sponsored Promotion';
-    if (item.item_type === 'MEMORY') return item.event_memories?.title || 'Event Memory';
-    return 'Media Slide';
+    return item.custom_title || 'Media Slide';
   };
 
   return (

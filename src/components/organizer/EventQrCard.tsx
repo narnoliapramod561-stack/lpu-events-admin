@@ -25,7 +25,7 @@ export const EventQrCard: React.FC<EventQrCardProps> = ({ eventId, eventName }) 
   const [copied, setCopied] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<'png' | 'svg' | null>(null);
 
-  const eventUrl = getStudentEventUrl(eventId);
+  const eventUrl = getStudentEventUrl(eventId, eventName);
 
   useEffect(() => {
     let isMounted = true;

@@ -58,11 +58,8 @@ export const AnalyticsPanel: React.FC = () => {
       const totalClubs = orgsRes.data?.length || 0;
       const pendingAccessRequests = reqsRes.data?.length || 0;
 
-      // 3. Fetch Advertisement Metrics
-      const { data: adMetrics } = await supabase
-        .from('advertisement_metrics_daily')
-        .select('advertisement_id, metric_date, impressions, clicks')
-        .order('metric_date', { ascending: true });
+      // 3. Advertisement Metrics (PostgreSQL ad metrics deprecated in favor of PostHog/GA4)
+      const adMetrics: any[] = [];
 
       let filteredMetrics = adMetrics || [];
       const now = new Date();
@@ -139,11 +136,11 @@ export const AnalyticsPanel: React.FC = () => {
       // 6. Fetch Top Performing Ads
       const { data: adsData } = await supabase
         .from('advertisements')
-        .select('id, name, status, redirect_url, advertisement_metrics_daily(impressions, clicks)');
+        .select('id, name, status, redirect_url');
 
       if (adsData) {
         const formattedAds = adsData.map(ad => {
-          const metrics = ad.advertisement_metrics_daily || [];
+          const metrics: any[] = [];
           const adImpr = metrics.reduce((s: number, m: any) => s + Number(m.impressions || 0), 0);
           const adClicks = metrics.reduce((s: number, m: any) => s + Number(m.clicks || 0), 0);
           const adCtr = adImpr > 0 ? (adClicks / adImpr) * 100 : 0;

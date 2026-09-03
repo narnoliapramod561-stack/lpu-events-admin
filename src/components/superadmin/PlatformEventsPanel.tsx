@@ -21,7 +21,7 @@ export const PlatformEventsPanel: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*, organizations(name)')
+        .select('id, name, venue_name, start_at, end_at, pricing_type, price_amount, status, view_count, organizations(name)')
         .order('start_at', { ascending: false });
 
       if (error) throw error;

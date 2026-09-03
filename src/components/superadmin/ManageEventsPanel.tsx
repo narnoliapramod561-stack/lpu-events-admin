@@ -38,7 +38,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
       const [eventsRes, catsRes, trendingRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, organizations(id, name), categories(id, name), event_content_sections(*)')
+          .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, status, category_id, subcategory_id, organization_id, created_at, updated_at, organizations(id, name), categories(id, name), event_content_sections(id, section_type, title, content, sort_order)')
           .order('start_at', { ascending: isPastMode ? false : true }),
         supabase.from('categories').select('id, name, key').eq('is_active', true),
         supabase.from('trending_events').select('event_id')
@@ -120,7 +120,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
         const { count } = await supabase
           .from('trending_events')
-          .select('*', { count: 'exact', head: true });
+          .select('event_id', { count: 'exact', head: true });
 
         const { error } = await supabase.from('trending_events').insert({
           event_id: evt.id,
@@ -319,9 +319,9 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
             </div>
             <div>
               <div className="text-2xl font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
-                {events.filter((e) => (e.event_memories?.length || 0) > 0).length || 0}
+                {events.filter((e) => (e.event_content_sections?.length || 0) > 0).length || 0}
               </div>
-              <div className="text-[11px] font-semibold text-[#5a4136] dark:text-[#ffb693]">With Event Memories</div>
+              <div className="text-[11px] font-semibold text-[#5a4136] dark:text-[#ffb693]">With Detailed Sections</div>
             </div>
           </div>
         )}

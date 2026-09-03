@@ -24,7 +24,7 @@ export const AuditLogsPanel: React.FC = () => {
     try {
       const { data, error: err } = await supabase
         .from('audit_logs')
-        .select('*, admin_users!actor_admin_id(email, display_name)')
+        .select('id, created_at, actor_role, action, target_type, target_id, justification, before_data, after_data, metadata, admin_users!actor_admin_id(email, display_name)')
         .order('created_at', { ascending: false })
         .limit(limit);
       if (err) throw err;

@@ -26,11 +26,11 @@ export const FeaturedEventsPanel: React.FC = () => {
       const [featRes, eventsRes, settingRes] = await Promise.all([
         supabase
           .from('featured_events')
-          .select('*, events(*, organizations(name), categories(name))')
+          .select('event_id, sort_order, events(id, name, start_at, end_at, status, organizations(name), categories(name))')
           .order('sort_order', { ascending: true }),
         supabase
           .from('events')
-          .select('*, organizations(name), categories(name)')
+          .select('id, name, start_at, end_at, status, organizations(name), categories(name)')
           .eq('status', 'PUBLISHED')
           .order('start_at', { ascending: true }),
         supabase

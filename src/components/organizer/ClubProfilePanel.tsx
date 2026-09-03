@@ -44,7 +44,7 @@ export const ClubProfilePanel: React.FC = () => {
       const [orgRes, eventsRes] = await Promise.all([
         supabase
           .from('organizations')
-          .select('*')
+          .select('id, name, logo_media_id, is_active, created_at, updated_at')
           .eq('id', profile.org_id)
           .single(),
         supabase

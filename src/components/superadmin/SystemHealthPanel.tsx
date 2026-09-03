@@ -4,17 +4,12 @@ import {
   RefreshCw, 
   Users, 
   Calendar, 
-  HardDrive, 
-  Send, 
-  Cpu 
+  HardDrive 
 } from 'lucide-react';
-import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
 
 export const SystemHealthPanel: React.FC = () => {
   const [resourceVersions, setResourceVersions] = useState<any[]>([]);
-  const [bgJobs, setBgJobs] = useState<any[]>([]);
-  const [outboxPending, setOutboxPending] = useState(0);
   const [adminCount, setAdminCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
   const [mediaCount, setMediaCount] = useState(0);
@@ -24,18 +19,14 @@ export const SystemHealthPanel: React.FC = () => {
   const fetchHealth = async () => {
     setLoading(true);
     try {
-      const [rvRes, jobsRes, outboxRes, adminRes, eventRes, mediaRes] = await Promise.all([
-        supabase.from('resource_versions').select('*').order('resource_type'),
-        supabase.from('background_jobs').select('*').order('scheduled_at', { ascending: false }).limit(20),
-        supabase.from('outbox_events').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+      const [rvRes, adminRes, eventRes, mediaRes] = await Promise.all([
+        supabase.from('resource_versions').select('resource,version,updated_at').order('resource'),
         supabase.from('admin_users').select('id', { count: 'exact', head: true }),
         supabase.from('events').select('id', { count: 'exact', head: true }),
         supabase.from('media_assets').select('id', { count: 'exact', head: true })
       ]);
 
       setResourceVersions(rvRes.data || []);
-      setBgJobs(jobsRes.data || []);
-      setOutboxPending(outboxRes.count || 0);
       setAdminCount(adminRes.count || 0);
       setEventCount(eventRes.count || 0);
       setMediaCount(mediaRes.count || 0);
@@ -110,20 +101,7 @@ export const SystemHealthPanel: React.FC = () => {
                 </div>
               </div>
               <div className="stat-card-value">{mediaCount}</div>
-              <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Banners & sponsor logos</span>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <span className="stat-card-title">Outbox Pending</span>
-                <div className="stat-card-icon-box" style={{ color: outboxPending > 0 ? 'var(--warning)' : 'var(--success)', backgroundColor: outboxPending > 0 ? 'var(--warning-subtle)' : 'var(--success-subtle)' }}>
-                  <Send size={18} />
-                </div>
-              </div>
-              <div className="stat-card-value" style={{ color: outboxPending > 0 ? 'var(--warning)' : 'var(--success)' }}>
-                {outboxPending}
-              </div>
-              <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Queued invalidation triggers</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Banners & images</span>
             </div>
           </div>
 
@@ -146,10 +124,10 @@ export const SystemHealthPanel: React.FC = () => {
                 </thead>
                 <tbody>
                   {resourceVersions.map(rv => (
-                    <tr key={rv.resource_type}>
+                    <tr key={rv.resource}>
                       <td>
                         <span className="font-mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-                          {rv.resource_type}
+                          {rv.resource}
                         </span>
                       </td>
                       <td>
@@ -167,80 +145,6 @@ export const SystemHealthPanel: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Background Jobs Card */}
-          <div className="card-box">
-            <div className="card-box-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h3 className="card-box-title">Background Job Executions</h3>
-                <span className="badge badge-purple">{bgJobs.length} Jobs</span>
-              </div>
-            </div>
-            {bgJobs.length === 0 ? (
-              <EmptyState
-                title="No Background Jobs Found"
-                description="Background workers are currently idle with zero pending batch jobs."
-                icon={<Cpu size={26} />}
-              />
-            ) : (
-              <div className="table-wrapper">
-                <table className="modern-table">
-                  <thead>
-                    <tr>
-                      <th>Job Identifier</th>
-                      <th>Status</th>
-                      <th>Retry Attempts</th>
-                      <th>Scheduled Timestamp</th>
-                      <th>Failure Trace</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bgJobs.map(job => (
-                      <tr key={job.id}>
-                        <td>
-                          <span className="font-mono" style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)' }}>
-                            {job.job_type}
-                          </span>
-                        </td>
-                        <td>
-                          {job.status === 'COMPLETED' ? (
-                            <span className="badge badge-success">
-                              <span className="badge-dot" />
-                              <span>COMPLETED</span>
-                            </span>
-                          ) : job.status === 'FAILED' ? (
-                            <span className="badge badge-danger">
-                              <span className="badge-dot" />
-                              <span>FAILED</span>
-                            </span>
-                          ) : (
-                            <span className="badge badge-warning">
-                              <span>{job.status}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                            {job.attempt_count} / {job.max_attempts}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '12.5px', color: 'var(--text-dim)' }}>
-                            {new Date(job.scheduled_at).toLocaleString()}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '11.5px', color: job.last_error ? 'var(--danger)' : 'var(--text-dim)' }}>
-                            {job.last_error || '—'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         </>
       )}

@@ -14,15 +14,12 @@ export type AdminNavTab =
   | 'featured-events'
   | 'trending-events'
   | 'advertisements'
-  | 'memories'
-  | 'carousel'
   | 'hero-carousel'
   | 'happening-today'
   | 'categories'
   | 'ad-control'
   | 'analytics'
   | 'audit-logs'
-  | 'outbox'
   | 'system-health'
   | 'settings';
 
@@ -37,10 +34,11 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
 
   useEffect(() => {
     const fetchPendingCount = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       try {
         const { count, error } = await supabase
           .from('organizer_access_requests')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('status', 'PENDING');
         if (!error && count !== null) {
           setPendingCount(count);
@@ -50,8 +48,15 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       }
     };
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 15000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchPendingCount, 60000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchPendingCount();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   const navSections = [
@@ -88,7 +93,6 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
         { id: 'trending-events', label: 'Trending Events', icon: 'local_fire_department' },
         { id: 'featured-events', label: 'Featured Events', icon: 'star' },
         { id: 'advertisements', label: 'Advertisements', icon: 'ads_click' },
-        { id: 'memories', label: 'Past Events Carousel', icon: 'history_toggle_off' },
         { id: 'categories', label: 'Categories & Tags', icon: 'category' }
       ]
     },
@@ -103,7 +107,6 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       items: [
         { id: 'analytics', label: 'Analytics', icon: 'monitoring' },
         { id: 'audit-logs', label: 'Audit Logs', icon: 'receipt_long' },
-        { id: 'outbox', label: 'Outbox Queue', icon: 'send_and_archive' },
         { id: 'system-health', label: 'System Health', icon: 'health_and_safety' },
         { id: 'settings', label: 'Settings', icon: 'settings' }
       ]

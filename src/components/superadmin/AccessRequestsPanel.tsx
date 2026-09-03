@@ -20,7 +20,7 @@ export const AccessRequestsPanel: React.FC<{ onNavigateToApproved?: () => void }
     try {
       const { data, error: reqsErr } = await supabase
         .from('organizer_access_requests')
-        .select('*, admin_users!admin_user_id(email, display_name)')
+        .select('id, admin_user_id, organization_name, remarks, status, review_reason, created_at, updated_at, admin_users!admin_user_id(email, display_name)')
         .order('created_at', { ascending: false });
 
       if (reqsErr) throw reqsErr;

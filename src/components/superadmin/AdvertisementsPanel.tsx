@@ -109,7 +109,7 @@ export const AdvertisementsPanel: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('advertisements')
-        .select('*, media_assets(id, object_key, bucket), advertisement_metrics_daily(impressions, clicks)')
+        .select('id, name, media_id, redirect_url, start_at, end_at, status, created_at, updated_at, media_assets(id, object_key)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -13,9 +13,7 @@ import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { AuditLogsPanel } from './components/superadmin/AuditLogsPanel';
 import { AdvertisementsPanel } from './components/superadmin/AdvertisementsPanel';
 import { CarouselPanel } from './components/superadmin/CarouselPanel';
-import { MemoriesPanel } from './components/superadmin/MemoriesPanel';
 import { SystemHealthPanel } from './components/superadmin/SystemHealthPanel';
-import { OutboxEventsPanel } from './components/superadmin/OutboxEventsPanel';
 import { LoginView } from './components/auth/LoginView';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { ToastProvider } from './components/shell/NotificationContext';
@@ -145,10 +143,8 @@ function AdminDashboard() {
         case 'ads-management': return <AdvertisementsPanel />;
         case 'carousel-management': return <CarouselPanel />;
         case 'categories-management': return <CategoriesPanel />;
-        case 'memories-management': return <MemoriesPanel />;
         case 'settings-management': return <SettingsPanel />;
         case 'audit-logs': return <AuditLogsPanel />;
-        case 'outbox': return <OutboxEventsPanel />;
         case 'system-health': return <SystemHealthPanel />;
         default: return <AccessRequestsPanel />;
       }
@@ -185,7 +181,7 @@ function UnapprovedView({ user, signOut, refreshProfile }: { user: any; signOut:
     try {
       const { data, error } = await supabase
         .from('organizer_access_requests')
-        .select('*')
+        .select('id, organization_name, remarks, status, review_reason, created_at, updated_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setMyRequests(data || []);

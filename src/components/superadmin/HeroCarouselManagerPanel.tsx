@@ -22,7 +22,6 @@ import {
   Pause,
   AlertCircle,
   CheckCircle2,
-  History,
   X,
   Settings2,
   Sparkles,
@@ -37,14 +36,13 @@ import {
 /* ================================================================
    Types
    ================================================================ */
-type SlideType = 'EVENT' | 'ADVERTISEMENT' | 'MEMORY' | 'MEDIA';
+type SlideType = 'EVENT' | 'ADVERTISEMENT' | 'MEDIA';
 
 interface CarouselSlide {
   id: string;
   item_type: SlideType;
   event_id: string | null;
   advertisement_id: string | null;
-  memory_id: string | null;
   media_id: string | null;
   sort_order: number;
   is_active: boolean;
@@ -60,7 +58,6 @@ interface CarouselSlide {
   // Joined data
   events?: { id: string; name: string; description?: string; start_at: string; venue_name: string; banner_media_id?: string | null; banner_url?: string | null } | null;
   advertisements?: { id: string; name: string; redirect_url: string | null; media_id: string | null } | null;
-  event_memories?: { id: string; title: string; description?: string | null; cover_media_id: string | null; media_assets?: { id: string; object_key: string } | null; events?: any } | null;
 }
 
 interface FeaturedEvent {
@@ -82,21 +79,9 @@ interface ActiveAd {
   status: string;
 }
 
-interface PastMemory {
-  id: string;
-  title: string;
-  description?: string;
-  cover_media_id: string | null;
-  status: string;
-  event_id?: string | null;
-  media_assets?: { id: string; object_key: string } | null;
-  events?: any;
-}
-
 const SLIDE_TYPE_CONFIG: Record<SlideType, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
   EVENT:         { label: 'Featured Event',  icon: <Star size={14} />,     color: '#ff6b00', bg: 'rgba(255,107,0,0.12)' },
   ADVERTISEMENT: { label: 'Advertisement',   icon: <Megaphone size={14} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  MEMORY:        { label: 'Event Memory',    icon: <History size={14} />,   color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
   MEDIA:         { label: 'Custom Media',    icon: <ImageIcon size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
@@ -116,7 +101,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
   const [featuredEvents, setFeaturedEvents] = useState<FeaturedEvent[]>([]);
   const [allPublishedEvents, setAllPublishedEvents] = useState<FeaturedEvent[]>([]);
   const [activeAds, setActiveAds] = useState<ActiveAd[]>([]);
-  const [pastMemories, setPastMemories] = useState<PastMemory[]>([]);
 
   // Expanded slide settings
   const [expandedSlideId, setExpandedSlideId] = useState<string | null>(null);
@@ -140,8 +124,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         .select(`
           *,
           events ( id, name, description, start_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket) ),
-          advertisements ( id, name, redirect_url, media_id, media_assets:media_id(id, object_key, bucket) ),
-          event_memories ( id, title, description, cover_media_id, media_assets:cover_media_id(id, object_key, bucket), events(id, name, description, venue_name, start_at, banner_media_id, media_assets:banner_media_id(id, object_key, bucket)) )
+          advertisements ( id, name, redirect_url, media_id, media_assets:media_id(id, object_key, bucket) )
         `)
         .order('sort_order', { ascending: true });
       if (error) throw error;
@@ -194,19 +177,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
       setActiveAds(ads || []);
     } catch (err) {
       console.error('Failed to load ads:', err);
-    }
-
-    try {
-      const { data: mems, error: memsErr } = await supabase
-        .from('event_memories')
-        .select('id, title, description, cover_media_id, status, event_id, media_assets:cover_media_id(id, object_key, bucket), events(id, name, description, venue_name, start_at, banner_media_id, media_assets:banner_media_id(id, object_key, bucket))')
-        .eq('status', 'PUBLISHED')
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (memsErr) console.error('Error loading event memories:', memsErr);
-      setPastMemories((mems as any) || []);
-    } catch (err) {
-      console.error('Failed to load event memories:', err);
     }
   }, []);
 
@@ -275,8 +245,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         insertPayload.event_id = contentId;
       } else if (type === 'ADVERTISEMENT') {
         insertPayload.advertisement_id = contentId;
-      } else if (type === 'MEMORY') {
-        insertPayload.memory_id = contentId;
       }
 
       const { data, error } = await supabase
@@ -285,8 +253,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         .select(`
           *,
           events ( id, name, description, start_at, venue_name, banner_media_id ),
-          advertisements ( id, name, redirect_url, media_id ),
-          event_memories ( id, title, description, cover_media_id, media_assets:cover_media_id(id, object_key), events(id, name, description, venue_name, start_at, banner_media_id) )
+          advertisements ( id, name, redirect_url, media_id )
         `)
         .single();
 
@@ -361,8 +328,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     if (slide.custom_title) return slide.custom_title;
     if (slide.item_type === 'EVENT' && slide.events) return slide.events.name;
     if (slide.item_type === 'ADVERTISEMENT' && slide.advertisements) return slide.advertisements.name;
-    if (slide.item_type === 'MEMORY' && slide.event_memories) return slide.event_memories.title;
-    return 'Custom Slide';
+    return slide.custom_title || 'Untitled Slide';
   };
 
   const getSlideImage = (slide: CarouselSlide): string | null => {
@@ -476,28 +442,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
               const img = getSlideImage(slide) || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop';
               const title = getSlideTitle(slide);
               const typeCfg = SLIDE_TYPE_CONFIG[slide.item_type];
-
-              if (slide.item_type === 'MEMORY') {
-                return (
-                  <div className="absolute inset-0 flex items-end">
-                    <img 
-                      src={img} 
-                      alt={title} 
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop';
-                      }}
-                      className="absolute inset-0 w-full h-full object-cover" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent pointer-events-none" />
-                    <div className="relative z-10 p-6 md:p-8 w-full">
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2 inline-block">
-                        Event Memory
-                      </span>
-                      <h3 className="text-xl md:text-3xl font-black font-['Outfit'] text-white drop-shadow-md">{title}</h3>
-                    </div>
-                  </div>
-                );
-              }
 
               return (
                 <div className="absolute inset-0 flex">
@@ -869,7 +813,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
             {/* Type Tabs */}
             <div className="px-6 py-4">
               <div className="flex items-center bg-[#fef5f0] dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-xl p-1 text-xs font-bold">
-                {(['EVENT', 'ADVERTISEMENT', 'MEMORY'] as SlideType[]).map(type => {
+                {(['EVENT', 'ADVERTISEMENT'] as SlideType[]).map(type => {
                   const cfg = SLIDE_TYPE_CONFIG[type];
                   return (
                     <button
@@ -990,61 +934,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                       <Plus size={16} className="text-[#5a4136]/40 group-hover:text-purple-600 transition-colors flex-shrink-0" />
                     </button>
                   ))}
-                </>
-              )}
-
-              {addSlideType === 'MEMORY' && (
-                <>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <p className="text-xs font-semibold text-[#5a4136] dark:text-[#ffb693]">
-                      Curated Past Events Carousel ({pastMemories.length} Available):
-                    </p>
-                  </div>
-
-                  {pastMemories.length === 0 ? (
-                    <div className="text-center py-8 bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-xl p-6">
-                      <p className="text-sm font-bold text-[#261812] dark:text-[#ffede6]">
-                        No Past Event Memories Found
-                      </p>
-                      <p className="text-xs text-[#5a4136]/70 dark:text-[#ffb693]/70 mt-1">
-                        Head to "Past Events Carousel" in the sidebar to curate completed events & memories first.
-                      </p>
-                    </div>
-                  ) : pastMemories.map(mem => {
-                    const memImg = mem.events ? getEventImage(mem.events) : null;
-                    return (
-                      <button
-                        key={mem.id}
-                        type="button"
-                        onClick={() => addSlide('MEMORY', mem.id)}
-                        className="w-full text-left p-4 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#261812] hover:border-cyan-500 hover:shadow-md transition-all cursor-pointer group flex items-center gap-4"
-                      >
-                        <div className="w-14 h-10 rounded-lg overflow-hidden bg-[#fef5f0] dark:bg-[#1f1510] flex-shrink-0">
-                          {memImg ? (
-                            <img 
-                              src={memImg} 
-                              alt={mem.title} 
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=800&auto=format&fit=crop';
-                              }}
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-cyan-100 dark:bg-cyan-950/50">
-                              <History size={16} className="text-cyan-600 dark:text-cyan-400" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-[#261812] dark:text-[#ffede6] truncate group-hover:text-cyan-600 transition-colors">{mem.title}</p>
-                          <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] truncate">
-                            {mem.description || (mem.events ? `Recap of ${mem.events.name}` : 'Curated Past Event Memory')}
-                          </p>
-                        </div>
-                        <Plus size={16} className="text-[#5a4136]/40 group-hover:text-cyan-600 transition-colors flex-shrink-0" />
-                      </button>
-                    );
-                  })}
                 </>
               )}
             </div>

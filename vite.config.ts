@@ -53,6 +53,13 @@ export default defineConfig({
     port: 3001,
     strictPort: true,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'https://lpuevents.live',
+        changeOrigin: true,
+        secure: true,
+      }
+    },
     fs: {
       strict: true,
       deny: ['.env', '.env.*', '*.{crt,pem}', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.*', '_headers', '_redirects']

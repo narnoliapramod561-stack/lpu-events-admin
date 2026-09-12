@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, lpuClient } from '../../supabase';
 import { getEventImage } from '../../utils/images';
 import { EventQrCard } from '../organizer/EventQrCard';
+import { getStudentEventUrl } from '@lpu-events/shared';
 
 interface ManageEventsPanelProps {
   mode?: 'active' | 'past' | 'all';
@@ -90,8 +91,8 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
     }
   };
 
-  const copyEventLink = (id: string) => {
-    const url = `${window.location.origin.replace('5174', '5173')}/events/${id}`;
+  const copyEventLink = (id: string, name?: string) => {
+    const url = getStudentEventUrl(id, name);
     navigator.clipboard.writeText(url);
     showToast('Student link copied to clipboard!');
   };
@@ -618,7 +619,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => copyEventLink(evt.id)}
+                        onClick={() => copyEventLink(evt.id, evt.name)}
                         className="p-2 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] text-[#5a4136] dark:text-[#ffb693] hover:border-[#ff6b00] hover:text-[#ff6b00] transition-colors cursor-pointer"
                         title="Copy Student Link"
                       >
@@ -813,7 +814,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => copyEventLink(evt.id)}
+                            onClick={() => copyEventLink(evt.id, evt.name)}
                             className="p-1.5 rounded-lg text-[#5a4136] hover:text-[#ff6b00] hover:bg-[#fee3d8] dark:hover:bg-[#3d2d26] transition-colors cursor-pointer"
                             title="Copy Student Link"
                           >
@@ -955,7 +956,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
               <div className="pt-4 border-t border-[#e2bfb0]/60 dark:border-[#5a4136]/60 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => copyEventLink(previewEvent.id)}
+                  onClick={() => copyEventLink(previewEvent.id, previewEvent.name)}
                   className="px-4 py-2 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-bold text-[#5a4136] dark:text-[#ffb693] hover:border-[#ff6b00] transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">link</span>

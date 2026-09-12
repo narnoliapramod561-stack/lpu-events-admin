@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { lpuClient } from '../../supabase';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { lpuClient, supabase } from '../../supabase';
+import { getEventImage } from '../../utils/images';
 import {
   AdSystemConfig,
   DEFAULT_AD_SYSTEM_CONFIG,
@@ -18,11 +19,267 @@ import {
   LayoutGrid,
   CalendarDays,
   Image as ImageIcon,
-  Columns3
+  Columns3,
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  ListOrdered,
+  CheckSquare,
+  Square
 } from 'lucide-react';
+
+interface PlacementAdSelectorProps {
+  placementKey: keyof AdSystemConfig['placements'];
+  placementName: string;
+  selectedAdIds?: string[];
+  allAds: any[];
+  onChange: (newIds?: string[]) => void;
+}
+
+const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
+  placementName,
+  selectedAdIds,
+  allAds,
+  onChange,
+}) => {
+  const isAutoMode = selectedAdIds === undefined;
+
+  const handleToggle = (adId: string) => {
+    const current = selectedAdIds !== undefined ? selectedAdIds : allAds.filter(a => a.status === 'active').map(a => a.id);
+    if (current.includes(adId)) {
+      onChange(current.filter(id => id !== adId));
+    } else {
+      onChange([...current, adId]);
+    }
+  };
+
+  const handleMoveUp = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedAdIds || idx <= 0) return;
+    const next = [...selectedAdIds];
+    const temp = next[idx - 1];
+    next[idx - 1] = next[idx];
+    next[idx] = temp;
+    onChange(next);
+  };
+
+  const handleMoveDown = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedAdIds || idx >= selectedAdIds.length - 1) return;
+    const next = [...selectedAdIds];
+    const temp = next[idx + 1];
+    next[idx + 1] = next[idx];
+    next[idx] = temp;
+    onChange(next);
+  };
+
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onChange(allAds.map(a => a.id));
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onChange([]);
+  };
+
+  const handleResetToAuto = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onChange(undefined);
+  };
+
+  const handleCustomize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const active = allAds.filter(a => a.status === 'active').map(a => a.id);
+    onChange(active.length > 0 ? active : allAds.map(a => a.id));
+  };
+
+  // Build sorted view of ads:
+  // If selectedAdIds is defined, show selected ads in their exact specified order first,
+  // followed by unselected ads.
+  const displayItems = useMemo(() => {
+    if (isAutoMode) {
+      return allAds.map(ad => ({
+        ad,
+        isSelected: ad.status === 'active',
+        orderIndex: -1,
+      }));
+    }
+
+    const selectedList: { ad: any; isSelected: boolean; orderIndex: number }[] = [];
+    selectedAdIds.forEach((id, idx) => {
+      const found = allAds.find(a => a.id === id);
+      if (found) {
+        selectedList.push({ ad: found, isSelected: true, orderIndex: idx });
+      }
+    });
+
+    const unselectedList: { ad: any; isSelected: boolean; orderIndex: number }[] = [];
+    allAds.forEach(ad => {
+      if (!selectedAdIds.includes(ad.id)) {
+        unselectedList.push({ ad, isSelected: false, orderIndex: -1 });
+      }
+    });
+
+    return [...selectedList, ...unselectedList];
+  }, [allAds, selectedAdIds, isAutoMode]);
+
+  return (
+    <div className="pt-3 border-t border-[#e2bfb0]/30 dark:border-[#5a4136]/30 space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[11px] font-black text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider flex items-center gap-1.5">
+          <ListOrdered className="w-3.5 h-3.5 text-[#fc721e]" />
+          <span>{placementName} Ads Selection & Order</span>
+        </label>
+
+        {isAutoMode ? (
+          <button
+            type="button"
+            onClick={handleCustomize}
+            className="text-[10px] font-black text-[#fc721e] hover:underline cursor-pointer flex items-center gap-1"
+          >
+            <span>Customize Order</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="text-[#fc721e] hover:underline cursor-pointer"
+            >
+              All
+            </button>
+            <span className="text-gray-400">•</span>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="text-rose-500 hover:underline cursor-pointer"
+            >
+              None
+            </button>
+            <span className="text-gray-400">•</span>
+            <button
+              type="button"
+              onClick={handleResetToAuto}
+              className="text-[#5a4136] dark:text-[#ffb693] hover:underline cursor-pointer"
+            >
+              Auto
+            </button>
+          </div>
+        )}
+      </div>
+
+      {allAds.length === 0 ? (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
+          No advertisements created yet. Add ads in the Advertisements section first.
+        </div>
+      ) : isAutoMode ? (
+        <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <p className="font-black text-[11px] text-[#261812] dark:text-[#ffede6]">
+              Auto-Rotating All Active Ads ({allAds.filter(a => a.status === 'active').length})
+            </p>
+            <p className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">
+              Default order by creation date. Click Customize to choose and order specific ads.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCustomize}
+            className="px-2.5 py-1 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 text-[#fc721e] text-[11px] font-black border border-orange-500/30 shrink-0 cursor-pointer"
+          >
+            Customize
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+          {displayItems.map(({ ad, isSelected, orderIndex }) => {
+            const imgUrl = getEventImage(ad, 'advertisement', 120);
+            return (
+              <div
+                key={ad.id}
+                onClick={() => handleToggle(ad.id)}
+                className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 text-xs transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-orange-500/10 border-[#fc721e]/60 shadow-xs'
+                    : 'bg-black/[0.01] dark:bg-white/[0.01] border-[#e2bfb0]/30 dark:border-[#5a4136]/30 opacity-60 hover:opacity-100'
+                }`}
+              >
+                {/* Left: Checkbox + Order badge + Thumbnail + Name */}
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="shrink-0 text-[#fc721e]">
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 fill-orange-500/20" />
+                    ) : (
+                      <Square className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+
+                  {isSelected ? (
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#fc721e] text-white font-black text-[10px] flex items-center justify-center font-mono shadow-xs">
+                      {orderIndex + 1}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-400 font-bold text-[10px] flex items-center justify-center">
+                      -
+                    </span>
+                  )}
+
+                  <div className="w-7 h-7 rounded-lg bg-slate-800 shrink-0 overflow-hidden border border-black/10 flex items-center justify-center">
+                    {imgUrl ? (
+                      <img src={imgUrl} alt={ad.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Megaphone className="w-3.5 h-3.5 text-indigo-400" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-[11px] text-[#261812] dark:text-[#ffede6] truncate">
+                      {ad.name}
+                    </p>
+                    <span className={`text-[9px] font-bold uppercase ${
+                      ad.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'
+                    }`}>
+                      {ad.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right: Order Movement Controls */}
+                {isSelected && (
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      disabled={orderIndex <= 0}
+                      onClick={(e) => handleMoveUp(orderIndex, e)}
+                      title="Move earlier in sequence"
+                      className="p-1 rounded-md bg-black/5 dark:bg-white/5 hover:bg-orange-500/20 hover:text-[#fc721e] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <ArrowUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={orderIndex >= (selectedAdIds?.length || 0) - 1}
+                      onClick={(e) => handleMoveDown(orderIndex, e)}
+                      title="Move later in sequence"
+                      className="p-1 rounded-md bg-black/5 dark:bg-white/5 hover:bg-orange-500/20 hover:text-[#fc721e] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <ArrowDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const AdControlPanel: React.FC = () => {
   const [config, setConfig] = useState<AdSystemConfig>(DEFAULT_AD_SYSTEM_CONFIG);
+  const [allAds, setAllAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -37,6 +294,17 @@ export const AdControlPanel: React.FC = () => {
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
+      // Load all advertisements for placement selectors
+      try {
+        const { data: adsData } = await supabase
+          .from('advertisements')
+          .select('id, name, media_id, redirect_url, status, media_assets:media_id(id, object_key)')
+          .order('created_at', { ascending: false });
+        if (adsData) setAllAds(adsData);
+      } catch (adErr) {
+        console.warn('Failed to load advertisements:', adErr);
+      }
+
       const { data: dbSettings } = await lpuClient.fetchGlobalSettings();
       if (dbSettings) {
         const adSysSetting = dbSettings.find((s: any) => s.key === 'ad_system_config');
@@ -45,11 +313,46 @@ export const AdControlPanel: React.FC = () => {
             const parsed = typeof adSysSetting.value === 'string'
               ? JSON.parse(adSysSetting.value)
               : adSysSetting.value;
+
+            const sanitizePublisherId = (pub?: string) => (!pub || pub === 'ca-pub-0000000000000000') ? 'ca-pub-5513043165999517' : pub;
+            const sanitizeSlotId = (slot?: string) => (!slot || slot.startsWith('100000000')) ? '8059587837' : slot;
+
             setConfig({
               ...DEFAULT_AD_SYSTEM_CONFIG,
               ...parsed,
-              adsense: { ...DEFAULT_AD_SYSTEM_CONFIG.adsense, ...(parsed.adsense || {}) },
-              placements: { ...DEFAULT_AD_SYSTEM_CONFIG.placements, ...(parsed.placements || {}) },
+              adsense: {
+                ...DEFAULT_AD_SYSTEM_CONFIG.adsense,
+                ...(parsed.adsense || {}),
+                publisher_id: sanitizePublisherId(parsed.adsense?.publisher_id),
+              },
+              placements: {
+                ...DEFAULT_AD_SYSTEM_CONFIG.placements,
+                ...(parsed.placements || {}),
+                hero_carousel: {
+                  ...DEFAULT_AD_SYSTEM_CONFIG.placements.hero_carousel,
+                  ...(parsed.placements?.hero_carousel || {}),
+                  ad_unit_id: sanitizeSlotId(parsed.placements?.hero_carousel?.ad_unit_id),
+                  selected_ad_ids: parsed.placements?.hero_carousel?.selected_ad_ids,
+                },
+                happening_today: {
+                  ...DEFAULT_AD_SYSTEM_CONFIG.placements.happening_today,
+                  ...(parsed.placements?.happening_today || {}),
+                  ad_unit_id: sanitizeSlotId(parsed.placements?.happening_today?.ad_unit_id),
+                  selected_ad_ids: parsed.placements?.happening_today?.selected_ad_ids,
+                },
+                event_hub: {
+                  ...DEFAULT_AD_SYSTEM_CONFIG.placements.event_hub,
+                  ...(parsed.placements?.event_hub || {}),
+                  ad_unit_id: sanitizeSlotId(parsed.placements?.event_hub?.ad_unit_id),
+                  selected_ad_ids: parsed.placements?.event_hub?.selected_ad_ids,
+                },
+                event_details: {
+                  ...DEFAULT_AD_SYSTEM_CONFIG.placements.event_details,
+                  ...(parsed.placements?.event_details || {}),
+                  ad_unit_id: sanitizeSlotId(parsed.placements?.event_details?.ad_unit_id),
+                  selected_ad_ids: parsed.placements?.event_details?.selected_ad_ids,
+                },
+              },
             });
           } catch (e) {
             console.error('Failed to parse ad_system_config:', e);
@@ -71,11 +374,27 @@ export const AdControlPanel: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await lpuClient.manageGlobalSetting('upsert', {
+      const sanitizedPublisherId = (!config.adsense.publisher_id || config.adsense.publisher_id === 'ca-pub-0000000000000000')
+        ? 'ca-pub-5513043165999517'
+        : config.adsense.publisher_id;
+
+      const savePayload: AdSystemConfig = {
+        ...config,
+        adsense: {
+          ...config.adsense,
+          publisher_id: sanitizedPublisherId,
+        }
+      };
+
+      const saveRes = await lpuClient.manageGlobalSetting('upsert', {
         key: 'ad_system_config',
-        value: config,
+        value: savePayload,
         description: 'Configurable multi-provider advertisement system configuration',
       });
+
+      if (saveRes?.error) {
+        throw new Error(saveRes.error.message || saveRes.error.details || 'Failed to save configuration to database.');
+      }
 
       // Maintain legacy keys in sync for backward compatibility if any legacy consumer reads them
       await lpuClient.manageGlobalSetting('upsert', {
@@ -84,7 +403,30 @@ export const AdControlPanel: React.FC = () => {
         description: 'Event Hub ad frequency interval',
       });
 
-      showToast('success', 'Advertisement system configuration saved successfully!');
+      // Send direct edge cache invalidation trigger with auth secret
+      try {
+        const secret = (import.meta as any).env?.VITE_CACHE_INVALIDATION_SECRET || '';
+        const invHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (secret) {
+          invHeaders['X-Invalidation-Secret'] = secret;
+        }
+        const invBody = JSON.stringify({ tags: ['settings', 'homepage', 'advertisements'] });
+
+        await Promise.allSettled([
+          fetch('/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
+          fetch('https://lpuevents.live/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
+          fetch('http://localhost:3000/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
+        ]);
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('lpu_cache_bust', String(Date.now()));
+          window.dispatchEvent(new CustomEvent('lpu:cache-invalidated', { detail: { tags: ['settings', 'homepage', 'advertisements'] } }));
+        }
+      } catch {}
+
+      showToast('success', 'Advertisement system configuration saved & synced live!');
     } catch (err: any) {
       showToast('error', 'Save failed: ' + (err?.message || 'Unknown error'));
     } finally {
@@ -130,15 +472,40 @@ export const AdControlPanel: React.FC = () => {
     const freq = Math.max(1, activePlacementConfig.frequency);
     const maxAds = Math.min(activePlacementConfig.max_ads, config.max_ads_per_page);
 
+    let effectiveAdLabels: string[] = [];
+    if (activePlacementConfig.provider === 'direct') {
+      if (activePlacementConfig.selected_ad_ids && activePlacementConfig.selected_ad_ids.length > 0) {
+        effectiveAdLabels = activePlacementConfig.selected_ad_ids
+          .map(id => allAds.find(a => a.id === id)?.name)
+          .filter(Boolean) as string[];
+      } else if (activePlacementConfig.selected_ad_ids && activePlacementConfig.selected_ad_ids.length === 0) {
+        effectiveAdLabels = [];
+      } else {
+        effectiveAdLabels = allAds.filter(a => a.status === 'active').map(a => a.name);
+      }
+    }
+
     sampleItems.forEach((item, idx) => {
       simulatedSequence.push({ type: 'item', label: item });
       if ((idx + 1) % freq === 0 && adsInjected < maxAds) {
-        simulatedSequence.push({
-          type: 'ad',
-          label: activePlacementConfig.provider === 'adsense' ? 'Google AdSense Ad' : 'Direct Sponsor Ad',
-          provider: activePlacementConfig.provider,
-        });
-        adsInjected++;
+        if (activePlacementConfig.provider === 'adsense') {
+          simulatedSequence.push({
+            type: 'ad',
+            label: 'Google AdSense Ad',
+            provider: 'adsense',
+          });
+          adsInjected++;
+        } else if (activePlacementConfig.provider === 'direct') {
+          if (effectiveAdLabels.length > 0) {
+            const adName = effectiveAdLabels[adsInjected % effectiveAdLabels.length];
+            simulatedSequence.push({
+              type: 'ad',
+              label: `Ad: "${adName}"`,
+              provider: 'direct',
+            });
+            adsInjected++;
+          }
+        }
       }
     });
   } else {
@@ -194,6 +561,115 @@ export const AdControlPanel: React.FC = () => {
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Save Configuration</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Mode Presets Bar */}
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#fc721e]" />
+              <span>One-Click Advertisement Mode Switcher</span>
+            </h3>
+            <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693]">
+              Instantly toggle between Google AdSense, Direct Self Ads, or completely pause all advertising across the student site.
+            </p>
+          </div>
+          <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+            !config.global_enabled
+              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+              : config.placements.event_hub.provider === 'adsense' && config.placements.hero_carousel.provider === 'adsense'
+              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+              : config.placements.event_hub.provider === 'direct' && config.placements.hero_carousel.provider === 'direct'
+              ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
+              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+          }`}>
+            {!config.global_enabled
+              ? '● System Paused (Zero Ads)'
+              : config.placements.event_hub.provider === 'adsense' && config.placements.hero_carousel.provider === 'adsense'
+              ? '● Active: Google AdSense'
+              : config.placements.event_hub.provider === 'direct' && config.placements.hero_carousel.provider === 'direct'
+              ? '● Active: Direct Self Ads'
+              : '● Active: Hybrid Mode'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setConfig(prev => ({
+                ...prev,
+                global_enabled: true,
+                placements: {
+                  hero_carousel: { ...prev.placements.hero_carousel, enabled: true, provider: 'adsense' },
+                  happening_today: { ...prev.placements.happening_today, enabled: true, provider: 'adsense' },
+                  event_hub: { ...prev.placements.event_hub, enabled: true, provider: 'adsense' },
+                  event_details: { ...prev.placements.event_details, enabled: false, provider: 'adsense' },
+                }
+              }));
+              showToast('success', 'Switched all placements to Google AdSense. Click "Save Configuration" to apply live.');
+            }}
+            className="p-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+          >
+            <span className="font-black text-[11px] uppercase tracking-wider">All Google AdSense</span>
+            <span className="text-[10px] opacity-80">Programmatic Google revenue ads everywhere</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setConfig(prev => ({
+                ...prev,
+                global_enabled: true,
+                placements: {
+                  hero_carousel: { ...prev.placements.hero_carousel, enabled: true, provider: 'direct' },
+                  happening_today: { ...prev.placements.happening_today, enabled: true, provider: 'direct' },
+                  event_hub: { ...prev.placements.event_hub, enabled: true, provider: 'direct' },
+                  event_details: { ...prev.placements.event_details, enabled: false, provider: 'direct' },
+                }
+              }));
+              showToast('success', 'Switched all placements to Direct / Self Ads. Click "Save Configuration" to apply live.');
+            }}
+            className="p-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+          >
+            <span className="font-black text-[11px] uppercase tracking-wider">All Direct / Self Ads</span>
+            <span className="text-[10px] opacity-80">University internal sponsors & campaigns</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setConfig(prev => ({
+                ...prev,
+                global_enabled: true,
+                placements: {
+                  hero_carousel: { ...prev.placements.hero_carousel, enabled: true, provider: 'direct' },
+                  happening_today: { ...prev.placements.happening_today, enabled: true, provider: 'direct' },
+                  event_hub: { ...prev.placements.event_hub, enabled: true, provider: 'adsense' },
+                  event_details: { ...prev.placements.event_details, enabled: false, provider: 'disabled' },
+                }
+              }));
+              showToast('success', 'Switched to Hybrid Mode. Click "Save Configuration" to apply live.');
+            }}
+            className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+          >
+            <span className="font-black text-[11px] uppercase tracking-wider">Hybrid Mode</span>
+            <span className="text-[10px] opacity-80">Direct hero banners + AdSense in feed</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setConfig(prev => ({ ...prev, global_enabled: false }));
+              showToast('success', 'All advertisements paused. Click "Save Configuration" to apply live.');
+            }}
+            className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+          >
+            <span className="font-black text-[11px] uppercase tracking-wider">Pause All Ads</span>
+            <span className="text-[10px] opacity-80">Zero advertisements on entire website</span>
           </button>
         </div>
       </div>
@@ -397,6 +873,17 @@ export const AdControlPanel: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Direct Ads Selector & Ordering */}
+            {config.placements.hero_carousel.provider === 'direct' && (
+              <PlacementAdSelector
+                placementKey="hero_carousel"
+                placementName="Hero Carousel"
+                selectedAdIds={config.placements.hero_carousel.selected_ad_ids}
+                allAds={allAds}
+                onChange={(ids) => updatePlacement('hero_carousel', { selected_ad_ids: ids })}
+              />
+            )}
           </div>
         </div>
 
@@ -501,6 +988,17 @@ export const AdControlPanel: React.FC = () => {
                   className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono"
                 />
               </div>
+            )}
+
+            {/* Direct Ads Selector & Ordering */}
+            {config.placements.happening_today.provider === 'direct' && (
+              <PlacementAdSelector
+                placementKey="happening_today"
+                placementName="Happening Today"
+                selectedAdIds={config.placements.happening_today.selected_ad_ids}
+                allAds={allAds}
+                onChange={(ids) => updatePlacement('happening_today', { selected_ad_ids: ids })}
+              />
             )}
           </div>
         </div>
@@ -607,6 +1105,17 @@ export const AdControlPanel: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Direct Ads Selector & Ordering */}
+            {config.placements.event_hub.provider === 'direct' && (
+              <PlacementAdSelector
+                placementKey="event_hub"
+                placementName="Event Hub Grid"
+                selectedAdIds={config.placements.event_hub.selected_ad_ids}
+                allAds={allAds}
+                onChange={(ids) => updatePlacement('event_hub', { selected_ad_ids: ids })}
+              />
+            )}
           </div>
         </div>
 
@@ -692,6 +1201,17 @@ export const AdControlPanel: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Direct Ads Selector & Ordering */}
+            {config.placements.event_details.provider === 'direct' && (
+              <PlacementAdSelector
+                placementKey="event_details"
+                placementName="Event Details Page"
+                selectedAdIds={config.placements.event_details.selected_ad_ids}
+                allAds={allAds}
+                onChange={(ids) => updatePlacement('event_details', { selected_ad_ids: ids })}
+              />
+            )}
           </div>
         </div>
 

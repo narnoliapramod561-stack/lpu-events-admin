@@ -21,6 +21,7 @@ import {
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
 import { getEventImage } from '../../utils/images';
+import { getStudentEventUrl } from '@lpu-events/shared';
 
 interface OrganizerDashboardProps {
   onSelectEvent: (eventId: string) => void;
@@ -78,9 +79,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const copyEventLink = (id: string, e?: React.MouseEvent) => {
+  const copyEventLink = (id: string, name?: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const url = `${window.location.origin.replace('5174', '5173')}/events/${id}`;
+    const url = getStudentEventUrl(id, name);
     navigator.clipboard.writeText(url);
     showToast('Student link copied to clipboard!');
   };
@@ -385,7 +386,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
-                            onClick={(e) => copyEventLink(evt.id, e)}
+                            onClick={(e) => copyEventLink(evt.id, evt.name, e)}
                             title="Copy Student Link"
                             style={{ padding: '6px 8px' }}
                           >
@@ -591,7 +592,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => copyEventLink(previewEvent.id)}>
+                <button className="btn btn-ghost btn-sm" onClick={() => copyEventLink(previewEvent.id, previewEvent.name)}>
                   <Link size={14} />
                   <span>Copy Link</span>
                 </button>

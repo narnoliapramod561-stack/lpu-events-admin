@@ -22,6 +22,16 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
     return url;
   }
 
+  if (url.startsWith('/defaults/events/') && url.endsWith('.webp') && !url.includes('_tablet') && !url.includes('_mobile')) {
+    if (effectiveWidth <= 640) {
+      return url.replace('.webp', '_mobile.webp');
+    }
+    if (effectiveWidth <= 1200) {
+      return url.replace('.webp', '_tablet.webp');
+    }
+    return url.replace('.webp', '_desktop.webp');
+  }
+
   if (url.includes('images.unsplash.com')) {
     const cleanUrl = url.split('?')[0];
     return `${cleanUrl}?auto=format&fit=crop&w=${Math.max(effectiveWidth, 960)}&q=88&dpr=${dpr >= 2 ? '2' : '1'}`;

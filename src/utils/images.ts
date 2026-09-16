@@ -12,25 +12,20 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
   const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 2, 3) : 2;
   const effectiveWidth = Math.round(targetWidth * (dpr >= 1.5 ? 1.5 : 1.0));
 
-  if (url.includes('_desktop.webp')) {
+  // 1. Local default category WebP assets have full responsive sets
+  if (url.startsWith('/defaults/events/')) {
+    const base = url.replace(/(_desktop|_tablet|_mobile)\.webp$/, '.webp');
     if (effectiveWidth <= 640) {
-      return url.replace('_desktop.webp', '_mobile.webp');
+      return base.replace('.webp', '_mobile.webp');
     }
     if (effectiveWidth <= 1200) {
-      return url.replace('_desktop.webp', '_tablet.webp');
+      return base.replace('.webp', '_tablet.webp');
     }
-    return url;
+    return base.replace('.webp', '_desktop.webp');
   }
 
-  if (url.startsWith('/defaults/events/') && url.endsWith('.webp') && !url.includes('_tablet') && !url.includes('_mobile')) {
-    if (effectiveWidth <= 640) {
-      return url.replace('.webp', '_mobile.webp');
-    }
-    if (effectiveWidth <= 1200) {
-      return url.replace('.webp', '_tablet.webp');
-    }
-    return url.replace('.webp', '_desktop.webp');
-  }
+  // 2. Cloudflare R2 uploaded images only have canonical _desktop.webp files in storage.
+  // We keep the URL as-is so it does not 404.
 
   if (url.includes('images.unsplash.com')) {
     const cleanUrl = url.split('?')[0];

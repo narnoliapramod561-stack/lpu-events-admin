@@ -39,7 +39,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
       const [eventsRes, catsRes, trendingRes] = await Promise.all([
         supabase
           .from('events')
-          .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, status, category_id, subcategory_id, organization_id, created_at, updated_at, organizations(id, name), categories(id, name), event_content_sections(id, section_type, title, content, sort_order)')
+          .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, media_assets:banner_media_id(id, object_key, bucket), status, category_id, subcategory_id, organization_id, created_at, updated_at, organizations(id, name), categories(id, name), event_content_sections(id, section_type, title, content, sort_order)')
           .order('start_at', { ascending: isPastMode ? false : true }),
         supabase.from('categories').select('id, name, key').eq('is_active', true),
         supabase.from('trending_events').select('event_id')

@@ -129,7 +129,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
 
       const { data: eventsData, error: eventsErr } = await supabase
         .from('events')
-        .select('id, name, description, start_at, end_at, venue_name, banner_media_id, organizations(name)')
+        .select('id, name, description, start_at, end_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket), organizations(name)')
         .eq('status', 'PUBLISHED')
         .is('deleted_at', null)
         .lte('start_at', todayEnd)

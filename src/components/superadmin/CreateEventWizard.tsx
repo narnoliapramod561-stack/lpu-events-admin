@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
-import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString } from '@lpu-events/shared';
+import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage } from '@lpu-events/shared';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -235,17 +235,55 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     const init = async () => {
       if (categories.length === 0) setLoading(true);
       try {
-        const [catsRes, orgsRes] = await Promise.all([
-          lpuClient.fetchCategories(),
+        // Query Supabase directly for categories and subcategories
+        const [catsRes, subsRes, orgsRes] = await Promise.all([
+          supabase.from('categories').select('id, key, name, is_active, sort_order').eq('is_active', true).order('sort_order'),
+          supabase.from('subcategories').select('id, category_id, key, name, is_active, sort_order').eq('is_active', true).order('sort_order'),
           supabase.from('organizations').select('id, name').eq('is_active', true).order('name')
         ]);
 
         if (!mounted) return;
 
+        let cats: any[] = [];
         if (catsRes.data && catsRes.data.length > 0) {
-          const cats = catsRes.data;
+          const subMap: Record<string, any[]> = {};
+          (subsRes.data || []).forEach((s: any) => {
+            if (!subMap[s.category_id]) subMap[s.category_id] = [];
+            subMap[s.category_id].push(s);
+          });
+          cats = catsRes.data.map((c: any) => ({
+            ...c,
+            subcategories: subMap[c.id] || []
+          }));
+        } else {
+          // Edge fallback if direct Supabase query returned no categories
+          const edgeRes = await lpuClient.fetchCategories();
+          if (edgeRes.data && edgeRes.data.length > 0) {
+            cats = edgeRes.data;
+          }
+        }
+
+        if (cats.length > 0) {
           setCategories(cats);
-          setCategoryId((prev) => prev || cats[0].id);
+          setCategoryId((prev) => {
+            if (editEventId && prev) {
+              return prev;
+            }
+            const initialCatId = prev || (editEventId ? '' : cats[0].id);
+            const currentCat = cats.find((c: any) => c.id === initialCatId) || cats[0];
+            const rawSubs = currentCat?.subcategories || [];
+            const sorted = [...rawSubs].sort((a: any, b: any) => {
+              const aIsOther = a.name.toLowerCase().includes('other') || a.name.toLowerCase().includes('miscellaneous');
+              const bIsOther = b.name.toLowerCase().includes('other') || b.name.toLowerCase().includes('miscellaneous');
+              if (aIsOther && !bIsOther) return 1;
+              if (!aIsOther && bIsOther) return -1;
+              return (a.sort_order || 0) - (b.sort_order || 0);
+            });
+            if (sorted.length > 0 && !editEventId) {
+              setSubcategoryId((prevSub) => prevSub || sorted[0].id);
+            }
+            return initialCatId;
+          });
         }
 
         if (orgsRes.data && orgsRes.data.length > 0) {
@@ -281,6 +319,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       return (a.sort_order || 0) - (b.sort_order || 0);
     });
   }, [rawSubcategories]);
+
+  // Reactive safeguard: Ensure subcategoryId is selected whenever subcategories become available
+  useEffect(() => {
+    if (!editEventId && subcategories.length > 0) {
+      if (!subcategoryId || !subcategories.some((s: any) => s.id === subcategoryId)) {
+        setSubcategoryId(subcategories[0].id);
+      }
+    }
+  }, [editEventId, subcategories, subcategoryId]);
 
   // Keep subcategoryId aligned when category changes
   const handleCategoryChange = (newCatId: string) => {
@@ -368,8 +415,26 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     const loadEvent = async () => {
       setLoading(true);
       try {
-        const { data, error: err } = await lpuClient.fetchEventDetails(editEventId);
-        if (err || !data) throw err || new Error('Event not found');
+        let data: any = null;
+        try {
+          const edgeRes = await lpuClient.fetchEventDetails(editEventId);
+          if (edgeRes?.data) {
+            data = edgeRes.data;
+          }
+        } catch {
+          // Fall through to direct Supabase query
+        }
+
+        if (!data) {
+          const { data: sbData, error: sbErr } = await supabase
+            .from('events')
+            .select('*, organizations(*), categories(*), event_content_sections(*), media_assets:banner_media_id(id, object_key, bucket)')
+            .eq('id', editEventId)
+            .maybeSingle();
+          if (sbErr || !sbData) throw sbErr || new Error('Event not found');
+          data = sbData;
+        }
+
         setName(data.name || '');
         setDescription(data.description || '');
         setOrgId(data.organization_id || '');
@@ -377,6 +442,11 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setSubcategoryId(data.subcategory_id || '');
         if (data.banner_media_id) {
           setBannerMediaId(data.banner_media_id);
+        }
+        if (data.banner_url) {
+          setBannerUrl(data.banner_url);
+        } else if (data.media_assets) {
+          setBannerUrl(getOptimizedImage(data, 'event-banner'));
         }
         if (data.start_at) {
           const s = new Date(data.start_at);
@@ -727,13 +797,18 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                   <select
                     value={categoryId}
                     onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm"
+                    disabled={categories.length === 0}
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm disabled:opacity-50"
                   >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {categories.length === 0 ? (
+                      <option value="">Loading categories...</option>
+                    ) : (
+                      categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -747,11 +822,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                     disabled={subcategories.length === 0}
                     className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm disabled:opacity-50"
                   >
-                    {subcategories.map((s: any) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
+                    {subcategories.length === 0 ? (
+                      <option value="">No subcategories available</option>
+                    ) : (
+                      subcategories.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>

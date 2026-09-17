@@ -24,8 +24,13 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
     return base.replace('.webp', '_desktop.webp');
   }
 
-  // 2. Cloudflare R2 uploaded images only have canonical _desktop.webp files in storage.
-  // We keep the URL as-is so it does not 404.
+  // 2. Multi-slot responsive derivatives for Cloudflare R2
+  if (url.includes('_card.webp') && effectiveWidth <= 800) {
+    return url.replace('_card.webp', '_card_mobile.webp');
+  }
+  if (url.includes('_banner.webp') && effectiveWidth <= 960) {
+    return url.replace('_banner.webp', '_banner_mobile.webp');
+  }
 
   if (url.includes('images.unsplash.com')) {
     const cleanUrl = url.split('?')[0];

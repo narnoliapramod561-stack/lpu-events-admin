@@ -48,6 +48,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   const [bannerUrl, setBannerUrl] = useState('');
   const [bannerFileName, setBannerFileName] = useState('');
   const [bannerMediaId, setBannerMediaId] = useState<string | null>(null);
+  const [slotPreviews, setSlotPreviews] = useState<Record<string, string> | null>(null);
+  const [activeSlotPreview, setActiveSlotPreview] = useState<'card' | 'banner' | 'thumb'>('card');
   const [optimizingImage, setOptimizingImage] = useState(false);
   const [uploadProgressStep, setUploadProgressStep] = useState<string>('');
   const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
@@ -388,6 +390,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
       setBannerUrl(result.dataUrl || result.publicUrl);
       setBannerMediaId(result.mediaId);
+      if (result.slots) {
+        setSlotPreviews({
+          card: result.slots.card?.dataUrl || result.slots.card?.publicUrl || '',
+          banner: result.slots.banner?.dataUrl || result.slots.banner?.publicUrl || '',
+          thumb: result.slots.thumb?.dataUrl || result.slots.thumb?.publicUrl || ''
+        });
+      } else {
+        setSlotPreviews(null);
+      }
       setImageStats({
         originalSize: result.originalSizeBytes,
         optimizedSize: result.fileSizeBytes,
@@ -402,6 +413,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       setBannerUrl('');
       setBannerMediaId(null);
       setBannerFileName('');
+      setSlotPreviews(null);
     } finally {
       setOptimizingImage(false);
       setUploadProgressStep('');
@@ -931,8 +943,48 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                   </div>
                 ) : bannerUrl ? (
                   <div className="w-full rounded-2xl overflow-hidden border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] relative group">
-                    <div className="h-44 sm:h-52 w-full overflow-hidden relative">
-                      <img src={bannerUrl} alt="Event Banner Preview" className="w-full h-full object-cover" />
+                    {/* Multi-Slot Preview Selector */}
+                    {slotPreviews && (
+                      <div className="p-2.5 bg-[#fee3d8]/80 dark:bg-[#2d1e17] border-b border-[#e2bfb0]/80 dark:border-[#5a4136] flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#5a4136] dark:text-[#ffb693] px-1 font-heading">
+                            Auto Synthesized Slots:
+                          </span>
+                          {(['card', 'banner', 'thumb'] as const).map((slotKey) => (
+                            <button
+                              key={slotKey}
+                              type="button"
+                              onClick={() => setActiveSlotPreview(slotKey)}
+                              className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                activeSlotPreview === slotKey
+                                  ? 'bg-[#ff6b00] text-white shadow-sm'
+                                  : 'bg-white/80 dark:bg-black/40 text-[#5a4136] dark:text-[#ffede6] hover:bg-white dark:hover:bg-black/60 border border-[#e2bfb0]/40 dark:border-white/10'
+                              }`}
+                            >
+                              {slotKey === 'card' ? 'Event Card (16:9)' : slotKey === 'banner' ? 'Details Banner (2.4:1)' : 'Thumbnail (1:1)'}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Full Cover • Stretched Edge-to-Edge
+                        </span>
+                      </div>
+                    )}
+
+                    <div className={`w-full overflow-hidden relative flex items-center justify-center bg-black/90 ${
+                      activeSlotPreview === 'thumb'
+                        ? 'h-52 max-w-[208px] mx-auto rounded-xl my-2 border border-white/10'
+                        : activeSlotPreview === 'banner'
+                        ? 'h-44 sm:h-52'
+                        : 'h-48 sm:h-60'
+                    }`}>
+                      <img
+                        src={(slotPreviews && slotPreviews[activeSlotPreview]) || bannerUrl}
+                        alt="Event Banner Preview"
+                        className="w-full h-full object-fill"
+                        style={{ objectFit: 'fill' }}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                       {imageStats && (
                         <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-emerald-400 border border-emerald-500/30">
@@ -972,6 +1024,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                             setBannerUrl('');
                             setBannerFileName('');
                             setBannerMediaId(null);
+                            setSlotPreviews(null);
                             setImageStats(null);
                           }}
                           className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 transition-colors cursor-pointer flex items-center gap-1"

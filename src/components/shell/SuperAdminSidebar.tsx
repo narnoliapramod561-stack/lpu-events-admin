@@ -26,10 +26,12 @@ export type AdminNavTab =
 interface SidebarProps {
   activeTab: AdminNavTab;
   setActiveTab: (tab: AdminNavTab) => void;
+  userEmail?: string;
+  displayName?: string;
   onLogout?: () => void;
 }
 
-export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) => {
+export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userEmail, displayName, onLogout }) => {
   const [pendingCount, setPendingCount] = useState<number>(0);
 
   useEffect(() => {
@@ -167,8 +169,23 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
         ))}
       </nav>
 
-      {/* Logout Footer */}
-      <div className="px-3 pt-3 border-t border-[#e2bfb0]/40 mt-auto">
+      {/* User Info & Logout Footer */}
+      <div className="px-3 pt-3 border-t border-[#e2bfb0]/40 mt-auto space-y-2">
+        {userEmail && (
+          <div className="px-3 py-2 rounded-lg bg-[#fee3d8]/60 dark:bg-[#3d2d26]/60 border border-[#e2bfb0]/50 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#ff6b00] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+              {(displayName || userEmail).charAt(0).toUpperCase()}
+            </div>
+            <div className="overflow-hidden min-w-0 flex-1 text-left">
+              <p className="text-xs font-bold text-[#261812] dark:text-[#ffede6] truncate leading-tight">
+                {displayName || 'Super Admin'}
+              </p>
+              <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] truncate leading-tight mt-0.5" title={userEmail}>
+                {userEmail}
+              </p>
+            </div>
+          </div>
+        )}
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-[#ba1a1a] hover:bg-[#ffdad6]/40 transition-colors"

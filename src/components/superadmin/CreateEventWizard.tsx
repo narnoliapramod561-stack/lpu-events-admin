@@ -27,6 +27,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
   // Form state - 4 distinct schedule options: Start Date, End Date, Start Time, End Time
   const [orgId, setOrgId] = useState<string>('');
+  const [orgMode, setOrgMode] = useState<'SELECT' | 'MANUAL'>('SELECT');
+  const [manualOrgName, setManualOrgName] = useState<string>('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -92,8 +94,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.name || draft.description || draft.startDate || draft.venueName || draft.orgId) {
+        if (draft.name || draft.description || draft.startDate || draft.venueName || draft.orgId || draft.manualOrgName) {
           if (draft.orgId) setOrgId(draft.orgId);
+          if (draft.orgMode) setOrgMode(draft.orgMode);
+          if (draft.manualOrgName) setManualOrgName(draft.manualOrgName);
           if (draft.name) setName(draft.name);
           if (draft.description) setDescription(draft.description);
           if (draft.categoryId) setCategoryId(draft.categoryId);
@@ -128,10 +132,12 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   useEffect(() => {
     if (editEventId) return;
     // Only save if there's actual content
-    if (!name && !description && !startDate && !venueName && !orgId && sections.length <= 1) return;
+    if (!name && !description && !startDate && !venueName && !orgId && !manualOrgName && sections.length <= 1) return;
 
     const draftData = {
       orgId,
+      orgMode,
+      manualOrgName,
       name,
       description,
       categoryId,
@@ -164,6 +170,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   }, [
     editEventId,
     orgId,
+    orgMode,
+    manualOrgName,
     name,
     description,
     categoryId,
@@ -205,6 +213,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       localStorage.removeItem(DRAFT_KEY);
     } catch (e) {}
     setName('');
+    setOrgId('');
+    setOrgMode('SELECT');
+    setManualOrgName('');
     setDescription('');
     setStartDate('');
     setEndDate('');
@@ -450,6 +461,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setName(data.name || '');
         setDescription(data.description || '');
         setOrgId(data.organization_id || '');
+        if (data.organizations?.name) {
+          setManualOrgName(data.organizations.name);
+        }
         setCategoryId(data.category_id || '');
         setSubcategoryId(data.subcategory_id || '');
         if (data.banner_media_id) {
@@ -504,12 +518,26 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setError('Please enter an event name.');
         return false;
       }
+      if (profile?.is_super_admin) {
+        if (orgMode === 'MANUAL') {
+          if (!manualOrgName.trim()) {
+            setError('Please enter the host club / organization name.');
+            return false;
+          }
+        } else {
+          if (!orgId) {
+            setError('Please select an organizing entity.');
+            return false;
+          }
+        }
+      } else {
+        if (!orgId && !profile?.org_id) {
+          setError('Please select an organizing entity.');
+          return false;
+        }
+      }
       if (!categoryId) {
         setError('Please select a primary Category.');
-        return false;
-      }
-      if (!orgId && !profile?.org_id) {
-        setError('Please select an organizing entity.');
         return false;
       }
     }
@@ -582,13 +610,82 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     setError('');
     setSuccess('');
 
+    let effectiveOrgId = orgId || profile?.org_id || organizations[0]?.id;
+
+    if (profile?.is_super_admin && orgMode === 'MANUAL') {
+      const cleanOrgName = manualOrgName.trim();
+      if (!cleanOrgName) {
+        setError('Please enter the host club / organization name.');
+        setSaving(false);
+        return;
+      }
+
+      // Check if matches an existing organization in memory (case-insensitive)
+      const existingMatch = organizations.find(
+        (o) => o.name.trim().toLowerCase() === cleanOrgName.toLowerCase()
+      );
+
+      if (existingMatch?.id) {
+        effectiveOrgId = existingMatch.id;
+      } else {
+        try {
+          // Check DB to see if it already exists
+          const { data: dbExisting } = await supabase
+            .from('organizations')
+            .select('id, name')
+            .ilike('name', cleanOrgName)
+            .maybeSingle();
+
+          if (dbExisting?.id) {
+            effectiveOrgId = dbExisting.id;
+          } else {
+            // Create new organization
+            const { data: createdOrg, error: createErr } = await supabase
+              .from('organizations')
+              .insert({
+                name: cleanOrgName,
+                is_active: true
+              })
+              .select('id, name')
+              .single();
+
+            if (createErr) {
+              if (createErr.code === '23505') {
+                const { data: retryOrg } = await supabase
+                  .from('organizations')
+                  .select('id, name')
+                  .ilike('name', cleanOrgName)
+                  .maybeSingle();
+                if (retryOrg?.id) {
+                  effectiveOrgId = retryOrg.id;
+                } else {
+                  throw new Error('An organization with this name already exists.');
+                }
+              } else {
+                throw new Error(`Failed to create club "${cleanOrgName}": ${createErr.message}`);
+              }
+            } else if (createdOrg?.id) {
+              effectiveOrgId = createdOrg.id;
+              setOrganizations((prev) => [createdOrg, ...prev]);
+              setOrgId(createdOrg.id);
+            }
+          }
+        } catch (orgErr: any) {
+          console.error('Error ensuring organization:', orgErr);
+          setError(orgErr.message || 'Failed to resolve organization.');
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
     const startIso = new Date(`${startDate}T${startTime}`).toISOString();
     const endIso = new Date(`${endDate}T${endTime}`).toISOString();
 
     const isExternal = pricingType === 'PAID' || !!externalUrl.trim();
 
     const payload: PublishEventPayload = {
-      organization_id: orgId || profile?.org_id || organizations[0]?.id,
+      organization_id: effectiveOrgId,
       name: name.trim(),
       description: description.trim() || name.trim(),
       category_id: categoryId,
@@ -776,27 +873,90 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                 />
               </div>
 
-              {/* Organization Picker (Super Admin dropdown / Organizer display) */}
+              {/* Organization Picker (Super Admin dropdown / manual entry / Organizer display) */}
               <div>
-                <label className="block text-xs font-bold text-[#261812] dark:text-[#ffede6] uppercase tracking-wider mb-1.5">
-                  Host Organization / Club *
-                </label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
+                  <label className="block text-xs font-bold text-[#261812] dark:text-[#ffede6] uppercase tracking-wider">
+                    Host Organization / Club *
+                  </label>
+                  {profile?.is_super_admin && (
+                    <div className="inline-flex items-center bg-[#fee3d8]/70 dark:bg-[#3d2d26] p-0.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136]">
+                      <button
+                        type="button"
+                        onClick={() => setOrgMode('SELECT')}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                          orgMode === 'SELECT'
+                            ? 'bg-white dark:bg-[#261812] text-[#ff6b00] shadow-sm'
+                            : 'text-[#5a4136] dark:text-[#ffb693] hover:text-[#ff6b00]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">format_list_bulleted</span>
+                        <span>Select Existing</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOrgMode('MANUAL')}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                          orgMode === 'MANUAL'
+                            ? 'bg-white dark:bg-[#261812] text-[#ff6b00] shadow-sm'
+                            : 'text-[#5a4136] dark:text-[#ffb693] hover:text-[#ff6b00]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">edit_square</span>
+                        <span>Enter Manually</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {profile?.is_super_admin ? (
-                  <select
-                    value={orgId}
-                    onChange={(e) => setOrgId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm font-medium"
-                  >
-                    {organizations.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
+                  orgMode === 'SELECT' ? (
+                    <div>
+                      <select
+                        value={orgId}
+                        onChange={(e) => setOrgId(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm font-medium"
+                      >
+                        {organizations.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1">
+                        Select from existing registered clubs, or click <strong>Enter Manually</strong> above to type a custom name.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-[#ff6b00]">
+                          corporate_fare
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. Robotics Innovation Club, Dance Society, etc."
+                          value={manualOrgName}
+                          onChange={(e) => setManualOrgName(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm font-medium"
+                          required
+                        />
+                      </div>
+                      <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1">
+                        Type any custom club / organization name. If not already registered, it will be automatically created.
+                      </p>
+                    </div>
+                  )
                 ) : (
-                  <div className="px-4 py-2.5 rounded-lg bg-[#fff8f6] dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-sm font-bold text-[#261812] dark:text-[#ffede6] flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-[#ff6b00]">corporate_fare</span>
-                    <span>{profile?.org_name || 'My Organization'}</span>
+                  <div>
+                    <div className="px-4 py-2.5 rounded-lg bg-[#fff8f6] dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-sm font-bold text-[#261812] dark:text-[#ffede6] flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#ff6b00]">corporate_fare</span>
+                      <span>{profile?.org_name || 'My Organization'}</span>
+                      <span className="ml-auto text-[11px] text-[#8c6b5d] dark:text-[#ffb693] font-normal flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">lock</span>
+                        Locked to your organization
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1760,7 +1920,12 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                     {name || 'Untitled Event'}
                   </h4>
                   <p className="text-[#5a4136] dark:text-[#ffb693] mt-0.5">
-                    Hosted by: <strong className="text-[#ff6b00]">{organizations.find((o) => o.id === orgId)?.name || profile?.org_name || 'Organization'}</strong>
+                    Hosted by:{' '}
+                    <strong className="text-[#ff6b00]">
+                      {profile?.is_super_admin && orgMode === 'MANUAL'
+                        ? (manualOrgName.trim() || 'Custom Organization')
+                        : (organizations.find((o) => o.id === orgId)?.name || profile?.org_name || 'Organization')}
+                    </strong>
                   </p>
                 </div>
                 <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold rounded-full">

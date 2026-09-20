@@ -66,10 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       if (currentSession?.user) {
-        if (event === 'SIGNED_IN' && !initialAuthDoneRef.current) {
+        if (event === 'SIGNED_IN') {
           setLoading(true);
           await fetchProfile(currentSession.user.id);
-          initialAuthDoneRef.current = true;
           setLoading(false);
           trackAdminAction('auth_login_success', { success: true });
           await supabase.rpc('log_security_event', { p_action: 'LOGIN', p_status: 'SUCCESS' });
@@ -82,6 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         if (event === 'SIGNED_OUT') {
           initialAuthDoneRef.current = false;
+          try {
+            sessionStorage.removeItem('lpu_organizer_active_tab');
+            sessionStorage.removeItem('lpu_superadmin_active_tab');
+          } catch (e) {}
           trackAdminAction('auth_logout', { success: true });
           await supabase.rpc('log_security_event', { p_action: 'LOGOUT', p_status: 'SUCCESS' });
         }
@@ -129,6 +132,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      sessionStorage.removeItem('lpu_organizer_active_tab');
+      sessionStorage.removeItem('lpu_superadmin_active_tab');
+    } catch (e) {}
+    setProfile(null);
+    setSession(null);
     await supabase.auth.signOut();
   };
 

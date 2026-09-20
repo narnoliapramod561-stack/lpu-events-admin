@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SuperAdminSidebar, AdminNavTab } from './components/shell/SuperAdminSidebar';
 import { AdminHeader } from './components/shell/AdminHeader';
 import { DashboardOverview } from './components/superadmin/DashboardOverview';
@@ -44,7 +44,29 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
   };
 
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('lpu_admin_theme');
+      if (saved) return saved === 'dark';
+      return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        localStorage.setItem('lpu_admin_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+        localStorage.setItem('lpu_admin_theme', 'light');
+      }
+    } catch {}
+  }, [darkMode]);
 
   const handleStartCreate = () => {
     setEditingEventId(null);
@@ -126,7 +148,7 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className={`min-h-screen flex bg-[#fff8f6] text-[#261812] font-['Inter'] ${darkMode ? 'dark bg-[#1a120e] text-[#ffede6]' : ''}`}>
+    <div className={`min-h-screen flex font-['Inter'] transition-colors duration-300 ${darkMode ? 'dark bg-[#08090f] text-[#f8fafc]' : 'bg-[#fff8f6] text-[#261812]'}`}>
       {/* Docked Sidebar */}
       <SuperAdminSidebar 
         activeTab={activeTab} 

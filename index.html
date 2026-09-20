@@ -32,6 +32,20 @@
     <!-- Google Material Symbols Outlined -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
 
+    <!-- Theme Initialization -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('lpu_admin_theme');
+          if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Tailwind CSS with custom styling -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>

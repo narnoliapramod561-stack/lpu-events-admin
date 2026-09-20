@@ -45,28 +45,28 @@
 }
 
 .dark {
-  --bg-base: #1a120e;
-  --bg-surface: #261812;
-  --bg-surface-raised: #3d2d26;
-  --bg-surface-active: #4d3830;
-  --bg-card: #261812;
-  --bg-input: #1a120e;
+  --bg-base: #08090f;
+  --bg-surface: #0a0d14;
+  --bg-surface-raised: #141824;
+  --bg-surface-active: #1c2233;
+  --bg-card: #0e111a;
+  --bg-input: #090c13;
   
-  --border-subtle: #5a4136;
-  --border-medium: #705244;
+  --border-subtle: #1e2536;
+  --border-medium: #2a344d;
   --border-focus: #ff6b00;
   
   --accent-primary: #ff6b00;
-  --accent-primary-hover: #a04100;
-  --accent-primary-subtle: rgba(255, 107, 0, 0.2);
-  --accent-glow: 0 0 20px rgba(255, 107, 0, 0.35);
+  --accent-primary-hover: #ff8533;
+  --accent-primary-subtle: rgba(255, 107, 0, 0.18);
+  --accent-glow: 0 0 24px rgba(255, 107, 0, 0.35);
   
   --accent-purple: #ff6b00;
-  --accent-purple-subtle: rgba(255, 107, 0, 0.2);
+  --accent-purple-subtle: rgba(255, 107, 0, 0.18);
   
-  --text-main: #ffede6;
-  --text-muted: #ffb693;
-  --text-dim: #d4a896;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
 
   --success: #22c55e;
   --success-subtle: rgba(34, 197, 94, 0.18);
@@ -96,6 +96,24 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   overscroll-behavior: none;
+}
+
+.dark body,
+.dark .admin-shell,
+.dark [class*="min-h-screen"] {
+  background-color: #08090f !important;
+  background-image:
+    /* 1. Molten Solar Corona — warm amber top glow */
+    radial-gradient(ellipse 70% 40% at 50% -5%, rgba(255, 140, 50, 0.20), rgba(255, 107, 0, 0.07) 45%, transparent 72%),
+    /* 2. Deep Navy-Wine Left Vignette */
+    radial-gradient(circle 650px at 8% 30%, rgba(30, 20, 60, 0.50), transparent 65%),
+    /* 3. Warm Amber Side Flare */
+    radial-gradient(circle 480px at 92% 18%, rgba(255, 120, 40, 0.12), transparent 55%),
+    /* 4. Chromatic Indigo Accent */
+    radial-gradient(circle 520px at 20% 65%, rgba(79, 70, 229, 0.06), transparent 55%),
+    /* 5. Bottom Horizon Ember */
+    radial-gradient(ellipse 85% 28% at 50% 102%, rgba(255, 107, 0, 0.10), rgba(180, 80, 20, 0.03) 50%, transparent 70%) !important;
+  color: #f8fafc !important;
 }
 
 #root {
@@ -225,7 +243,8 @@ body {
 }
 
 .dark .admin-header {
-  background-color: rgba(26, 18, 14, 0.92);
+  background-color: rgba(10, 13, 20, 0.92);
+  border-bottom-color: var(--border-subtle);
 }
 
 .admin-header-left {
@@ -725,4 +744,164 @@ body {
   .hidden-on-mobile {
     display: none !important;
   }
+}
+
+/* =========================================================
+   STUDENT-STYLE TRUE MIDNIGHT BLACK OVERRIDES FOR ADMIN
+   Replaces legacy muddy brown/peach colors with crisp midnight black & cool slate
+   ========================================================= */
+
+/* Direct class overrides for Tailwind arbitrary hex values in dark mode */
+.dark [class*="bg-[#1a120e]"],
+.dark [class*="bg-[#1a120e]/"],
+.dark [class*="hover:bg-[#1a120e]"]:hover {
+  background-color: #08090f !important;
+}
+
+.dark [class*="bg-[#261812]"],
+.dark [class*="bg-[#261812]/"],
+.dark [class*="hover:bg-[#261812]"]:hover {
+  background-color: #0e111a !important;
+}
+
+.dark [class*="bg-[#3d2d26]"],
+.dark [class*="bg-[#3d2d26]/"],
+.dark [class*="hover:bg-[#3d2d26]"]:hover {
+  background-color: #161b26 !important;
+}
+
+.dark [class*="bg-[#4d3830]"],
+.dark [class*="bg-[#4d3830]/"],
+.dark [class*="hover:bg-[#4d3830]"]:hover {
+  background-color: #1f2637 !important;
+}
+
+.dark [class*="border-[#e2bfb0]"],
+.dark [class*="border-[#e2bfb0]/"],
+.dark [class*="border-[#5a4136]"],
+.dark [class*="border-[#5a4136]/"] {
+  border-color: #1e2536 !important;
+}
+
+.dark [class*="border-[#705244]"],
+.dark [class*="border-[#705244]/"] {
+  border-color: #2a344d !important;
+}
+
+.dark [class*="text-[#ffede6]"],
+.dark [class*="text-[#ffede6]/"],
+.dark [class*="text-[#261812]"] {
+  color: #f8fafc !important;
+}
+
+.dark [class*="text-[#ffb693]"],
+.dark [class*="text-[#ffb693]/"],
+.dark [class*="text-[#5a4136]"],
+.dark [class*="text-[#5a4136]/"] {
+  color: #94a3b8 !important;
+}
+
+.dark [class*="text-[#d4a896]"],
+.dark [class*="text-[#d4a896]/"] {
+  color: #64748b !important;
+}
+
+.dark [class*="hover:text-[#ffb693]"]:hover,
+.dark [class*="hover:text-[#ffede6]"]:hover {
+  color: #ffffff !important;
+}
+
+/* Sidebar & Header Glass */
+.dark aside,
+.dark .admin-sidebar {
+  background-color: #0a0d14 !important;
+  border-right-color: #1e2536 !important;
+}
+
+.dark header,
+.dark .admin-header {
+  background-color: rgba(10, 13, 20, 0.90) !important;
+  border-bottom-color: #1e2536 !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+/* Modals, Dialogs, Cards & Tables */
+.dark .stat-card,
+.dark .card-box,
+.dark .modal-dialog {
+  background-color: #0e111a !important;
+  border-color: #1e2536 !important;
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .card-box-header,
+.dark .modal-header,
+.dark .modal-footer,
+.dark .stat-card-icon-box {
+  background-color: #141824 !important;
+  border-color: #1e2536 !important;
+}
+
+.dark .modern-table th {
+  background-color: #141824 !important;
+  border-color: #1e2536 !important;
+  color: #94a3b8 !important;
+}
+
+.dark .modern-table td {
+  border-color: #1e2536 !important;
+  color: #f8fafc !important;
+}
+
+.dark .modern-table tr:hover td {
+  background-color: #141824 !important;
+}
+
+/* Inputs & Form Fields */
+.dark .form-input,
+.dark .form-select,
+.dark .form-textarea,
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #090c13 !important;
+  border-color: #1e2536 !important;
+  color: #f8fafc !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+.dark .form-input:focus,
+.dark .form-select:focus,
+.dark .form-textarea:focus,
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #ff6b00 !important;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.25) !important;
+}
+
+/* Secondary & Ghost Buttons */
+.dark .btn-secondary {
+  background-color: #141824 !important;
+  border-color: #1e2536 !important;
+  color: #f8fafc !important;
+}
+
+.dark .btn-secondary:hover:not(:disabled) {
+  background-color: #1c2233 !important;
+  border-color: #2a344d !important;
+}
+
+.dark .btn-ghost {
+  color: #94a3b8 !important;
+}
+
+.dark .btn-ghost:hover:not(:disabled) {
+  background-color: #141824 !important;
+  color: #ffffff !important;
 }

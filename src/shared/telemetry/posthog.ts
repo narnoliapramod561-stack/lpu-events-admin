@@ -3,7 +3,7 @@
 
 import posthog from 'posthog-js';
 import { PostHogConfig, AppIdentifier } from './types';
-import { scrubSensitiveData } from './sentry';
+import { scrubSensitiveData } from './scrub';
 
 let isInitialized = false;
 let activeApp: AppIdentifier = 'student';

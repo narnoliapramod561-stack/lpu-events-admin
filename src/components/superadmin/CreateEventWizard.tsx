@@ -304,6 +304,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
           setOrganizations(orgs);
           if (profile?.org_id) {
             setOrgId(profile.org_id);
+          } else if (profile?.is_super_admin) {
+            // For super admin, do NOT force default to orgs[0].id so it starts optional
+            setOrgId((prev) => prev || '');
           } else {
             setOrgId((prev) => prev || orgs[0].id);
           }
@@ -518,19 +521,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setError('Please enter an event name.');
         return false;
       }
-      if (profile?.is_super_admin) {
-        if (orgMode === 'MANUAL') {
-          if (!manualOrgName.trim()) {
-            setError('Please enter the host club / organization name.');
-            return false;
-          }
-        } else {
-          if (!orgId) {
-            setError('Please select an organizing entity.');
-            return false;
-          }
-        }
-      } else {
+      if (!profile?.is_super_admin) {
         if (!orgId && !profile?.org_id) {
           setError('Please select an organizing entity.');
           return false;
@@ -555,23 +546,26 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setError('Please specify an event Start Time.');
         return false;
       }
-      if (!endDate) {
-        setError('Please select an event End Date.');
-        return false;
-      }
-      if (endDate < startDate) {
+      // End Date and End Time are now OPTIONAL
+      if (endDate && endDate < startDate) {
         setError('Event End Date cannot be before the Start Date.');
         return false;
       }
-      if (!endTime) {
-        setError('Please specify an event End Time.');
-        return false;
-      }
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${endDate}T${endTime}`);
-      if (endDateTime <= startDateTime) {
-        setError('Event end date & time must be strictly after the start date & time.');
-        return false;
+      if (endDate && endTime) {
+        const startDateTime = new Date(`${startDate}T${startTime}`);
+        const endDateTime = new Date(`${endDate}T${endTime}`);
+        if (endDateTime <= startDateTime) {
+          setError('Event end date & time must be strictly after the start date & time.');
+          return false;
+        }
+      } else if (!endDate && endTime) {
+        // Same day event with only end time specified
+        const startDateTime = new Date(`${startDate}T${startTime}`);
+        const endDateTime = new Date(`${startDate}T${endTime}`);
+        if (endDateTime <= startDateTime) {
+          setError('Event end time must be after the start time on the same day.');
+          return false;
+        }
       }
     }
     if (step === 3) {
@@ -610,82 +604,142 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     setError('');
     setSuccess('');
 
-    let effectiveOrgId = orgId || profile?.org_id || organizations[0]?.id;
+    let effectiveOrgId = orgId || profile?.org_id;
 
-    if (profile?.is_super_admin && orgMode === 'MANUAL') {
-      const cleanOrgName = manualOrgName.trim();
-      if (!cleanOrgName) {
-        setError('Please enter the host club / organization name.');
-        setSaving(false);
-        return;
-      }
+    if (profile?.is_super_admin) {
+      if (orgMode === 'MANUAL' && manualOrgName.trim()) {
+        const cleanOrgName = manualOrgName.trim();
 
-      // Check if matches an existing organization in memory (case-insensitive)
-      const existingMatch = organizations.find(
-        (o) => o.name.trim().toLowerCase() === cleanOrgName.toLowerCase()
-      );
+        // Check if matches an existing organization in memory (case-insensitive)
+        const existingMatch = organizations.find(
+          (o) => o.name.trim().toLowerCase() === cleanOrgName.toLowerCase()
+        );
 
-      if (existingMatch?.id) {
-        effectiveOrgId = existingMatch.id;
-      } else {
-        try {
-          // Check DB to see if it already exists
-          const { data: dbExisting } = await supabase
-            .from('organizations')
-            .select('id, name')
-            .ilike('name', cleanOrgName)
-            .maybeSingle();
-
-          if (dbExisting?.id) {
-            effectiveOrgId = dbExisting.id;
-          } else {
-            // Create new organization
-            const { data: createdOrg, error: createErr } = await supabase
+        if (existingMatch?.id) {
+          effectiveOrgId = existingMatch.id;
+        } else {
+          try {
+            // Check DB to see if it already exists
+            const { data: dbExisting } = await supabase
               .from('organizations')
-              .insert({
-                name: cleanOrgName,
-                is_active: true
-              })
               .select('id, name')
-              .single();
+              .ilike('name', cleanOrgName)
+              .maybeSingle();
 
-            if (createErr) {
-              if (createErr.code === '23505') {
-                const { data: retryOrg } = await supabase
-                  .from('organizations')
-                  .select('id, name')
-                  .ilike('name', cleanOrgName)
-                  .maybeSingle();
-                if (retryOrg?.id) {
-                  effectiveOrgId = retryOrg.id;
+            if (dbExisting?.id) {
+              effectiveOrgId = dbExisting.id;
+            } else {
+              // Create new organization
+              const { data: createdOrg, error: createErr } = await supabase
+                .from('organizations')
+                .insert({
+                  name: cleanOrgName,
+                  is_active: true
+                })
+                .select('id, name')
+                .single();
+
+              if (createErr) {
+                if (createErr.code === '23505') {
+                  const { data: retryOrg } = await supabase
+                    .from('organizations')
+                    .select('id, name')
+                    .ilike('name', cleanOrgName)
+                    .maybeSingle();
+                  if (retryOrg?.id) {
+                    effectiveOrgId = retryOrg.id;
+                  } else {
+                    throw new Error('An organization with this name already exists.');
+                  }
                 } else {
-                  throw new Error('An organization with this name already exists.');
+                  throw new Error(`Failed to create club "${cleanOrgName}": ${createErr.message}`);
                 }
-              } else {
-                throw new Error(`Failed to create club "${cleanOrgName}": ${createErr.message}`);
+              } else if (createdOrg?.id) {
+                effectiveOrgId = createdOrg.id;
+                setOrganizations((prev) => [createdOrg, ...prev]);
+                setOrgId(createdOrg.id);
               }
-            } else if (createdOrg?.id) {
-              effectiveOrgId = createdOrg.id;
-              setOrganizations((prev) => [createdOrg, ...prev]);
-              setOrgId(createdOrg.id);
             }
+          } catch (orgErr: any) {
+            console.error('Error ensuring organization:', orgErr);
+            setError(orgErr.message || 'Failed to resolve organization.');
+            setSaving(false);
+            return;
           }
-        } catch (orgErr: any) {
-          console.error('Error ensuring organization:', orgErr);
-          setError(orgErr.message || 'Failed to resolve organization.');
-          setSaving(false);
-          return;
+        }
+      } else if (orgMode === 'SELECT' && orgId) {
+        effectiveOrgId = orgId;
+      } else {
+        // Super Admin did not provide a club name (optional)
+        // Find or create "Lovely Professional University" as official parent organization
+        const lpuOrg = organizations.find(
+          (o) =>
+            o.name.trim().toLowerCase() === 'lovely professional university' ||
+            o.name.trim().toLowerCase() === 'lpu' ||
+            o.name.trim().toLowerCase() === 'lpu events'
+        );
+
+        if (lpuOrg?.id) {
+          effectiveOrgId = lpuOrg.id;
+        } else {
+          try {
+            const { data: dbLpu } = await supabase
+              .from('organizations')
+              .select('id, name')
+              .ilike('name', 'Lovely Professional University')
+              .maybeSingle();
+
+            if (dbLpu?.id) {
+              effectiveOrgId = dbLpu.id;
+            } else {
+              const { data: createdLpu } = await supabase
+                .from('organizations')
+                .insert({
+                  name: 'Lovely Professional University',
+                  is_active: true
+                })
+                .select('id, name')
+                .single();
+
+              if (createdLpu?.id) {
+                effectiveOrgId = createdLpu.id;
+                setOrganizations((prev) => [createdLpu, ...prev]);
+              } else {
+                effectiveOrgId = organizations[0]?.id;
+              }
+            }
+          } catch {
+            effectiveOrgId = organizations[0]?.id;
+          }
         }
       }
+    } else {
+      effectiveOrgId = orgId || profile?.org_id || organizations[0]?.id;
     }
 
-    const startIso = new Date(`${startDate}T${startTime}`).toISOString();
-    const endIso = new Date(`${endDate}T${endTime}`).toISOString();
+    const startDateTime = new Date(`${startDate}T${startTime}`);
+    const startIso = startDateTime.toISOString();
+
+    let effectiveEndDate = endDate || startDate;
+    let effectiveEndTime = endTime;
+
+    if (!effectiveEndTime) {
+      // Conclusion time was not specified (optional):
+      // Default safely to 23:59:59 of effectiveEndDate, or start + 2 hours (whichever is later)
+      const endOfDay = new Date(`${effectiveEndDate}T23:59:59`);
+      const twoHoursLater = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+      const targetEnd = endOfDay.getTime() > startDateTime.getTime() ? endOfDay : twoHoursLater;
+
+      effectiveEndDate = toLocalDateString(targetEnd);
+      effectiveEndTime = `${String(targetEnd.getHours()).padStart(2, '0')}:${String(targetEnd.getMinutes()).padStart(2, '0')}`;
+    }
+
+    const endIso = new Date(`${effectiveEndDate}T${effectiveEndTime}`).toISOString();
 
     const isExternal = pricingType === 'PAID' || !!externalUrl.trim();
 
     const payload: PublishEventPayload = {
-      organization_id: effectiveOrgId,
+      organization_id: String(effectiveOrgId || organizations[0]?.id || ''),
       name: name.trim(),
       description: description.trim() || name.trim(),
       category_id: categoryId,
@@ -877,7 +931,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
                   <label className="block text-xs font-bold text-[#261812] dark:text-[#ffede6] uppercase tracking-wider">
-                    Host Organization / Club *
+                    {profile?.is_super_admin ? 'Host Organization / Club (Optional)' : 'Host Organization / Club *'}
                   </label>
                   {profile?.is_super_admin && (
                     <div className="inline-flex items-center bg-[#fee3d8]/70 dark:bg-[#3d2d26] p-0.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136]">
@@ -917,6 +971,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                         onChange={(e) => setOrgId(e.target.value)}
                         className="w-full px-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm font-medium"
                       >
+                        <option value="">None / General (Lovely Professional University)</option>
                         {organizations.map((o) => (
                           <option key={o.id} value={o.id}>
                             {o.name}
@@ -924,7 +979,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                         ))}
                       </select>
                       <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1">
-                        Select from existing registered clubs, or click <strong>Enter Manually</strong> above to type a custom name.
+                        Optional for Super Admin. Select a club, click <strong>Enter Manually</strong>, or leave as <strong>None / General</strong>.
                       </p>
                     </div>
                   ) : (
@@ -935,15 +990,14 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                         </span>
                         <input
                           type="text"
-                          placeholder="e.g. Robotics Innovation Club, Dance Society, etc."
+                          placeholder="e.g. Robotics Innovation Club (Optional)"
                           value={manualOrgName}
                           onChange={(e) => setManualOrgName(e.target.value)}
                           className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] outline-none focus:border-[#ff6b00] text-sm font-medium"
-                          required
                         />
                       </div>
                       <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1">
-                        Type any custom club / organization name. If not already registered, it will be automatically created.
+                        Optional for Super Admin. Type custom club name, or leave blank to publish as Lovely Professional University.
                       </p>
                     </div>
                   )
@@ -1244,7 +1298,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                 minDate={!editEventId ? toLocalDateString(new Date()) : undefined}
                 onChange={(val) => {
                   setStartDate(val);
-                  if (!endDate || endDate < val) {
+                  if (endDate && endDate < val) {
                     setEndDate(val);
                   }
                 }}
@@ -1252,10 +1306,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
               {/* 2. End Date */}
               <CustomDatePicker
-                label="End Date *"
-                subtext="Calendar date when the event concludes"
+                label="End Date (Optional)"
+                subtext="Optional • Defaults to Start Date if left empty"
                 icon="event_available"
-                required={true}
+                required={false}
                 value={endDate}
                 minDate={startDate || (!editEventId ? toLocalDateString(new Date()) : undefined)}
                 onChange={(val) => setEndDate(val)}
@@ -1273,10 +1327,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
               {/* 4. End Time */}
               <CustomTimePicker
-                label="End Time *"
-                subtext="Session wrap-up / Event conclusion time"
+                label="End Time (Optional)"
+                subtext="Optional • Session wrap-up / Event conclusion time"
                 icon="alarm_on"
-                required={true}
+                required={false}
                 value={endTime}
                 onChange={(val) => setEndTime(val)}
               />
@@ -1290,7 +1344,17 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                   <span className="font-bold text-[#261812] dark:text-[#ffede6]">Schedule Overview: </span>
                   <span className="text-[#ff6b00] font-bold">
                     {new Date(`${startDate}T${startTime}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {startTime}
-                    {endDate && endTime ? ` ➔ ${new Date(`${endDate}T${endTime}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at ${endTime}` : ''}
+                    {endDate || endTime ? (
+                      <>
+                        {' ➔ '}
+                        {new Date(`${endDate || startDate}T${endTime || startTime}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {endTime ? ` at ${endTime}` : ''}
+                      </>
+                    ) : (
+                      <span className="text-[#5a4136] dark:text-[#ffb693] font-normal text-[11px] ml-1.5">
+                        (Open-ended session)
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -1923,8 +1987,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                     Hosted by:{' '}
                     <strong className="text-[#ff6b00]">
                       {profile?.is_super_admin && orgMode === 'MANUAL'
-                        ? (manualOrgName.trim() || 'Custom Organization')
-                        : (organizations.find((o) => o.id === orgId)?.name || profile?.org_name || 'Organization')}
+                        ? (manualOrgName.trim() || 'Lovely Professional University (General)')
+                        : (organizations.find((o) => o.id === orgId)?.name || (profile?.is_super_admin ? 'Lovely Professional University (General)' : (profile?.org_name || 'Organization')))}
                     </strong>
                   </p>
                 </div>
@@ -1939,11 +2003,18 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                   <p className="font-bold text-[#261812] dark:text-[#ffede6]">
                     {startDate && startTime
                       ? `${new Date(`${startDate}T${startTime}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at ${startTime}`
-                      : 'Not Set'}{' '}
-                    &rarr;{' '}
-                    {endDate && endTime
-                      ? `${new Date(`${endDate}T${endTime}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at ${endTime}`
                       : 'Not Set'}
+                    {endDate || endTime ? (
+                      <>
+                        {' ➔ '}
+                        {new Date(`${endDate || startDate}T${endTime || '23:59'}`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {endTime ? ` at ${endTime}` : ''}
+                      </>
+                    ) : (
+                      <span className="text-[#5a4136] dark:text-[#ffb693] font-normal text-[11px] ml-1.5">
+                        (Open-ended session)
+                      </span>
+                    )}
                   </p>
                 </div>
 

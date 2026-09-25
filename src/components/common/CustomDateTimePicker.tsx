@@ -359,21 +359,36 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
           {/* Footer Shortcuts */}
           <div className="pt-1.5 border-t border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex items-center justify-between text-[11px]">
-            <button
-              type="button"
-              onClick={() => {
-                const now = new Date();
-                const nowIso = toLocalDateString(now);
-                if (!minDate || nowIso >= minDate) {
-                  onChange(nowIso);
-                  setInputText(isoToDisplayDate(nowIso));
-                  setIsOpen(false);
-                }
-              }}
-              className="px-2 py-0.5 font-bold text-[#ff6b00] hover:bg-[#fee3d8] dark:hover:bg-[#3d2d26] rounded transition-colors cursor-pointer"
-            >
-              Today
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const now = new Date();
+                  const nowIso = toLocalDateString(now);
+                  if (!minDate || nowIso >= minDate) {
+                    onChange(nowIso);
+                    setInputText(isoToDisplayDate(nowIso));
+                    setIsOpen(false);
+                  }
+                }}
+                className="px-2 py-0.5 font-bold text-[#ff6b00] hover:bg-[#fee3d8] dark:hover:bg-[#3d2d26] rounded transition-colors cursor-pointer"
+              >
+                Today
+              </button>
+              {!required && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange('');
+                    setInputText('');
+                    setIsOpen(false);
+                  }}
+                  className="px-2 py-0.5 font-bold text-[#8c6d62] dark:text-[#ffb693] hover:text-red-500 rounded transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
@@ -602,9 +617,22 @@ export const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
 
           {/* Action Footer */}
           <div className="pt-2 border-t border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex items-center justify-between text-xs">
-            <span className="text-[11px] font-bold text-[#ff6b00]">
-              {selectedHour}:{selectedMinute} {selectedPeriod}
-            </span>
+            {!required ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('');
+                  setIsOpen(false);
+                }}
+                className="px-2 py-1 text-[11px] font-bold text-[#8c6d62] dark:text-[#ffb693] hover:text-red-500 transition-colors cursor-pointer"
+              >
+                Clear Time
+              </button>
+            ) : (
+              <span className="text-[11px] font-bold text-[#ff6b00]">
+                {selectedHour}:{selectedMinute} {selectedPeriod}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setIsOpen(false)}

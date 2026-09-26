@@ -1,0 +1,20 @@
+{
+  "name": "LPU Events — Admin Portal",
+  "short_name": "LPU Admin",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#1c1c1e",
+  "background_color": "#1c1c1e",
+  "display": "standalone",
+  "start_url": "/"
+}

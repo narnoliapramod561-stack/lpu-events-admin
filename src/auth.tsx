@@ -67,9 +67,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(currentSession);
       if (currentSession?.user) {
         if (event === 'SIGNED_IN') {
-          setLoading(true);
-          await fetchProfile(currentSession.user.id);
-          setLoading(false);
+          // If initial auth is not done yet (cold boot sign-in), resolve initial profile loading
+          if (!initialAuthDoneRef.current) {
+            setLoading(true);
+            await fetchProfile(currentSession.user.id);
+            setLoading(false);
+            initialAuthDoneRef.current = true;
+          } else {
+            // Tab return, token refresh, or cross-tab session update:
+            // ALWAYS update silently in the background without triggering full-screen loading spinners
+            // or unmounting the application dashboard.
+            await fetchProfile(currentSession.user.id);
+          }
           trackAdminAction('auth_login_success', { success: true });
           await supabase.rpc('log_security_event', { p_action: 'LOGIN', p_status: 'SUCCESS' });
         } else {

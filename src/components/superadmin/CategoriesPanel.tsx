@@ -29,7 +29,7 @@ export const CategoriesPanel: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
-    setLoading(true);
+    if (categories.length === 0) setLoading(true);
     try {
       const [catRes, subRes] = await Promise.all([
         supabase.from('categories').select('id, key, name, is_active, sort_order').order('sort_order'),

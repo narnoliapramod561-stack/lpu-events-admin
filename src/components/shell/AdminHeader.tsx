@@ -48,12 +48,12 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   const initialLetter = (displayName || userEmail || 'S').charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 flex justify-between items-center w-full px-6 md:px-8 h-20 bg-[#fff8f6]/90 dark:bg-[#0a0d14]/90 backdrop-blur-md border-b border-[#e2bfb0] dark:border-[#1e2536] shadow-sm">
+    <header className="sticky top-0 z-40 flex justify-between items-center w-full px-6 md:px-8 h-20 bg-[#fff8f6]/90 dark:bg-[#1c1c1e]/90 backdrop-blur-md border-b border-[#e2bfb0] dark:border-white/10 shadow-sm">
       {/* Breadcrumb Context */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-[#5a4136] dark:text-slate-400 hidden md:inline">Admin</span>
-        <span className="text-sm text-[#8e7164] dark:text-slate-600 hidden md:inline material-symbols-outlined text-[16px]">chevron_right</span>
-        <span className="text-lg font-bold font-['Outfit'] text-[#261812] dark:text-[#f8fafc]">{getTitle()}</span>
+        <span className="text-sm text-[#5a4136] dark:text-[#aeaeb2] hidden md:inline">Admin</span>
+        <span className="text-sm text-[#8e7164] dark:text-[#8e8e93] hidden md:inline material-symbols-outlined text-[16px]">chevron_right</span>
+        <span className="text-lg font-bold font-['Outfit'] text-[#261812] dark:text-white">{getTitle()}</span>
       </div>
 
       {/* Actions */}
@@ -69,7 +69,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={onToggleDarkMode} 
-            className="w-10 h-10 rounded-full hover:bg-[#fee3d8] dark:hover:bg-white/10 flex items-center justify-center text-[#5a4136] dark:text-slate-300 transition-colors"
+            className="w-10 h-10 rounded-full hover:bg-[#fee3d8] dark:hover:bg-white/10 flex items-center justify-center text-[#5a4136] dark:text-[#aeaeb2] transition-colors"
             title="Toggle theme"
           >
             <span className="material-symbols-outlined">{darkMode ? 'light_mode' : 'dark_mode'}</span>
@@ -83,7 +83,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
               {initialLetter}
             </div>
             <div className="flex flex-col text-left max-w-[170px]">
-              <span className="text-xs font-bold text-[#261812] dark:text-[#f8fafc] truncate leading-tight">
+              <span className="text-xs font-bold text-[#261812] dark:text-white truncate leading-tight">
                 {userEmail}
               </span>
               <span className="text-[10px] font-extrabold uppercase text-[#ff6b00] tracking-wider leading-none mt-0.5">

@@ -15,7 +15,7 @@ export const AccessRequestsPanel: React.FC<{ onNavigateToApproved?: () => void }
   const [manualAddLoading, setManualAddLoading] = useState(false);
 
   const fetchRequests = async () => {
-    setLoading(true);
+    if (requests.length === 0) setLoading(true);
     setError('');
     try {
       const { data, error: reqsErr } = await supabase

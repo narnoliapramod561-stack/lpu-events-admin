@@ -267,16 +267,16 @@ export const HappeningTodayManagerPanel: React.FC = () => {
       )}
 
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#201510] border border-[#e2bfb0] dark:border-[#3d2d26] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF5E00] to-[#FF8C00] flex items-center justify-center text-white shadow-[0_8px_20px_rgba(255,94,0,0.35)] shrink-0">
             <Sparkles className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black font-['Outfit'] text-[#261812] dark:text-white tracking-tight">
               Happening Today Manager
             </h1>
-            <p className="text-sm font-semibold text-[#5a4136] dark:text-[#ffb693]">
+            <p className="text-sm font-semibold text-[#5a4136] dark:text-zinc-400">
               Control slide duration, auto-play pacing, and inject sponsored advertisements into the student live section.
             </p>
           </div>
@@ -285,7 +285,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setConfig(DEFAULT_CONFIG)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-bold text-[#5a4136] dark:text-[#ffede6] hover:bg-[#ffeae1] dark:hover:bg-[#3d2d26] transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-white/10 text-xs font-bold text-[#5a4136] dark:text-zinc-200 hover:bg-[#ffeae1] dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             <RotateCw className="w-4 h-4" />
             Reset Defaults
@@ -315,17 +315,17 @@ export const HappeningTodayManagerPanel: React.FC = () => {
         {/* Left Column: Configuration Controls (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Card 1: Slide Timing & Auto-Play */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#201510] border border-[#e2bfb0] dark:border-[#3d2d26] shadow-sm space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-[#FF5E00] flex items-center justify-center">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#261812] dark:text-[#ffede6] font-['Outfit']">
+                  <h3 className="font-bold text-base text-[#261812] dark:text-white font-['Outfit']">
                     Slide Display Duration
                   </h3>
-                  <p className="text-xs text-[#5a4136] dark:text-[#ffb693]">
+                  <p className="text-xs text-[#5a4136] dark:text-zinc-400">
                     Pacing between automatic slide transitions
                   </p>
                 </div>
@@ -350,7 +350,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
             {/* Range Slider */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#5a4136] dark:text-zinc-400 uppercase tracking-wider">
                   Slide Interval
                 </span>
                 <span className="px-3 py-1 bg-orange-500/15 text-[#FF5E00] rounded-xl text-sm font-black font-['Outfit']">
@@ -365,7 +365,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                 step="500"
                 value={config.slide_duration_ms}
                 onChange={(e) => setConfig(prev => ({ ...prev, slide_duration_ms: Number(e.target.value) }))}
-                className="w-full h-2.5 bg-gray-200 dark:bg-[#3d2d26] rounded-lg appearance-none cursor-pointer accent-[#FF5E00]"
+                className="w-full h-2.5 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#FF5E00]"
               />
 
               {/* Quick Presets */}
@@ -383,7 +383,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                       config.slide_duration_ms === preset.ms
                         ? 'bg-[#FF5E00] text-white shadow-sm'
-                        : 'bg-[#ffeae1] dark:bg-[#3d2d26] text-[#5a4136] dark:text-[#ffb693] hover:bg-[#fee3d8]'
+                        : 'bg-black/5 dark:bg-white/5 text-[#5a4136] dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/10 border border-transparent dark:border-white/10'
                     }`}
                   >
                     {preset.label}
@@ -394,17 +394,17 @@ export const HappeningTodayManagerPanel: React.FC = () => {
           </div>
 
           {/* Card 2: Advertisement Injection Controls */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#201510] border border-[#e2bfb0] dark:border-[#3d2d26] shadow-sm space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                   <Megaphone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#261812] dark:text-[#ffede6] font-['Outfit']">
+                  <h3 className="font-bold text-base text-[#261812] dark:text-white font-['Outfit']">
                     Advertisement Injection
                   </h3>
-                  <p className="text-xs text-[#5a4136] dark:text-[#ffb693]">
+                  <p className="text-xs text-[#5a4136] dark:text-zinc-400">
                     Insert a sponsored slide in the Happening Today carousel
                   </p>
                 </div>
@@ -430,14 +430,14 @@ export const HappeningTodayManagerPanel: React.FC = () => {
             </div>
 
             {config.ad_injection.enabled && (
-              <div className="space-y-4 pt-2 border-t border-[#e2bfb0]/40 dark:border-[#3d2d26]/40">
+              <div className="space-y-4 pt-2 border-t border-[#e2bfb0]/40 dark:border-white/10">
                 {/* 1. Select Active Advertisement */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                     Select Advertisement *
                   </label>
                   {ads.length === 0 ? (
-                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>No active advertisements found in database. Create one in the Advertisements panel first.</span>
                     </div>
@@ -448,7 +448,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                         ...prev,
                         ad_injection: { ...prev.ad_injection, advertisement_id: e.target.value }
                       }))}
-                      className="w-full px-4 py-3 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
+                      className="w-full px-4 py-3 rounded-xl border border-[#e2bfb0] dark:border-white/10 bg-white dark:bg-[#18181b] text-[#261812] dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
                     >
                       {ads.map((ad) => (
                         <option key={ad.id} value={ad.id}>
@@ -461,7 +461,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
 
                 {/* 2. Position: Insert After Slide */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                     Insert After Slide # (Position) *
                   </label>
                   <select
@@ -470,7 +470,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                       ...prev,
                       ad_injection: { ...prev.ad_injection, insert_after_slide: Number(e.target.value) }
                     }))}
-                    className="w-full px-4 py-3 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
+                    className="w-full px-4 py-3 rounded-xl border border-[#e2bfb0] dark:border-white/10 bg-white dark:bg-[#18181b] text-[#261812] dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
                   >
                     <option value={0}>At the Very Beginning (Slide #1)</option>
                     <option value={1}>After Slide 1 (Position #2)</option>
@@ -479,14 +479,14 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                     <option value={4}>After Slide 4 (Position #5)</option>
                     <option value={999}>At the Very End (Last Slide)</option>
                   </select>
-                  <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693]/80">
+                  <p className="text-[11px] text-[#5a4136] dark:text-zinc-400">
                     Determines where the advertisement appears among today's {todayEvents.length} live events.
                   </p>
                 </div>
 
                 {/* 3. Custom Badge Text */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                     Custom Badge Label
                   </label>
                   <input
@@ -497,13 +497,13 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                       ...prev,
                       ad_injection: { ...prev.ad_injection, custom_badge: e.target.value }
                     }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-white/10 bg-white dark:bg-[#18181b] text-[#261812] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
                   />
                 </div>
 
                 {/* 4. Custom CTA Button Text */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                     Custom CTA Button Label
                   </label>
                   <input
@@ -514,7 +514,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                       ...prev,
                       ad_injection: { ...prev.ad_injection, custom_cta_text: e.target.value }
                     }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-white/10 bg-white dark:bg-[#18181b] text-[#261812] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#FF5E00]"
                   />
                 </div>
               </div>
@@ -524,17 +524,17 @@ export const HappeningTodayManagerPanel: React.FC = () => {
 
         {/* Right Column: Interactive Live Preview (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#201510] border border-[#e2bfb0] dark:border-[#3d2d26] shadow-sm space-y-6">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-[#FF5E00] flex items-center justify-center">
                   <Eye className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#261812] dark:text-[#ffede6] font-['Outfit']">
+                  <h3 className="font-bold text-base text-[#261812] dark:text-white font-['Outfit']">
                     Student Live Preview
                   </h3>
-                  <p className="text-xs text-[#5a4136] dark:text-[#ffb693]">
+                  <p className="text-xs text-[#5a4136] dark:text-zinc-400">
                     Real-time simulation of the student homepage carousel
                   </p>
                 </div>
@@ -543,7 +543,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
               {/* Play / Pause Simulator */}
               <button
                 onClick={() => setPreviewPlaying(!previewPlaying)}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#ffeae1] dark:bg-[#3d2d26] text-xs font-bold text-[#5a4136] dark:text-[#ffede6] hover:bg-[#fee3d8] transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-bold text-[#5a4136] dark:text-white hover:bg-black/10 dark:hover:bg-white/15 transition-colors cursor-pointer"
               >
                 {previewPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 <span>{previewPlaying ? 'Pause Auto-Play' : 'Resume Auto-Play'}</span>
@@ -552,7 +552,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
 
             {/* Mockup Card Frame */}
             {previewSlides.length === 0 ? (
-              <div className="h-72 rounded-2xl border-2 border-dashed border-[#e2bfb0] dark:border-[#5a4136] flex flex-col items-center justify-center p-6 text-center text-[#5a4136] dark:text-[#ffb693]">
+              <div className="h-72 rounded-2xl border-2 border-dashed border-[#e2bfb0] dark:border-white/15 flex flex-col items-center justify-center p-6 text-center text-[#5a4136] dark:text-zinc-400">
                 <CalendarDays className="w-10 h-10 mb-2 opacity-50" />
                 <p className="font-bold">No events scheduled for today</p>
                 <p className="text-xs">Events scheduled for today will appear here along with injected ads.</p>
@@ -580,7 +580,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                 </div>
 
                 {/* Right Side: Details */}
-                <div className="w-full md:w-1/2 p-5 sm:p-6 flex flex-col justify-between bg-[#0e111d] text-white">
+                <div className="w-full md:w-1/2 p-5 sm:p-6 flex flex-col justify-between bg-[#121214] text-white">
                   <div>
                     <h4 className="text-xl font-black font-['Outfit'] mb-3 line-clamp-2 leading-snug">
                       {currentPreviewSlide?.title}
@@ -650,7 +650,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
 
             {/* Sequence Flow Queue */}
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                 Current Slide Order ({previewSlides.length} Total Slides)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -661,7 +661,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                     className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 ${
                       previewIndex === idx
                         ? 'bg-orange-500/15 border-[#FF5E00] text-[#FF5E00] font-bold shadow-sm'
-                        : 'bg-[#fff8f6] dark:bg-[#1a120e] border-[#e2bfb0]/60 dark:border-[#3d2d26] text-[#5a4136] dark:text-[#ffede6]'
+                        : 'bg-black/[0.02] dark:bg-white/[0.04] border-[#e2bfb0]/60 dark:border-white/10 text-[#5a4136] dark:text-zinc-200 hover:border-[#FF5E00]/50'
                     }`}
                   >
                     <span className="w-6 h-6 rounded-lg bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs font-black">

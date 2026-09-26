@@ -34,7 +34,11 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
   const isPastMode = mode === 'past';
 
   const fetchEventsAndTaxonomy = async () => {
-    setLoading(true);
+    if (events.length === 0) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     try {
       const [eventsRes, catsRes, trendingRes] = await Promise.all([
         supabase
@@ -61,6 +65,11 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
   useEffect(() => {
     fetchEventsAndTaxonomy();
+    const handleUpdate = () => {
+      fetchEventsAndTaxonomy();
+    };
+    window.addEventListener('lpu:events-updated', handleUpdate);
+    return () => window.removeEventListener('lpu:events-updated', handleUpdate);
   }, [mode]);
 
   const handleRefresh = async () => {

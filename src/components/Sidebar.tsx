@@ -54,14 +54,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab,
     <aside className={`admin-sidebar ${isOpenMobile ? 'mobile-open' : ''}`}>
       {/* Brand Header */}
       <div className="admin-sidebar-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <LpuLogo size={32} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <LpuLogo size={60} />
           <div>
-            <div className="font-heading" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+            <div className="font-heading" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
               LPU Events
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span className={`badge ${isSuperAdmin ? 'badge-purple' : 'badge-accent'}`} style={{ padding: '1px 6px', fontSize: '9px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <span className={`badge ${isSuperAdmin ? 'badge-purple' : 'badge-accent'}`} style={{ padding: '2px 8px', fontSize: '9px', fontWeight: 700 }}>
                 {isSuperAdmin ? 'SUPER ADMIN' : 'ORGANIZER'}
               </span>
             </div>

@@ -244,9 +244,9 @@ function UnapprovedView({ user, signOut, refreshProfile }: { user: any; signOut:
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-base)', display: 'flex', flexDirection: 'column' }}>
       <header className="admin-header">
         <div className="admin-header-left">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <LpuLogo size={32} />
-            <h1 className="font-heading" style={{ fontSize: '18px', fontWeight: 800 }}>LPU Events Console</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <LpuLogo size={52} />
+            <h1 className="font-heading" style={{ fontSize: '20px', fontWeight: 800 }}>LPU Events Console</h1>
           </div>
         </div>
         <div className="admin-header-right">
@@ -363,7 +363,10 @@ function UnapprovedView({ user, signOut, refreshProfile }: { user: any; signOut:
 function MainApp() {
   const { user, loading } = useAuth();
 
-  if (loading) {
+  // Only display the full-screen splash loader during the initial cold boot before
+  // we know whether an active user session exists.
+  // Once authenticated, NEVER unmount the dashboard for background auth sync or tab switches.
+  if (loading && !user) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: 'var(--bg-base)' }}>
         <LoadingSpinner message="Initializing LPU Events Console..." />

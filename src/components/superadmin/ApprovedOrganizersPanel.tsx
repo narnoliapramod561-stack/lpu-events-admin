@@ -19,7 +19,7 @@ export const ApprovedOrganizersPanel: React.FC = () => {
   const [addEmail, setAddEmail] = useState('');
 
   const fetchData = async () => {
-    setLoading(true);
+    if (organizers.length === 0 && preApproved.length === 0) setLoading(true);
     setError('');
 
     let orgsList: any[] = [];

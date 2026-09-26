@@ -116,13 +116,13 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
   ];
 
   return (
-    <aside className="hidden md:flex flex-col h-full py-4 fixed left-0 top-0 w-[280px] bg-[#ffeae1] dark:bg-[#0a0d14] border-r border-[#e2bfb0] dark:border-[#1e2536] shadow-sm z-50 overflow-y-auto">
+    <aside className="hidden md:flex flex-col h-full py-4 fixed left-0 top-0 w-[280px] bg-[#ffeae1] dark:bg-[#1c1c1e] border-r border-[#e2bfb0] dark:border-white/10 shadow-sm z-50 overflow-y-auto">
       {/* Brand Logo Header */}
-      <div className="px-5 pb-5 pt-2 flex items-center gap-3 border-b border-[#e2bfb0]/40 dark:border-[#1e2536]">
-        <LpuLogo className="w-11 h-11 shrink-0 drop-shadow-sm" />
-        <div>
-          <h1 className="text-lg font-bold font-['Outfit'] text-[#261812] dark:text-[#f8fafc] tracking-tight">LPU Events</h1>
-          <p className="text-xs font-semibold text-[#5a4136] dark:text-orange-400 uppercase tracking-wider">Super Admin Portal</p>
+      <div className="px-4 pb-5 pt-3 flex items-center gap-3.5 border-b border-[#e2bfb0]/40 dark:border-white/10">
+        <LpuLogo className="w-16 h-16 sm:w-[72px] sm:h-[72px] shrink-0" size={72} />
+        <div className="min-w-0">
+          <h1 className="text-xl font-black font-['Outfit'] text-[#261812] dark:text-white tracking-tight leading-tight">LPU Events</h1>
+          <p className="text-[11px] font-bold text-[#a04100] dark:text-orange-400 uppercase tracking-wider mt-0.5 whitespace-nowrap">Super Admin Portal</p>
         </div>
       </div>
 
@@ -130,7 +130,7 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       <nav className="flex-1 px-3 py-4 space-y-4">
         {navSections.map((sec, idx) => (
           <div key={idx}>
-            <span className="px-3 text-[11px] font-bold text-[#5a4136]/70 dark:text-slate-500 uppercase tracking-wider">
+            <span className="px-3 text-[11px] font-bold text-[#5a4136]/70 dark:text-[#8e8e93] uppercase tracking-wider">
               {sec.group}
             </span>
             <div className="mt-1 space-y-1">
@@ -142,8 +142,8 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
                     onClick={() => setActiveTab(item.id as AdminNavTab)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                       isActive
-                        ? 'bg-[#fee3d8] dark:bg-orange-500/15 text-[#a04100] dark:text-orange-400 border-l-4 border-[#fc721e] shadow-sm font-bold scale-[0.99]'
-                        : 'text-[#5a4136] dark:text-slate-400 hover:text-[#a04100] dark:hover:text-white hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5'
+                        ? 'bg-[#fee3d8] dark:bg-orange-500/15 text-[#a04100] dark:text-orange-400 border-l-4 border-[#ff6b00] shadow-sm font-bold scale-[0.99]'
+                        : 'text-[#5a4136] dark:text-[#aeaeb2] hover:text-[#a04100] dark:hover:text-white hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -170,17 +170,17 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       </nav>
 
       {/* User Info & Logout Footer */}
-      <div className="px-3 pt-3 border-t border-[#e2bfb0]/40 dark:border-[#1e2536] mt-auto space-y-2">
+      <div className="px-3 pt-3 border-t border-[#e2bfb0]/40 dark:border-white/10 mt-auto space-y-2">
         {userEmail && (
           <div className="px-3 py-2 rounded-lg bg-[#fee3d8]/60 dark:bg-white/[0.04] border border-[#e2bfb0]/50 dark:border-white/10 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[#ff6b00] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
               {(displayName || userEmail).charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden min-w-0 flex-1 text-left">
-              <p className="text-xs font-bold text-[#261812] dark:text-[#f8fafc] truncate leading-tight">
+              <p className="text-xs font-bold text-[#261812] dark:text-white truncate leading-tight">
                 {displayName || 'Super Admin'}
               </p>
-              <p className="text-[11px] text-[#5a4136] dark:text-slate-400 truncate leading-tight mt-0.5" title={userEmail}>
+              <p className="text-[11px] text-[#5a4136] dark:text-[#aeaeb2] truncate leading-tight mt-0.5" title={userEmail}>
                 {userEmail}
               </p>
             </div>

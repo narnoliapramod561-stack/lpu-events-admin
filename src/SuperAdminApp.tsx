@@ -43,6 +43,38 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
     } catch (e) {}
   };
 
+  // Keep-alive state: tracks visited tabs so components stay mounted in memory
+  // This eliminates full-page reloading, wipes out spinning indicators on return,
+  // and preserves filters, scroll positions, and inputs for a true desktop-class feel.
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    try {
+      const saved = (sessionStorage.getItem('lpu_superadmin_active_tab') as AdminNavTab) || 'dashboard';
+      const canonical = 
+        saved === 'manage-events' ? 'all-events' : 
+        saved === 'old-events' ? 'past-events' : 
+        saved;
+      initial.add(canonical);
+    } catch {
+      initial.add('dashboard');
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    setVisitedTabs((prev) => {
+      const canonicalTab = 
+        activeTab === 'manage-events' ? 'all-events' :
+        activeTab === 'old-events' ? 'past-events' : 
+        activeTab;
+
+      if (prev.has(canonicalTab)) return prev;
+      const next = new Set(prev);
+      next.add(canonicalTab);
+      return next;
+    });
+  }, [activeTab]);
+
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
@@ -78,77 +110,11 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
     setActiveTab('create-event');
   };
 
-  const renderActiveView = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardOverview onNavigate={setActiveTab} />;
-      case 'access-requests':
-        return <AccessRequestsPanel onNavigateToApproved={() => setActiveTab('approved-organizers')} />;
-      case 'approved-organizers':
-        return <ApprovedOrganizersPanel />;
-      case 'create-event':
-        return (
-          <CreateEventWizard
-            editEventId={editingEventId || undefined}
-            onCancel={() => {
-              setEditingEventId(null);
-              setActiveTab('all-events');
-            }}
-            onComplete={() => {
-              setEditingEventId(null);
-              setActiveTab('all-events');
-            }}
-          />
-        );
-      case 'all-events':
-      case 'manage-events':
-        return (
-          <ManageEventsPanel
-            key="active-events-panel"
-            mode="active"
-            onCreateClick={handleStartCreate}
-            onEditClick={handleStartEdit}
-          />
-        );
-      case 'past-events':
-      case 'old-events':
-        return (
-          <ManageEventsPanel
-            key="past-events-panel"
-            mode="past"
-            onCreateClick={handleStartCreate}
-            onEditClick={handleStartEdit}
-          />
-        );
-      case 'featured-events':
-        return <FeaturedEventsPanel />;
-      case 'trending-events':
-        return <TrendingEventsPanel />;
-      case 'hero-carousel':
-        return <HeroCarouselManagerPanel />;
-      case 'happening-today':
-        return <HappeningTodayManagerPanel />;
-      case 'advertisements':
-        return <AdvertisementsPanel />;
-      case 'categories':
-        return <CategoriesPanel />;
-      case 'ad-control':
-        return <AdControlPanel />;
-      case 'analytics':
-        return <AnalyticsPanel />;
-      case 'audit-logs':
-        return <AuditLogsPanel />;
-      case 'system-health':
-        return <SystemHealthPanel />;
-      case 'settings':
-        return <SettingsPanel />;
-      default:
-        return <DashboardOverview onNavigate={setActiveTab} />;
-    }
-  };
+  const isCurrentActiveEvents = activeTab === 'all-events' || activeTab === 'manage-events';
+  const isCurrentPastEvents = activeTab === 'past-events' || activeTab === 'old-events';
 
   return (
-    <div className={`min-h-screen flex font-['Inter'] transition-colors duration-300 ${darkMode ? 'dark bg-[#08090f] text-[#f8fafc]' : 'bg-[#fff8f6] text-[#261812]'}`}>
+    <div className={`min-h-screen flex font-['Inter'] transition-colors duration-300 ${darkMode ? 'dark bg-[#1c1c1e] text-white' : 'bg-[#fff8f6] text-[#261812]'}`}>
       {/* Docked Sidebar */}
       <SuperAdminSidebar 
         activeTab={activeTab} 
@@ -164,14 +130,135 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
           activeTab={activeTab}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
-          onCreateClick={() => setActiveTab('create-event')}
+          onCreateClick={handleStartCreate}
           userEmail={userEmail}
           displayName={displayName}
           onLogout={onLogout}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
-          {renderActiveView()}
+          {/* Create / Edit Event Wizard (Standalone modal flow) */}
+          {activeTab === 'create-event' && (
+            <CreateEventWizard
+              editEventId={editingEventId || undefined}
+              onCancel={() => {
+                setEditingEventId(null);
+                setActiveTab('all-events');
+              }}
+              onComplete={() => {
+                setEditingEventId(null);
+                setActiveTab('all-events');
+                window.dispatchEvent(new CustomEvent('lpu:events-updated'));
+              }}
+            />
+          )}
+
+          {/* Visited Tabs Kept Alive in Memory — Zero Re-fetching, Instant Tab Switching */}
+          {visitedTabs.has('dashboard') && (
+            <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
+              <DashboardOverview onNavigate={setActiveTab} />
+            </div>
+          )}
+
+          {visitedTabs.has('access-requests') && (
+            <div style={{ display: activeTab === 'access-requests' ? 'block' : 'none' }}>
+              <AccessRequestsPanel onNavigateToApproved={() => setActiveTab('approved-organizers')} />
+            </div>
+          )}
+
+          {visitedTabs.has('approved-organizers') && (
+            <div style={{ display: activeTab === 'approved-organizers' ? 'block' : 'none' }}>
+              <ApprovedOrganizersPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('all-events') && (
+            <div style={{ display: isCurrentActiveEvents ? 'block' : 'none' }}>
+              <ManageEventsPanel
+                key="active-events-panel"
+                mode="active"
+                onCreateClick={handleStartCreate}
+                onEditClick={handleStartEdit}
+              />
+            </div>
+          )}
+
+          {visitedTabs.has('past-events') && (
+            <div style={{ display: isCurrentPastEvents ? 'block' : 'none' }}>
+              <ManageEventsPanel
+                key="past-events-panel"
+                mode="past"
+                onCreateClick={handleStartCreate}
+                onEditClick={handleStartEdit}
+              />
+            </div>
+          )}
+
+          {visitedTabs.has('featured-events') && (
+            <div style={{ display: activeTab === 'featured-events' ? 'block' : 'none' }}>
+              <FeaturedEventsPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('trending-events') && (
+            <div style={{ display: activeTab === 'trending-events' ? 'block' : 'none' }}>
+              <TrendingEventsPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('hero-carousel') && (
+            <div style={{ display: activeTab === 'hero-carousel' ? 'block' : 'none' }}>
+              <HeroCarouselManagerPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('happening-today') && (
+            <div style={{ display: activeTab === 'happening-today' ? 'block' : 'none' }}>
+              <HappeningTodayManagerPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('advertisements') && (
+            <div style={{ display: activeTab === 'advertisements' ? 'block' : 'none' }}>
+              <AdvertisementsPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('categories') && (
+            <div style={{ display: activeTab === 'categories' ? 'block' : 'none' }}>
+              <CategoriesPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('ad-control') && (
+            <div style={{ display: activeTab === 'ad-control' ? 'block' : 'none' }}>
+              <AdControlPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('analytics') && (
+            <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
+              <AnalyticsPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('audit-logs') && (
+            <div style={{ display: activeTab === 'audit-logs' ? 'block' : 'none' }}>
+              <AuditLogsPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('system-health') && (
+            <div style={{ display: activeTab === 'system-health' ? 'block' : 'none' }}>
+              <SystemHealthPanel />
+            </div>
+          )}
+
+          {visitedTabs.has('settings') && (
+            <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+              <SettingsPanel />
+            </div>
+          )}
         </main>
       </div>
     </div>

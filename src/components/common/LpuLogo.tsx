@@ -1,66 +1,126 @@
 import React from 'react';
 
-interface LpuLogoProps {
+export interface LpuLogoProps {
   className?: string;
   size?: number;
+  id?: string;
 }
 
-export const LpuLogo: React.FC<LpuLogoProps> = ({ className = 'w-10 h-10', size }) => {
+/**
+ * Authoritative LPU Events "Sunset Blend" Logo Component for Admin Portal.
+ * Pure vector SVG matching the Student Portal's pixel-perfect geometry,
+ * translucent circular glass layers, and typography with zero raster artifacts.
+ */
+export const LpuLogo: React.FC<LpuLogoProps> = ({
+  className = 'w-16 h-16',
+  size,
+  id,
+}) => {
   const style = size ? { width: `${size}px`, height: `${size}px` } : undefined;
 
   return (
     <svg
+      id={id}
       viewBox="0 0 512 512"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`object-contain select-none shrink-0 ${className}`}
       style={style}
     >
-      {/* Outer Orange Border */}
-      <circle cx="256" cy="256" r="240" stroke="#E65100" strokeWidth="24" />
-      {/* Dark Navy Background */}
-      <circle cx="256" cy="256" r="228" fill="#0D1B2A" />
-      {/* Dashed Inner Line */}
-      <circle cx="256" cy="256" r="210" stroke="#E65100" strokeWidth="2" strokeDasharray="8 8" />
+      <defs>
+        <radialGradient id="admin-logo-navy-1" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#1e293b" stopOpacity="0.95" />
+          <stop offset="70%" stopColor="#0f172a" stopOpacity="0.88" />
+          <stop offset="100%" stopColor="#090d16" stopOpacity="0.82" />
+        </radialGradient>
+        <radialGradient id="admin-logo-navy-2" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#25334d" stopOpacity="0.92" />
+          <stop offset="65%" stopColor="#172235" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#0b111c" stopOpacity="0.78" />
+        </radialGradient>
+        <radialGradient id="admin-logo-orange-1" cx="65%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#fb923c" stopOpacity="0.92" />
+          <stop offset="55%" stopColor="#ea580c" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#c2410c" stopOpacity="0.78" />
+        </radialGradient>
+        <radialGradient id="admin-logo-orange-2" cx="60%" cy="40%" r="65%">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.90" />
+          <stop offset="60%" stopColor="#d95a1e" stopOpacity="0.84" />
+          <stop offset="100%" stopColor="#9a3412" stopOpacity="0.75" />
+        </radialGradient>
+        <radialGradient id="admin-logo-orange-3" cx="70%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#fdba74" stopOpacity="0.85" />
+          <stop offset="60%" stopColor="#f97316" stopOpacity="0.75" />
+          <stop offset="100%" stopColor="#c2410c" stopOpacity="0.65" />
+        </radialGradient>
+        <radialGradient id="admin-logo-dark-glass" cx="45%" cy="40%" r="62%">
+          <stop offset="0%" stopColor="#45271d" stopOpacity="0.97" />
+          <stop offset="50%" stopColor="#2c1a14" stopOpacity="0.95" />
+          <stop offset="85%" stopColor="#191924" stopOpacity="0.94" />
+          <stop offset="100%" stopColor="#10131d" stopOpacity="0.92" />
+        </radialGradient>
+        <linearGradient id="admin-logo-rim-sheen" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.32" />
+          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="75%" stopColor="#ea580c" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#0f172a" stopOpacity="0.35" />
+        </linearGradient>
+        <filter id="admin-logo-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#000000" floodOpacity="0.45" />
+        </filter>
+      </defs>
 
-      {/* LPU Text */}
-      <text
-        x="50%"
-        y="45%"
-        textAnchor="middle"
-        fill="white"
-        style={{
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          fontWeight: 900,
-          fontSize: '110px',
-          letterSpacing: '8px'
-        }}
-        dy=".3em"
-      >
-        LPU
-      </text>
+      {/* Circular glass layers */}
+      <g style={{ transformOrigin: '256px 256px' }}>
+        <circle cx="208" cy="280" r="165" fill="url(#admin-logo-navy-1)" />
+        <circle cx="224" cy="224" r="170" fill="url(#admin-logo-navy-2)" />
+        <circle cx="306" cy="222" r="174" fill="url(#admin-logo-orange-1)" />
+        <circle cx="324" cy="274" r="166" fill="url(#admin-logo-orange-2)" />
+        <circle cx="332" cy="246" r="158" fill="url(#admin-logo-orange-3)" />
+        <circle cx="256" cy="256" r="168" fill="url(#admin-logo-dark-glass)" stroke="url(#admin-logo-rim-sheen)" strokeWidth="1.5" />
+      </g>
 
-      {/* Divider */}
-      <circle cx="160" cy="290" r="6" fill="#E65100" />
-      <line x1="180" y1="290" x2="332" y2="290" stroke="#4A4A4A" strokeWidth="2" />
-      <circle cx="352" cy="290" r="6" fill="#E65100" />
+      {/* Typography */}
+      <g style={{ transformOrigin: '256px 268px' }}>
+        <text
+          x="256"
+          y="228"
+          textAnchor="middle"
+          filter="url(#admin-logo-text-shadow)"
+          style={{
+            fontFamily: "'Outfit', 'Inter', -apple-system, sans-serif",
+            fontWeight: 900,
+            fontSize: '106px',
+            fill: '#ffffff',
+            letterSpacing: '5px',
+          }}
+        >
+          LPU
+        </text>
 
-      {/* EVENTS Text */}
-      <text
-        x="50%"
-        y="70%"
-        textAnchor="middle"
-        fill="#E65100"
-        style={{
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          fontWeight: 800,
-          fontSize: '52px',
-          letterSpacing: '16px'
-        }}
-        dy=".3em"
-      >
-        EVENTS
-      </text>
+        {/* Connector */}
+        <rect x="162" y="257" width="188" height="22" rx="11" fill="rgba(255, 255, 255, 0.14)" stroke="rgba(255, 255, 255, 0.18)" strokeWidth="1" />
+        <circle cx="178" cy="268" r="5.5" fill="#ffffff" filter="url(#admin-logo-text-shadow)" />
+        <line x1="184" y1="268" x2="328" y2="268" stroke="#ffffff" strokeWidth="3.2" strokeLinecap="round" filter="url(#admin-logo-text-shadow)" />
+        <circle cx="334" cy="268" r="5.5" fill="#ffffff" filter="url(#admin-logo-text-shadow)" />
+
+        {/* EVENTS */}
+        <text
+          x="256"
+          y="323"
+          textAnchor="middle"
+          filter="url(#admin-logo-text-shadow)"
+          style={{
+            fontFamily: "'Outfit', 'Inter', -apple-system, sans-serif",
+            fontWeight: 800,
+            fontSize: '35px',
+            fill: '#ffffff',
+            letterSpacing: '13px',
+          }}
+        >
+          EVENTS
+        </text>
+      </g>
     </svg>
   );
 };

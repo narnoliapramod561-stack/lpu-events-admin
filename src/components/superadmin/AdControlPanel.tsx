@@ -125,9 +125,9 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
   }, [allAds, selectedAdIds, isAutoMode]);
 
   return (
-    <div className="pt-3 border-t border-[#e2bfb0]/30 dark:border-[#5a4136]/30 space-y-2.5">
+    <div className="pt-3 border-t border-[#e2bfb0]/30 dark:border-white/10 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-[11px] font-black text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider flex items-center gap-1.5">
+        <label className="text-[11px] font-black text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
           <ListOrdered className="w-3.5 h-3.5 text-[#fc721e]" />
           <span>{placementName} Ads Selection & Order</span>
         </label>
@@ -161,7 +161,7 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
             <button
               type="button"
               onClick={handleResetToAuto}
-              className="text-[#5a4136] dark:text-[#ffb693] hover:underline cursor-pointer"
+              className="text-[#5a4136] dark:text-zinc-400 hover:underline cursor-pointer"
             >
               Auto
             </button>
@@ -170,16 +170,16 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
       </div>
 
       {allAds.length === 0 ? (
-        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
           No advertisements created yet. Add ads in the Advertisements section first.
         </div>
       ) : isAutoMode ? (
-        <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex items-center justify-between gap-3 text-xs">
+        <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-[#e2bfb0]/40 dark:border-white/10 flex items-center justify-between gap-3 text-xs">
           <div>
-            <p className="font-black text-[11px] text-[#261812] dark:text-[#ffede6]">
+            <p className="font-black text-[11px] text-[#261812] dark:text-white">
               Auto-Rotating All Active Ads ({allAds.filter(a => a.status === 'active').length})
             </p>
-            <p className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">
+            <p className="text-[10px] text-[#5a4136] dark:text-zinc-400">
               Default order by creation date. Click Customize to choose and order specific ads.
             </p>
           </div>
@@ -202,7 +202,7 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
                 className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 text-xs transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-orange-500/10 border-[#fc721e]/60 shadow-xs'
-                    : 'bg-black/[0.01] dark:bg-white/[0.01] border-[#e2bfb0]/30 dark:border-[#5a4136]/30 opacity-60 hover:opacity-100'
+                    : 'bg-black/[0.01] dark:bg-white/[0.02] border-[#e2bfb0]/30 dark:border-white/10 opacity-60 hover:opacity-100'
                 }`}
               >
                 {/* Left: Checkbox + Order badge + Thumbnail + Name */}
@@ -220,7 +220,7 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
                       {orderIndex + 1}
                     </span>
                   ) : (
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-400 font-bold text-[10px] flex items-center justify-center">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-gray-200 dark:bg-zinc-800 text-gray-400 font-bold text-[10px] flex items-center justify-center">
                       -
                     </span>
                   )}
@@ -234,7 +234,7 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-black text-[11px] text-[#261812] dark:text-[#ffede6] truncate">
+                    <p className="font-black text-[11px] text-[#261812] dark:text-white truncate">
                       {ad.name}
                     </p>
                     <span className={`text-[9px] font-bold uppercase ${
@@ -533,11 +533,11 @@ export const AdControlPanel: React.FC = () => {
             <span className="p-2 rounded-xl bg-orange-500/15 text-[#fc721e] border border-orange-500/20">
               <Megaphone className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black font-['Outfit'] text-[#261812] dark:text-white tracking-tight">
               Advertisement Settings
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-[#5a4136] dark:text-[#ffb693] mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-[#5a4136] dark:text-zinc-400 mt-1 font-medium">
             Configure advertisement providers (Google AdSense vs. Direct Sponsors), insertion frequencies, and limits across Student Website placements.
           </p>
         </div>
@@ -547,7 +547,7 @@ export const AdControlPanel: React.FC = () => {
             type="button"
             onClick={loadSettings}
             disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 text-xs font-bold text-[#5a4136] dark:text-zinc-200 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -566,14 +566,14 @@ export const AdControlPanel: React.FC = () => {
       </div>
 
       {/* Quick Mode Presets Bar */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-3">
+      <div className="p-5 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6] flex items-center gap-2">
+            <h3 className="text-sm font-black font-['Outfit'] text-[#261812] dark:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#fc721e]" />
               <span>One-Click Advertisement Mode Switcher</span>
             </h3>
-            <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693]">
+            <p className="text-[11px] text-[#5a4136] dark:text-zinc-400">
               Instantly toggle between Google AdSense, Direct Self Ads, or completely pause all advertising across the student site.
             </p>
           </div>
@@ -581,9 +581,9 @@ export const AdControlPanel: React.FC = () => {
             !config.global_enabled
               ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
               : config.placements.event_hub.provider === 'adsense' && config.placements.hero_carousel.provider === 'adsense'
-              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+              ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30'
               : config.placements.event_hub.provider === 'direct' && config.placements.hero_carousel.provider === 'direct'
-              ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
+              ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30'
               : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
           }`}>
             {!config.global_enabled
@@ -612,7 +612,11 @@ export const AdControlPanel: React.FC = () => {
               }));
               showToast('success', 'Switched all placements to Google AdSense. Click "Save Configuration" to apply live.');
             }}
-            className="p-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+            className={`p-3 rounded-2xl border transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs ${
+              config.global_enabled && config.placements.event_hub.provider === 'adsense' && config.placements.hero_carousel.provider === 'adsense'
+                ? 'border-sky-500 bg-sky-500/20 text-sky-900 dark:text-sky-200 ring-2 ring-sky-500/40'
+                : 'border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/15 text-sky-700 dark:text-sky-300'
+            }`}
           >
             <span className="font-black text-[11px] uppercase tracking-wider">All Google AdSense</span>
             <span className="text-[10px] opacity-80">Programmatic Google revenue ads everywhere</span>
@@ -633,7 +637,11 @@ export const AdControlPanel: React.FC = () => {
               }));
               showToast('success', 'Switched all placements to Direct / Self Ads. Click "Save Configuration" to apply live.');
             }}
-            className="p-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+            className={`p-3 rounded-2xl border transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs ${
+              config.global_enabled && config.placements.event_hub.provider === 'direct' && config.placements.hero_carousel.provider === 'direct'
+                ? 'border-orange-500 bg-orange-500/20 text-orange-900 dark:text-orange-200 ring-2 ring-orange-500/40'
+                : 'border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/15 text-orange-700 dark:text-orange-300'
+            }`}
           >
             <span className="font-black text-[11px] uppercase tracking-wider">All Direct / Self Ads</span>
             <span className="text-[10px] opacity-80">University internal sponsors & campaigns</span>
@@ -654,7 +662,11 @@ export const AdControlPanel: React.FC = () => {
               }));
               showToast('success', 'Switched to Hybrid Mode. Click "Save Configuration" to apply live.');
             }}
-            className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+            className={`p-3 rounded-2xl border transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs ${
+              config.global_enabled && !(config.placements.event_hub.provider === 'adsense' && config.placements.hero_carousel.provider === 'adsense') && !(config.placements.event_hub.provider === 'direct' && config.placements.hero_carousel.provider === 'direct')
+                ? 'border-amber-500 bg-amber-500/20 text-amber-900 dark:text-amber-200 ring-2 ring-amber-500/40'
+                : 'border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15 text-amber-700 dark:text-amber-300'
+            }`}
           >
             <span className="font-black text-[11px] uppercase tracking-wider">Hybrid Mode</span>
             <span className="text-[10px] opacity-80">Direct hero banners + AdSense in feed</span>
@@ -666,7 +678,11 @@ export const AdControlPanel: React.FC = () => {
               setConfig(prev => ({ ...prev, global_enabled: false }));
               showToast('success', 'All advertisements paused. Click "Save Configuration" to apply live.');
             }}
-            className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold text-xs text-left transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs"
+            className={`p-3 rounded-2xl border transition-all active:scale-97 cursor-pointer flex flex-col justify-between gap-1 shadow-xs ${
+              !config.global_enabled
+                ? 'border-rose-500 bg-rose-500/20 text-rose-900 dark:text-rose-200 ring-2 ring-rose-500/40'
+                : 'border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/15 text-rose-700 dark:text-rose-300'
+            }`}
           >
             <span className="font-black text-[11px] uppercase tracking-wider">Pause All Ads</span>
             <span className="text-[10px] opacity-80">Zero advertisements on entire website</span>
@@ -675,20 +691,20 @@ export const AdControlPanel: React.FC = () => {
       </div>
 
       {/* Global Master Controls */}
-      <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-6">
-        <div className="flex items-center gap-2 pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+      <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-6">
+        <div className="flex items-center gap-2 pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
           <Globe className="w-5 h-5 text-[#fc721e]" />
-          <h2 className="text-base sm:text-lg font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+          <h2 className="text-base sm:text-lg font-black font-['Outfit'] text-[#261812] dark:text-white">
             Global Advertisement System Controls
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Master Switch */}
-          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex flex-col justify-between">
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-[#e2bfb0]/40 dark:border-white/10 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-[#ffede6]">
+                <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-white">
                   Master System Switch
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -699,7 +715,7 @@ export const AdControlPanel: React.FC = () => {
                   {config.global_enabled ? 'Active' : 'Disabled'}
                 </span>
               </div>
-              <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-[#5a4136] dark:text-zinc-400 mt-1.5 leading-relaxed">
                 Globally enable or pause all advertisement units across the entire Student Website with a single toggle.
               </p>
             </div>
@@ -709,8 +725,8 @@ export const AdControlPanel: React.FC = () => {
               onClick={() => setConfig(prev => ({ ...prev, global_enabled: !prev.global_enabled }))}
               className={`mt-4 w-full py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
                 config.global_enabled
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                  ? 'bg-[#fc721e] hover:bg-[#ff8533] text-white shadow-md shadow-orange-500/20'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20'
               }`}
             >
               {config.global_enabled ? '✓ All Ads Enabled' : '✕ All Ads Paused'}
@@ -718,12 +734,12 @@ export const AdControlPanel: React.FC = () => {
           </div>
 
           {/* Global Max Ads Limit */}
-          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex flex-col justify-between">
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-[#e2bfb0]/40 dark:border-white/10 flex flex-col justify-between">
             <div>
-              <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-[#ffede6]">
+              <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-white">
                 Max Ads Per Page Ceiling
               </span>
-              <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-[#5a4136] dark:text-zinc-400 mt-1.5 leading-relaxed">
                 Maximum number of advertisements rendered in any single page view, preventing ad clutter on infinite scroll.
               </p>
             </div>
@@ -735,20 +751,20 @@ export const AdControlPanel: React.FC = () => {
                 max="30"
                 value={config.max_ads_per_page}
                 onChange={(e) => setConfig(prev => ({ ...prev, max_ads_per_page: Math.max(1, Number(e.target.value) || 1) }))}
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-[#261812] dark:text-white"
               />
-              <span className="text-xs text-[#5a4136] dark:text-[#ffb693] font-bold shrink-0">ads / page</span>
+              <span className="text-xs text-[#5a4136] dark:text-zinc-300 font-bold shrink-0">ads / page</span>
             </div>
           </div>
 
           {/* AdSense Publisher ID */}
-          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40 flex flex-col justify-between">
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-[#e2bfb0]/40 dark:border-white/10 flex flex-col justify-between">
             <div>
-              <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-[#ffede6]">
+              <span className="text-xs font-black uppercase tracking-wider text-[#261812] dark:text-white">
                 Google AdSense Publisher ID
               </span>
-              <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693] mt-1.5 leading-relaxed">
-                Official Google AdSense Client ID (e.g. <code className="text-orange-600 font-mono">ca-pub-XXXXXXXXXXXX</code>).
+              <p className="text-[11px] text-[#5a4136] dark:text-zinc-400 mt-1.5 leading-relaxed">
+                Official Google AdSense Client ID (e.g. <code className="text-orange-500 font-mono">ca-pub-XXXXXXXXXXXX</code>).
               </p>
             </div>
 
@@ -761,7 +777,7 @@ export const AdControlPanel: React.FC = () => {
                   ...prev,
                   adsense: { ...prev.adsense, publisher_id: e.target.value.trim() }
                 }))}
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-[#261812] dark:text-white"
               />
             </div>
           </div>
@@ -772,17 +788,17 @@ export const AdControlPanel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* 1. Hero Carousel Placement Card */}
-        <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+        <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-orange-500/15 text-[#fc721e]">
                 <ImageIcon className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
                   Hero Carousel Ads
                 </h3>
-                <span className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">Top billboard showcase</span>
+                <span className="text-[10px] text-[#5a4136] dark:text-zinc-400">Top billboard showcase</span>
               </div>
             </div>
 
@@ -800,7 +816,7 @@ export const AdControlPanel: React.FC = () => {
           <div className="space-y-4">
             {/* Provider Selection */}
             <div>
-              <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                 Active Provider
               </label>
               <div className="grid grid-cols-3 gap-2 mt-1.5">
@@ -811,8 +827,8 @@ export const AdControlPanel: React.FC = () => {
                     onClick={() => updatePlacement('hero_carousel', { provider: mode })}
                     className={`py-2 px-3 rounded-xl text-xs font-black capitalize transition-all cursor-pointer border ${
                       config.placements.hero_carousel.provider === mode
-                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] shadow-xs'
-                        : 'border-[#e2bfb0]/40 dark:border-[#5a4136]/40 hover:bg-black/5 dark:hover:bg-white/5'
+                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] dark:text-orange-400 shadow-xs'
+                        : 'border-[#e2bfb0]/40 dark:border-white/10 bg-black/[0.01] dark:bg-white/5 text-gray-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                   >
                     {mode === 'direct' ? 'My Ads' : mode === 'adsense' ? 'AdSense' : 'Disabled'}
@@ -824,7 +840,7 @@ export const AdControlPanel: React.FC = () => {
             {/* Frequency & Limits */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Insert after every:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -834,14 +850,14 @@ export const AdControlPanel: React.FC = () => {
                     max="10"
                     value={config.placements.hero_carousel.frequency}
                     onChange={(e) => updatePlacement('hero_carousel', { frequency: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">slides</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">slides</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Maximum ads:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -851,9 +867,9 @@ export const AdControlPanel: React.FC = () => {
                     max="10"
                     value={config.placements.hero_carousel.max_ads}
                     onChange={(e) => updatePlacement('hero_carousel', { max_ads: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">max</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">max</span>
                 </div>
               </div>
             </div>
@@ -861,7 +877,7 @@ export const AdControlPanel: React.FC = () => {
             {/* AdSense Slot ID */}
             {config.placements.hero_carousel.provider === 'adsense' && (
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   AdSense Slot ID (Optional)
                 </label>
                 <input
@@ -869,7 +885,7 @@ export const AdControlPanel: React.FC = () => {
                   value={config.placements.hero_carousel.ad_unit_id || ''}
                   placeholder="1000000001"
                   onChange={(e) => updatePlacement('hero_carousel', { ad_unit_id: e.target.value.trim() })}
-                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono"
+                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono text-gray-900 dark:text-white"
                 />
               </div>
             )}
@@ -888,17 +904,17 @@ export const AdControlPanel: React.FC = () => {
         </div>
 
         {/* 2. Happening Today Placement Card */}
-        <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+        <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-orange-500/15 text-[#fc721e]">
                 <CalendarDays className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
                   Happening Today Ads
                 </h3>
-                <span className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">Live daily schedule slider</span>
+                <span className="text-[10px] text-[#5a4136] dark:text-zinc-400">Live daily schedule slider</span>
               </div>
             </div>
 
@@ -916,7 +932,7 @@ export const AdControlPanel: React.FC = () => {
           <div className="space-y-4">
             {/* Provider Selection */}
             <div>
-              <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                 Active Provider
               </label>
               <div className="grid grid-cols-3 gap-2 mt-1.5">
@@ -927,8 +943,8 @@ export const AdControlPanel: React.FC = () => {
                     onClick={() => updatePlacement('happening_today', { provider: mode })}
                     className={`py-2 px-3 rounded-xl text-xs font-black capitalize transition-all cursor-pointer border ${
                       config.placements.happening_today.provider === mode
-                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] shadow-xs'
-                        : 'border-[#e2bfb0]/40 dark:border-[#5a4136]/40 hover:bg-black/5 dark:hover:bg-white/5'
+                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] dark:text-orange-400 shadow-xs'
+                        : 'border-[#e2bfb0]/40 dark:border-white/10 bg-black/[0.01] dark:bg-white/5 text-gray-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                   >
                     {mode === 'direct' ? 'My Ads' : mode === 'adsense' ? 'AdSense' : 'Disabled'}
@@ -940,7 +956,7 @@ export const AdControlPanel: React.FC = () => {
             {/* Frequency & Limits */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Insert after every:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -950,14 +966,14 @@ export const AdControlPanel: React.FC = () => {
                     max="10"
                     value={config.placements.happening_today.frequency}
                     onChange={(e) => updatePlacement('happening_today', { frequency: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">events</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">events</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Maximum ads:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -967,9 +983,9 @@ export const AdControlPanel: React.FC = () => {
                     max="10"
                     value={config.placements.happening_today.max_ads}
                     onChange={(e) => updatePlacement('happening_today', { max_ads: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">max</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">max</span>
                 </div>
               </div>
             </div>
@@ -977,7 +993,7 @@ export const AdControlPanel: React.FC = () => {
             {/* AdSense Slot ID */}
             {config.placements.happening_today.provider === 'adsense' && (
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   AdSense Slot ID (Optional)
                 </label>
                 <input
@@ -985,7 +1001,7 @@ export const AdControlPanel: React.FC = () => {
                   value={config.placements.happening_today.ad_unit_id || ''}
                   placeholder="1000000002"
                   onChange={(e) => updatePlacement('happening_today', { ad_unit_id: e.target.value.trim() })}
-                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono"
+                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono text-gray-900 dark:text-white"
                 />
               </div>
             )}
@@ -1004,17 +1020,17 @@ export const AdControlPanel: React.FC = () => {
         </div>
 
         {/* 3. Event Hub Grid Placement Card */}
-        <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+        <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-orange-500/15 text-[#fc721e]">
                 <LayoutGrid className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
                   Event Hub Grid Ads
                 </h3>
-                <span className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">In-feed responsive grid items</span>
+                <span className="text-[10px] text-[#5a4136] dark:text-zinc-400">In-feed responsive grid items</span>
               </div>
             </div>
 
@@ -1032,7 +1048,7 @@ export const AdControlPanel: React.FC = () => {
           <div className="space-y-4">
             {/* Provider Selection */}
             <div>
-              <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                 Active Provider
               </label>
               <div className="grid grid-cols-3 gap-2 mt-1.5">
@@ -1043,8 +1059,8 @@ export const AdControlPanel: React.FC = () => {
                     onClick={() => updatePlacement('event_hub', { provider: mode })}
                     className={`py-2 px-3 rounded-xl text-xs font-black capitalize transition-all cursor-pointer border ${
                       config.placements.event_hub.provider === mode
-                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] shadow-xs'
-                        : 'border-[#e2bfb0]/40 dark:border-[#5a4136]/40 hover:bg-black/5 dark:hover:bg-white/5'
+                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] dark:text-orange-400 shadow-xs'
+                        : 'border-[#e2bfb0]/40 dark:border-white/10 bg-black/[0.01] dark:bg-white/5 text-gray-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                   >
                     {mode === 'direct' ? 'My Ads' : mode === 'adsense' ? 'AdSense' : 'Disabled'}
@@ -1056,7 +1072,7 @@ export const AdControlPanel: React.FC = () => {
             {/* Frequency & Limits */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Insert after every:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -1066,14 +1082,14 @@ export const AdControlPanel: React.FC = () => {
                     max="20"
                     value={config.placements.event_hub.frequency}
                     onChange={(e) => updatePlacement('event_hub', { frequency: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">events</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">events</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Maximum ads:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -1083,9 +1099,9 @@ export const AdControlPanel: React.FC = () => {
                     max="20"
                     value={config.placements.event_hub.max_ads}
                     onChange={(e) => updatePlacement('event_hub', { max_ads: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">max</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">max</span>
                 </div>
               </div>
             </div>
@@ -1093,7 +1109,7 @@ export const AdControlPanel: React.FC = () => {
             {/* AdSense Slot ID */}
             {config.placements.event_hub.provider === 'adsense' && (
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   AdSense Slot ID (Optional)
                 </label>
                 <input
@@ -1101,7 +1117,7 @@ export const AdControlPanel: React.FC = () => {
                   value={config.placements.event_hub.ad_unit_id || ''}
                   placeholder="1000000003"
                   onChange={(e) => updatePlacement('event_hub', { ad_unit_id: e.target.value.trim() })}
-                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono"
+                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono text-gray-900 dark:text-white"
                 />
               </div>
             )}
@@ -1120,17 +1136,17 @@ export const AdControlPanel: React.FC = () => {
         </div>
 
         {/* 4. Event Details Placement Card */}
-        <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+        <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-orange-500/15 text-[#fc721e]">
                 <Columns3 className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                <h3 className="text-sm sm:text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
                   Event Details Page Ads
                 </h3>
-                <span className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">Spotlight banner positions</span>
+                <span className="text-[10px] text-[#5a4136] dark:text-zinc-400">Spotlight banner positions</span>
               </div>
             </div>
 
@@ -1148,7 +1164,7 @@ export const AdControlPanel: React.FC = () => {
           <div className="space-y-4">
             {/* Provider Selection */}
             <div>
-              <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300 uppercase tracking-wider">
                 Active Provider
               </label>
               <div className="grid grid-cols-3 gap-2 mt-1.5">
@@ -1159,8 +1175,8 @@ export const AdControlPanel: React.FC = () => {
                     onClick={() => updatePlacement('event_details', { provider: mode })}
                     className={`py-2 px-3 rounded-xl text-xs font-black capitalize transition-all cursor-pointer border ${
                       config.placements.event_details.provider === mode
-                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] shadow-xs'
-                        : 'border-[#e2bfb0]/40 dark:border-[#5a4136]/40 hover:bg-black/5 dark:hover:bg-white/5'
+                        ? 'bg-orange-500/15 border-[#fc721e] text-[#fc721e] dark:text-orange-400 shadow-xs'
+                        : 'border-[#e2bfb0]/40 dark:border-white/10 bg-black/[0.01] dark:bg-white/5 text-gray-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                   >
                     {mode === 'direct' ? 'My Ads' : mode === 'adsense' ? 'AdSense' : 'Disabled'}
@@ -1172,7 +1188,7 @@ export const AdControlPanel: React.FC = () => {
             {/* Frequency & Limits */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   Maximum ads:
                 </label>
                 <div className="flex items-center gap-2 mt-1">
@@ -1182,14 +1198,14 @@ export const AdControlPanel: React.FC = () => {
                     max="5"
                     value={config.placements.event_details.max_ads}
                     onChange={(e) => updatePlacement('event_details', { max_ads: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono font-bold text-center"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono font-bold text-center text-gray-900 dark:text-white"
                   />
-                  <span className="text-xs text-[#5a4136] dark:text-[#ffb693] shrink-0 font-medium">max</span>
+                  <span className="text-xs text-[#5a4136] dark:text-zinc-400 shrink-0 font-medium">max</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#5a4136] dark:text-[#ffb693]">
+                <label className="text-[11px] font-bold text-[#5a4136] dark:text-zinc-300">
                   AdSense Slot ID
                 </label>
                 <input
@@ -1197,7 +1213,7 @@ export const AdControlPanel: React.FC = () => {
                   value={config.placements.event_details.ad_unit_id || ''}
                   placeholder="1000000004"
                   onChange={(e) => updatePlacement('event_details', { ad_unit_id: e.target.value.trim() })}
-                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a120e] border border-[#e2bfb0] dark:border-[#5a4136] text-xs font-mono"
+                  className="mt-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18181b] border border-[#e2bfb0] dark:border-white/10 text-xs font-mono text-gray-900 dark:text-white"
                 />
               </div>
             </div>
@@ -1218,11 +1234,11 @@ export const AdControlPanel: React.FC = () => {
       </div>
 
       {/* Live Sequence Simulator */}
-      <div className="p-6 rounded-3xl bg-white/70 dark:bg-[#201510]/70 border border-[#e2bfb0]/70 dark:border-[#5a4136]/70 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e2bfb0]/30 dark:border-[#5a4136]/30">
+      <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
           <div className="flex items-center gap-2">
             <Eye className="w-5 h-5 text-[#fc721e]" />
-            <h3 className="text-base font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+            <h3 className="text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
               Live Presentation Sequence Simulator
             </h3>
           </div>
@@ -1236,7 +1252,7 @@ export const AdControlPanel: React.FC = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
                   previewPlacement === p
                     ? 'bg-[#fc721e] text-white shadow-sm'
-                    : 'bg-black/5 dark:bg-white/5 hover:bg-black/10'
+                    : 'bg-black/5 dark:bg-white/5 text-gray-700 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/10'
                 }`}
               >
                 {p.replace('_', ' ')}
@@ -1245,8 +1261,8 @@ export const AdControlPanel: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.02] border border-[#e2bfb0]/40 dark:border-[#5a4136]/40">
-          <div className="text-[11px] text-[#5a4136] dark:text-[#ffb693] font-bold mb-3 flex items-center gap-1.5">
+        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-[#e2bfb0]/40 dark:border-white/10">
+          <div className="text-[11px] text-[#5a4136] dark:text-zinc-300 font-bold mb-3 flex items-center gap-1.5">
             <span>Resulting stream for {previewPlacement.replace('_', ' ')}:</span>
             <span className="text-xs font-mono text-[#fc721e]">
               (Frequency: every {activePlacementConfig.frequency}, Max: {activePlacementConfig.max_ads}, Provider: {activePlacementConfig.provider})
@@ -1260,9 +1276,9 @@ export const AdControlPanel: React.FC = () => {
                 <span className={`px-3.5 py-2 rounded-xl text-xs font-black tracking-wide border shadow-xs ${
                   item.type === 'ad'
                     ? item.provider === 'adsense'
-                      ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/40 shadow-indigo-500/10'
-                      : 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/40 shadow-purple-500/10'
-                    : 'bg-white dark:bg-[#1a120e] text-[#261812] dark:text-[#ffede6] border-[#e2bfb0]/60 dark:border-[#5a4136]/60'
+                      ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30 shadow-sky-500/10'
+                      : 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30 shadow-orange-500/10'
+                    : 'bg-white dark:bg-[#18181b] text-[#261812] dark:text-white border-[#e2bfb0]/60 dark:border-white/10'
                 }`}>
                   {item.label}
                 </span>

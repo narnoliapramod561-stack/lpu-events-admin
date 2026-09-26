@@ -45,28 +45,28 @@
 }
 
 .dark {
-  --bg-base: #08090f;
-  --bg-surface: #0a0d14;
-  --bg-surface-raised: #141824;
-  --bg-surface-active: #1c2233;
-  --bg-card: #0e111a;
-  --bg-input: #090c13;
+  --bg-base: #1c1c1e;
+  --bg-surface: #202023;
+  --bg-surface-raised: #2c2c2e;
+  --bg-surface-active: #3a3a3c;
+  --bg-card: #202023;
+  --bg-input: #2c2c2e;
   
-  --border-subtle: #1e2536;
-  --border-medium: #2a344d;
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-medium: rgba(255, 255, 255, 0.16);
   --border-focus: #ff6b00;
   
   --accent-primary: #ff6b00;
   --accent-primary-hover: #ff8533;
   --accent-primary-subtle: rgba(255, 107, 0, 0.18);
-  --accent-glow: 0 0 24px rgba(255, 107, 0, 0.35);
+  --accent-glow: 0 4px 16px rgba(255, 107, 0, 0.45);
   
   --accent-purple: #ff6b00;
   --accent-purple-subtle: rgba(255, 107, 0, 0.18);
   
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #ffffff;
+  --text-muted: #aeaeb2;
+  --text-dim: #8e8e93;
 
   --success: #22c55e;
   --success-subtle: rgba(34, 197, 94, 0.18);
@@ -99,21 +99,17 @@ body {
 }
 
 .dark body,
+html.dark body,
 .dark .admin-shell,
 .dark [class*="min-h-screen"] {
-  background-color: #08090f !important;
+  background-color: #1c1c1e !important;
   background-image:
-    /* 1. Molten Solar Corona — warm amber top glow */
-    radial-gradient(ellipse 70% 40% at 50% -5%, rgba(255, 140, 50, 0.20), rgba(255, 107, 0, 0.07) 45%, transparent 72%),
-    /* 2. Deep Navy-Wine Left Vignette */
-    radial-gradient(circle 650px at 8% 30%, rgba(30, 20, 60, 0.50), transparent 65%),
-    /* 3. Warm Amber Side Flare */
-    radial-gradient(circle 480px at 92% 18%, rgba(255, 120, 40, 0.12), transparent 55%),
-    /* 4. Chromatic Indigo Accent */
-    radial-gradient(circle 520px at 20% 65%, rgba(79, 70, 229, 0.06), transparent 55%),
-    /* 5. Bottom Horizon Ember */
-    radial-gradient(ellipse 85% 28% at 50% 102%, rgba(255, 107, 0, 0.10), rgba(180, 80, 20, 0.03) 50%, transparent 70%) !important;
-  color: #f8fafc !important;
+    /* Premium Warm Charcoal Ambient Depth — Apple Style matching Student Portal */
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(142, 142, 147, 0.08), transparent 70%),
+    radial-gradient(ellipse 55% 35% at 85% 20%, rgba(174, 174, 178, 0.04), transparent 55%),
+    radial-gradient(ellipse 55% 35% at 15% 50%, rgba(142, 142, 147, 0.04), transparent 55%),
+    radial-gradient(circle 700px at 50% 100%, rgba(174, 174, 178, 0.05), transparent 65%) !important;
+  color: #ffffff !important;
 }
 
 #root {
@@ -243,8 +239,10 @@ body {
 }
 
 .dark .admin-header {
-  background-color: rgba(10, 13, 20, 0.92);
-  border-bottom-color: var(--border-subtle);
+  background-color: rgba(28, 28, 30, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
 }
 
 .admin-header-left {
@@ -747,63 +745,80 @@ body {
 }
 
 /* =========================================================
-   STUDENT-STYLE TRUE MIDNIGHT BLACK OVERRIDES FOR ADMIN
-   Replaces legacy muddy brown/peach colors with crisp midnight black & cool slate
+   STUDENT-STYLE LUXURY WARM CHARCOAL DARK MODE FOR ADMIN
+   Matches Student Portal's Apple-style #1c1c1e warm charcoal palette
    ========================================================= */
 
 /* Direct class overrides for Tailwind arbitrary hex values in dark mode */
 .dark [class*="bg-[#1a120e]"],
 .dark [class*="bg-[#1a120e]/"],
 .dark [class*="hover:bg-[#1a120e]"]:hover {
-  background-color: #08090f !important;
+  background-color: #202023 !important;
 }
 
 .dark [class*="bg-[#261812]"],
 .dark [class*="bg-[#261812]/"],
 .dark [class*="hover:bg-[#261812]"]:hover {
-  background-color: #0e111a !important;
+  background-color: #202023 !important;
 }
 
 .dark [class*="bg-[#3d2d26]"],
 .dark [class*="bg-[#3d2d26]/"],
 .dark [class*="hover:bg-[#3d2d26]"]:hover {
-  background-color: #161b26 !important;
+  background-color: #2c2c2e !important;
 }
 
 .dark [class*="bg-[#4d3830]"],
 .dark [class*="bg-[#4d3830]/"],
 .dark [class*="hover:bg-[#4d3830]"]:hover {
-  background-color: #1f2637 !important;
+  background-color: #3a3a3c !important;
+}
+
+.dark [class*="bg-[#fee3d8]"],
+.dark [class*="bg-[#fee3d8]/"],
+.dark [class*="hover:bg-[#fee3d8]"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark [class*="bg-[#f8ddd2]"],
+.dark [class*="bg-[#f8ddd2]/"],
+.dark [class*="hover:bg-[#f8ddd2]"]:hover {
+  background-color: rgba(255, 255, 255, 0.10) !important;
 }
 
 .dark [class*="border-[#e2bfb0]"],
 .dark [class*="border-[#e2bfb0]/"],
 .dark [class*="border-[#5a4136]"],
 .dark [class*="border-[#5a4136]/"] {
-  border-color: #1e2536 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
 }
 
 .dark [class*="border-[#705244]"],
-.dark [class*="border-[#705244]/"] {
-  border-color: #2a344d !important;
+.dark [class*="border-[#705244]/"],
+.dark [class*="border-[#d4a896]"],
+.dark [class*="border-[#d4a896]/"] {
+  border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 .dark [class*="text-[#ffede6]"],
 .dark [class*="text-[#ffede6]/"],
-.dark [class*="text-[#261812]"] {
-  color: #f8fafc !important;
+.dark [class*="text-[#261812]"],
+.dark [class*="text-[#261812]/"] {
+  color: #ffffff !important;
 }
 
 .dark [class*="text-[#ffb693]"],
 .dark [class*="text-[#ffb693]/"],
 .dark [class*="text-[#5a4136]"],
 .dark [class*="text-[#5a4136]/"] {
-  color: #94a3b8 !important;
+  color: #aeaeb2 !important;
 }
 
 .dark [class*="text-[#d4a896]"],
-.dark [class*="text-[#d4a896]/"] {
-  color: #64748b !important;
+.dark [class*="text-[#d4a896]/"],
+.dark [class*="text-[#8e7164]"],
+.dark [class*="text-[#8e7164]/"] {
+  color: #8e8e93 !important;
 }
 
 .dark [class*="hover:text-[#ffb693]"]:hover,
@@ -814,48 +829,61 @@ body {
 /* Sidebar & Header Glass */
 .dark aside,
 .dark .admin-sidebar {
-  background-color: #0a0d14 !important;
-  border-right-color: #1e2536 !important;
+  background-color: rgba(28, 28, 30, 0.94) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
 .dark header,
 .dark .admin-header {
-  background-color: rgba(10, 13, 20, 0.90) !important;
-  border-bottom-color: #1e2536 !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  background-color: rgba(28, 28, 30, 0.92) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(40px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(190%) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.20) !important;
 }
 
 /* Modals, Dialogs, Cards & Tables */
 .dark .stat-card,
 .dark .card-box,
 .dark .modal-dialog {
-  background-color: #0e111a !important;
-  border-color: #1e2536 !important;
-  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.8) !important;
+  background-color: #202023 !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 
+    0 12px 32px -4px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .stat-card:hover,
+.dark .card-box:hover {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 
+    0 16px 36px -4px rgba(0, 0, 0, 0.50),
+    0 0 20px rgba(255, 107, 0, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16) !important;
 }
 
 .dark .card-box-header,
 .dark .modal-header,
 .dark .modal-footer,
 .dark .stat-card-icon-box {
-  background-color: #141824 !important;
-  border-color: #1e2536 !important;
+  background-color: #28282b !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
 }
 
 .dark .modern-table th {
-  background-color: #141824 !important;
-  border-color: #1e2536 !important;
-  color: #94a3b8 !important;
+  background-color: #242426 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #aeaeb2 !important;
 }
 
 .dark .modern-table td {
-  border-color: #1e2536 !important;
-  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
 }
 
 .dark .modern-table tr:hover td {
-  background-color: #141824 !important;
+  background-color: #2c2c2e !important;
 }
 
 /* Inputs & Form Fields */
@@ -865,14 +893,14 @@ body {
 .dark input:not([type="checkbox"]):not([type="radio"]),
 .dark select,
 .dark textarea {
-  background-color: #090c13 !important;
-  border-color: #1e2536 !important;
-  color: #f8fafc !important;
+  background-color: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #64748b !important;
+  color: #8e8e93 !important;
 }
 
 .dark .form-input:focus,
@@ -887,21 +915,75 @@ body {
 
 /* Secondary & Ghost Buttons */
 .dark .btn-secondary {
-  background-color: #141824 !important;
-  border-color: #1e2536 !important;
-  color: #f8fafc !important;
+  background-color: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
 }
 
 .dark .btn-secondary:hover:not(:disabled) {
-  background-color: #1c2233 !important;
-  border-color: #2a344d !important;
+  background-color: #3a3a3c !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .dark .btn-ghost {
-  color: #94a3b8 !important;
+  color: #aeaeb2 !important;
 }
 
 .dark .btn-ghost:hover:not(:disabled) {
-  background-color: #141824 !important;
+  background-color: #2c2c2e !important;
   color: #ffffff !important;
+}
+
+/* Apple Control Center Active Glowing Pill for Admin */
+.dark .glass-pill-active {
+  background: linear-gradient(
+    135deg,
+    #FF5E00 0%,
+    #FFA000 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 
+    0 4px 16px rgba(255, 107, 0, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Login View Dark Mode Overrides */
+.dark .login-card {
+  background-color: #202023 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.10) !important;
+  color: #ffffff !important;
+}
+
+.dark .login-eyebrow {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ff8533 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .login-badge-scope {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  color: #aeaeb2 !important;
+}
+
+.dark .login-input {
+  background-color: #2c2c2e !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.dark .login-otp-box {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .login-text-title {
+  color: #ffffff !important;
+}
+
+.dark .login-text-muted {
+  color: #aeaeb2 !important;
 }

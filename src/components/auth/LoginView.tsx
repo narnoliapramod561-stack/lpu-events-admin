@@ -156,7 +156,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
   };
 
   return (
-    <div style={{
+    <div className="login-wrapper min-h-screen" style={{
       minHeight: '100vh',
       width: '100vw',
       display: 'flex',
@@ -180,7 +180,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
 
       {/* Top Eyebrow Badge (Outside the Box at the Top - Big & Premium) */}
       <div style={{ marginBottom: '22px', zIndex: 10 }}>
-        <div style={{
+        <div className="login-eyebrow" style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '9px',
@@ -216,7 +216,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
       </div>
 
       {/* Main Elevated Card Container (Pure, Balanced LPU Palette) */}
-      <div style={{
+      <div className="login-card" style={{
         width: '100%',
         maxWidth: '540px',
         backgroundColor: '#ffffff',
@@ -234,18 +234,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
 
         {/* Clean LPU Logo at the top of the box */}
         <div style={{
-          marginBottom: '20px',
+          marginBottom: '22px',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center'
         }}>
-          <LpuLogo size={92} />
+          <LpuLogo size={130} />
         </div>
 
         {/* Header inside the box */}
         <div style={{ textAlign: 'center', marginBottom: '28px', width: '100%' }}>
           {/* Centered Main Title */}
-          <h1 style={{
+          <h1 className="login-text-title" style={{
             fontFamily: "'Outfit', sans-serif",
             fontSize: '28px',
             fontWeight: 800,
@@ -258,7 +258,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
           </h1>
 
           {/* Scope indicator */}
-          <div style={{
+          <div className="login-badge-scope" style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
@@ -275,7 +275,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
             <span>Clubs • Schools • University Authorities</span>
           </div>
 
-          <p style={{
+          <p className="login-text-muted" style={{
             fontSize: '14px',
             color: '#5a4136',
             lineHeight: 1.55,
@@ -369,6 +369,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
             <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
               <label
                 htmlFor="adminEmail"
+                className="login-text-title"
                 style={{
                   fontSize: '12px',
                   fontWeight: 700,
@@ -394,6 +395,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
                 />
                 <input
                   id="adminEmail"
+                  className="login-input"
                   type="email"
                   placeholder="e.g. club.lead@lpu.co.in"
                   value={email}
@@ -478,7 +480,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
         {/* STEP 2: OTP VERIFICATION */}
         {step === 'OTP' && (
           <form onSubmit={handleVerifyOtp} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            <div style={{
+            <div className="login-otp-box" style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -490,7 +492,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                 <Mail size={14} style={{ color: '#ff6b00', flexShrink: 0 }} />
-                <span style={{ color: '#261812', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} data-clarity-mask="True">
+                <span className="login-text-title" style={{ color: '#261812', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} data-clarity-mask="True">
                   {email}
                 </span>
               </div>
@@ -515,6 +517,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label
+                className="login-text-title"
                 style={{
                   fontSize: '11.5px',
                   fontWeight: 700,
@@ -536,6 +539,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
                   <input
                     key={idx}
                     ref={(el) => (otpInputRefs.current[idx] = el)}
+                    className="login-input"
                     type="text"
                     inputMode="numeric"
                     maxLength={1}

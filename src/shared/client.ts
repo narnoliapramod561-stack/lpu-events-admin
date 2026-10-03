@@ -770,45 +770,21 @@ export class LpuEventsClient {
           // Non-blocking
         }
 
-        let secret = '';
-        try {
-          secret = (import.meta as any).env?.VITE_CACHE_INVALIDATION_SECRET || 'lpu-cache-secret-2024';
-        } catch { /* env unavailable */ }
-
         const studentSiteUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
           ? `http://${window.location.hostname}:3000`
           : 'https://lpuevents.live';
-
-        const anonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_S9KH9_RTpx1MiPwyEBWxRQ_QkJVgzsA';
-        const headers: Record<string, string> = {
+        const { data: { session } } = await this.supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const headers = {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${secret || anonKey}`,
-          'X-Invalidation-Secret': secret || anonKey,
+          'Authorization': `Bearer ${session.access_token}`,
         };
 
-        // 2. Invalidate tags across all potential paths to guarantee fresh edge responses
-        const invalidationTargets = [
-          '/api/cache/invalidate',
-          'https://lpuevents.live/api/cache/invalidate',
-          `${studentSiteUrl}/api/cache/invalidate`,
-        ];
-        invalidationTargets.forEach(endpoint => {
-          fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ tags }),
-          }).catch(() => {});
+        await fetch(`${studentSiteUrl}/api/cache/invalidate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ tags }),
         });
-
-        // 3. Trigger active rebuild & pre-warm
-        fetch(`${studentSiteUrl}/api/cache/rebuild`, {
-          method: 'POST',
-          headers,
-        }).catch(() => {});
-        fetch('https://lpuevents.live/api/cache/rebuild', {
-          method: 'POST',
-          headers,
-        }).catch(() => {});
       } catch {
         // Non-blocking telemetry
       }
@@ -873,20 +849,6 @@ export class LpuEventsClient {
     return res;
   }
 
-  async requestMediaUpload(mediaType: string, mimeType: string, fileSize: number): Promise<{ data: any; error: any }> {
-    return this.supabase.rpc('request_media_upload', {
-      p_media_type: mediaType,
-      p_mime_type: mimeType,
-      p_file_size_bytes: fileSize
-    });
-  }
-
-  async confirmMediaUpload(mediaId: string): Promise<{ data: any; error: any }> {
-    return this.supabase.rpc('confirm_media_upload', {
-      p_media_id: mediaId
-    });
-  }
-
   // --- Super Admin Content Management RPCs ---
 
   async manageCategory(action: string, params?: {
@@ -944,30 +906,10 @@ export class LpuEventsClient {
     return res;
   }
 
-  async manageCarouselItem(action: string, params?: {
-    id?: string; item_type?: string; event_id?: string; advertisement_id?: string;
-    media_id?: string; sort_order?: number; is_active?: boolean;
-    start_at?: string; end_at?: string; display_duration_ms?: number;
-    custom_title?: string; custom_subtitle?: string; custom_cta_text?: string;
-    custom_cta_url?: string; badge_text?: string;
-  }): Promise<{ data: any; error: any }> {
+  async manageCarouselItem(action: 'toggle_active' | 'delete', params: { id: string }): Promise<{ data: any; error: any }> {
     const res = await this.supabase.rpc('manage_carousel_item', {
       p_action: action,
-      p_id: params?.id || null,
-      p_item_type: params?.item_type || 'EVENT',
-      p_event_id: params?.event_id || null,
-      p_advertisement_id: params?.advertisement_id || null,
-      p_media_id: params?.media_id || null,
-      p_sort_order: params?.sort_order ?? 0,
-      p_is_active: params?.is_active ?? true,
-      p_start_at: params?.start_at || null,
-      p_end_at: params?.end_at || null,
-      p_display_duration_ms: params?.display_duration_ms ?? 5000,
-      p_custom_title: params?.custom_title || null,
-      p_custom_subtitle: params?.custom_subtitle || null,
-      p_custom_cta_text: params?.custom_cta_text || null,
-      p_custom_cta_url: params?.custom_cta_url || null,
-      p_badge_text: params?.badge_text || null
+      p_id: params.id
     });
     if (!res.error) {
       this._dispatchTargetedEdgeInvalidation(['carousel', 'homepage']);
@@ -990,30 +932,12 @@ export class LpuEventsClient {
       }
     }
 
-    let res = await this.supabase.rpc('manage_global_setting', {
+    const res = await this.supabase.rpc('manage_global_setting', {
       p_action,
       p_key,
       p_value,
       p_description
     });
-
-    // Robust Fallback: direct table upsert if RPC had permission or transient error
-    if (res.error && p_action === 'upsert') {
-      const { data: directData, error: directErr } = await this.supabase
-        .from('global_settings')
-        .upsert({
-          key: (p_key || '').trim(),
-          value: p_value,
-          description: p_description,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'key' })
-        .select()
-        .maybeSingle();
-
-      if (!directErr) {
-        res = { data: directData, error: null } as any;
-      }
-    }
 
     if (!res.error) {
       this._dispatchTargetedEdgeInvalidation(['settings', 'homepage', 'advertisements']);

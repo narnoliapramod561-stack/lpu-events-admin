@@ -385,7 +385,6 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         supabase,
         file,
         context: 'event-banner',
-        adminUserId: profile?.id,
         entityId: editEventId || undefined,
         onProgress: (step) => {
           if (uploadGenerationRef.current !== currentGeneration) return;

@@ -95,7 +95,6 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
 
   const now = new Date();
   const isActive = new Date(event.end_at) >= now && event.status === 'PUBLISHED';
-  const isCancelled = event.status === 'CANCELLED';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -109,12 +108,7 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <h2 className="page-title">{event.name}</h2>
-            {isCancelled ? (
-              <span className="badge badge-danger">
-                <span className="badge-dot" />
-                <span>CANCELLED</span>
-              </span>
-            ) : isActive ? (
+            {isActive ? (
               <span className="badge badge-success">
                 <span className="badge-dot" />
                 <span>LIVE ON PORTAL</span>
@@ -129,7 +123,7 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
 
         {/* Quick action buttons */}
         <div style={{ display: 'flex', gap: '10px' }}>
-          {isActive && !isCancelled && (
+          {isActive && (
             <>
               <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('edit')}>
                 <Edit3 size={15} />

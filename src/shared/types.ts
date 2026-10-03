@@ -4,7 +4,7 @@
 export type PlatformAdminRole = 'SUPER_ADMIN';
 export type OrganizationMemberRole = 'ORGANIZER';
 export type AccessRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type EventStatus = 'PUBLISHED' | 'COMPLETED' | 'CANCELLED' | 'DRAFT' | 'DELETED';
+export type EventStatus = 'PUBLISHED' | 'COMPLETED';
 export type RegistrationMode = 'NONE' | 'EXTERNAL';
 export type EventPricingType = 'FREE' | 'PAID';
 export type MediaType = 'EVENT_BANNER' | 'ADVERTISEMENT' | 'SPONSOR_LOGO' | 'CAROUSEL_IMAGE' | 'MEMORY_IMAGE';
@@ -269,7 +269,6 @@ export interface EventFeedItem {
     bucket?: string;
   } | null;
   status?: EventStatus;
-  deleted_at?: string | null;
   organizations: {
     name: string;
   } | null;
@@ -323,7 +322,6 @@ export interface CarouselItemFeedItem {
     pricing_type: EventPricingType;
     banner_media_id: string | null;
     status: EventStatus;
-    deleted_at?: string | null;
     organizations: { name: string } | null;
     categories?: { name: string } | null;
   } | null;

@@ -80,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await fetchProfile(currentSession.user.id);
           }
           trackAdminAction('auth_login_success', { success: true });
-          await supabase.rpc('log_security_event', { p_action: 'LOGIN', p_status: 'SUCCESS' });
         } else {
           // Token refreshed / window focus / tab switch: update quietly in background without unmounting or reloading UI
           await fetchProfile(currentSession.user.id);
@@ -95,7 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             sessionStorage.removeItem('lpu_superadmin_active_tab');
           } catch (e) {}
           trackAdminAction('auth_logout', { success: true });
-          await supabase.rpc('log_security_event', { p_action: 'LOGOUT', p_status: 'SUCCESS' });
         }
       }
     });
@@ -109,15 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          shouldCreateUser: true
-        }
       });
-      if (!error) {
-        await supabase.rpc('log_security_event', { p_action: 'REQUEST_OTP', p_status: 'SUCCESS', p_metadata: { email } });
-      } else {
-        await supabase.rpc('log_security_event', { p_action: 'REQUEST_OTP', p_status: 'FAILED', p_metadata: { email, error: error.message } });
-      }
       return { error };
     } catch (err: any) {
       return { error: err };
@@ -131,9 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         type: 'email'
       });
-      if (error) {
-        await supabase.rpc('log_security_event', { p_action: 'VERIFY_OTP', p_status: 'FAILED', p_metadata: { email, error: error.message } });
-      }
       return { error };
     } catch (err: any) {
       return { error: err };

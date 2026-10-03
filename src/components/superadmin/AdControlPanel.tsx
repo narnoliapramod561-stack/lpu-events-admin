@@ -403,29 +403,6 @@ export const AdControlPanel: React.FC = () => {
         description: 'Event Hub ad frequency interval',
       });
 
-      // Send direct edge cache invalidation trigger with auth secret
-      try {
-        const secret = (import.meta as any).env?.VITE_CACHE_INVALIDATION_SECRET || '';
-        const invHeaders: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (secret) {
-          invHeaders['X-Invalidation-Secret'] = secret;
-        }
-        const invBody = JSON.stringify({ tags: ['settings', 'homepage', 'advertisements'] });
-
-        await Promise.allSettled([
-          fetch('/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
-          fetch('https://lpuevents.live/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
-          fetch('http://localhost:3000/api/cache/invalidate', { method: 'POST', headers: invHeaders, body: invBody }),
-        ]);
-
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('lpu_cache_bust', String(Date.now()));
-          window.dispatchEvent(new CustomEvent('lpu:cache-invalidated', { detail: { tags: ['settings', 'homepage', 'advertisements'] } }));
-        }
-      } catch {}
-
       showToast('success', 'Advertisement system configuration saved & synced live!');
     } catch (err: any) {
       showToast('error', 'Save failed: ' + (err?.message || 'Unknown error'));

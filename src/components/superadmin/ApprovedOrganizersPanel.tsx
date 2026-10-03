@@ -69,7 +69,7 @@ export const ApprovedOrganizersPanel: React.FC = () => {
       // 2. Query pre-approved organizers
       const { data: preApps, error: pErr } = await supabase
         .from('pre_approved_organizers')
-        .select('id, email, organization_name, remarks, is_claimed, claimed_at, created_at')
+        .select('id, email, organization_id, organization_name, created_at')
         .order('created_at', { ascending: false });
 
       if (!pErr && Array.isArray(preApps)) {

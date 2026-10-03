@@ -7,11 +7,7 @@ delete from public.featured_events;
 delete from public.carousel_items;
 delete from public.advertisement_positions;
 delete from public.advertisements;
-delete from public.event_memory_media;
-delete from public.event_memories;
-delete from public.sponsors;
 delete from public.event_content_sections;
-delete from public.outbox_events;
 delete from public.events;
 delete from public.media_assets;
 delete from public.organizer_access_requests;
@@ -181,7 +177,7 @@ values
   ('bad0000d-0000-0000-0000-000000000001', 'cd000000-0000-0000-0000-000000000001', 'miscellaneous', 'Miscellaneous Events', 1, true)
 on conflict (id) do update set category_id = excluded.category_id, name = excluded.name, sort_order = excluded.sort_order, is_active = true;
 
--- 7. Seed Media Assets for All 60 Events, Ads, Sponsors, and Memories
+-- 7. Seed Media Assets for Event and Advertisement Fixtures
 insert into public.media_assets (
   id, bucket, object_key, media_type, mime_type, file_size_bytes, checksum, status, created_by
 )
@@ -199,7 +195,7 @@ from generate_series(1, 60) as s(i)
 cross join (select id from public.admin_users where email = 'subhamkumar86032@gmail.com' limit 1) au
 on conflict (id) do update set object_key = excluded.object_key, status = excluded.status;
 
--- Additional Media Assets for Ads, Sponsors, and Memories
+-- Additional Media Assets for Ads
 insert into public.media_assets (
   id, bucket, object_key, media_type, mime_type, file_size_bytes, checksum, status, created_by
 )
@@ -220,15 +216,7 @@ insert into public.media_assets (
   id, bucket, object_key, media_type, mime_type, file_size_bytes, checksum, status, created_by
 )
 select
-  'd3333333-3333-3333-3333-333333333333', 'public', 'sponsors/google_cloud.png', 'SPONSOR_LOGO'::public.media_type, 'image/png', 40960, 'chk_sp1', 'READY'::public.media_status, au.id
-from public.admin_users au where au.email = 'subhamkumar86032@gmail.com' limit 1
-on conflict (id) do update set status = excluded.status;
-
-insert into public.media_assets (
-  id, bucket, object_key, media_type, mime_type, file_size_bytes, checksum, status, created_by
-)
-select
-  'd4444444-4444-4444-4444-444444444444', 'public', 'memories/one_india_2025.png', 'MEMORY_IMAGE'::public.media_type, 'image/png', 120000, 'chk_mem1', 'READY'::public.media_status, au.id
+  'd3333333-3333-3333-3333-333333333333', 'public', 'ads/google_cloud.png', 'ADVERTISEMENT'::public.media_type, 'image/png', 40960, 'chk_ad2', 'READY'::public.media_status, au.id
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com' limit 1
 on conflict (id) do update set status = excluded.status;
 
@@ -239,8 +227,7 @@ on conflict (id) do update set status = excluded.status;
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'LPU RoboWars 2026: Heavyweight Battlebots Championship',
@@ -249,15 +236,14 @@ select
   'de000000-0000-0000-0000-000000000001',
   now() - interval '2 hours', now() + interval '6 hours',
   'LPU Indoor Sports Complex Arena Ring 1', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 4250, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 4250
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 2: One India Inter-State Folk Dance Faceoff
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'One India Inter-State Folk Dance Faceoff',
@@ -266,15 +252,14 @@ select
   'de000000-0000-0000-0000-000000000002',
   now() - interval '1 hour', now() + interval '5 hours',
   'LPU Open Air Theatre (OAT)', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 3890, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 3890
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 3: Inter-Hostel Valorant & BGMI Esports Championship
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-Hostel Valorant & BGMI Esports Championship',
@@ -283,15 +268,14 @@ select
   'de000000-0000-0000-0000-000000000003',
   now() - interval '3 hours', now() + interval '4 hours',
   'Student Center Esports Lounge', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 3120, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 3120
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 4: GenAI & Prompt Engineering Hands-on Bootcamp
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000004', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'GenAI & Prompt Engineering Hands-on Bootcamp',
@@ -300,15 +284,14 @@ select
   'de000000-0000-0000-0000-000000000004',
   now() - interval '30 minutes', now() + interval '4 hours',
   'Block 32 Auditorium 1', 'EXTERNAL'::public.registration_mode, 'https://gdg.lpu.in/genai-bootcamp',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 250, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 2870, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 250, 'PUBLISHED'::public.event_status, 2870
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 5: LPU Startup Pitch Tank 2026
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000005', '77777777-7777-7777-7777-777777777777', au.id, au.id,
   'LPU Startup Pitch Tank 2026',
@@ -317,15 +300,14 @@ select
   'de000000-0000-0000-0000-000000000005',
   now() + interval '1 day 2 hours', now() + interval '1 day 6 hours',
   'Mittal School of Business Conclave Hall', 'EXTERNAL'::public.registration_mode, 'https://ecell.lpu.in/pitch-tank',
-  'FREE'::public.event_pricing_type, null, 'TEAM', 50, 'TEAMS', null, 'PUBLISHED'::public.event_status, 1940, null
+  'FREE'::public.event_pricing_type, null, 'TEAM', 50, 'PUBLISHED'::public.event_status, 1940
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 6: Classical Hindustani Sitar & Tabla Evening
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000006', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Classical Hindustani Sitar & Tabla Evening',
@@ -334,15 +316,14 @@ select
   'de000000-0000-0000-0000-000000000006',
   now() + interval '1 day 4 hours', now() + interval '1 day 8 hours',
   'Shanti Devi Mittal Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1680, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1680
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 7: Inter-School Cricket Derby: Super Over League
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000007', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-School Cricket Derby: Super Over League',
@@ -351,15 +332,14 @@ select
   'de000000-0000-0000-0000-000000000007',
   now() + interval '1 day 1 hour', now() + interval '1 day 7 hours',
   'LPU Main Sports Stadium Oval 1', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2150, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2150
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 8: Figma UI/UX & Design Systems Sprint
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000008', '55555555-5555-5555-5555-555555555555', au.id, au.id,
   'Figma UI/UX & Design Systems Sprint',
@@ -368,15 +348,14 @@ select
   'de000000-0000-0000-0000-000000000008',
   now() + interval '1 day 3 hours', now() + interval '1 day 7 hours',
   'Block 32 Design Studio 4', 'EXTERNAL'::public.registration_mode, 'https://design.lpu.in/figma-sprint',
-  'PAID'::public.event_pricing_type, 199.0, 'INDIVIDUAL', 100, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1420, null
+  'PAID'::public.event_pricing_type, 199.0, 'INDIVIDUAL', 100, 'PUBLISHED'::public.event_status, 1420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 9: CyberSec CTF Ethical Hacking Arena
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000009', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'CyberSec CTF Ethical Hacking Arena',
@@ -385,15 +364,14 @@ select
   'de000000-0000-0000-0000-000000000009',
   now() + interval '2 days 2 hours', now() + interval '2 days 10 hours',
   'Block 34 Cyber Security Lab', 'EXTERNAL'::public.registration_mode, 'https://cybersec.lpu.in/ctf-2026',
-  'FREE'::public.event_pricing_type, null, 'TEAM', 100, 'TEAMS', null, 'PUBLISHED'::public.event_status, 2310, null
+  'FREE'::public.event_pricing_type, null, 'TEAM', 100, 'PUBLISHED'::public.event_status, 2310
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 10: Western Band Jam & Battle of Vocals
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000010', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Western Band Jam & Battle of Vocals',
@@ -402,15 +380,14 @@ select
   'de000000-0000-0000-0000-000000000010',
   now() + interval '2 days 4 hours', now() + interval '2 days 8 hours',
   'Unipolis Open Stage', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2760, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2760
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 11: 3v3 Basketball Knockout League
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000011', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   '3v3 Basketball Knockout League',
@@ -419,15 +396,14 @@ select
   'de000000-0000-0000-0000-000000000011',
   now() + interval '2 days 1 hour', now() + interval '2 days 6 hours',
   'Outdoor Basketball Arena Court 2', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1850, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1850
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 12: Blockchain & Solidity Web3 Workshop
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000012', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Blockchain & Solidity Web3 Workshop',
@@ -436,15 +412,14 @@ select
   'de000000-0000-0000-0000-000000000012',
   now() + interval '2 days 3 hours', now() + interval '2 days 7 hours',
   'Block 32 Computer Lab 2', 'EXTERNAL'::public.registration_mode, 'https://web3.lpu.in/solidity-bootcamp',
-  'PAID'::public.event_pricing_type, 149.0, 'INDIVIDUAL', 150, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1540, null
+  'PAID'::public.event_pricing_type, 149.0, 'INDIVIDUAL', 150, 'PUBLISHED'::public.event_status, 1540
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 13: LPU CyberHack 2026: 48-Hour National Hackathon
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000013', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'LPU CyberHack 2026: 48-Hour National Hackathon',
@@ -453,15 +428,14 @@ select
   'de000000-0000-0000-0000-000000000013',
   now() + interval '3 days', now() + interval '5 days',
   'Unipolis Auditorium & Block 34 Labs', 'EXTERNAL'::public.registration_mode, 'https://cyberhack.lpu.in',
-  'FREE'::public.event_pricing_type, null, 'TEAM', 500, 'TEAMS', null, 'PUBLISHED'::public.event_status, 5420, null
+  'FREE'::public.event_pricing_type, null, 'TEAM', 500, 'PUBLISHED'::public.event_status, 5420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 14: Street Play & Nukkad Natak Drama Fest
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000014', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Street Play & Nukkad Natak Drama Fest',
@@ -470,15 +444,14 @@ select
   'de000000-0000-0000-0000-000000000014',
   now() + interval '3 days 2 hours', now() + interval '3 days 6 hours',
   'Central Plaza Roundabout', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1980, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1980
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 15: All-India Inter-University Table Tennis Cup
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000015', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'All-India Inter-University Table Tennis Cup',
@@ -487,15 +460,14 @@ select
   'de000000-0000-0000-0000-000000000015',
   now() + interval '3 days 1 hour', now() + interval '3 days 7 hours',
   'Indoor Sports Complex Hall 3', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1630, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1630
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 16: Cloud Native DevOps & Kubernetes Masterclass
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000016', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Cloud Native DevOps & Kubernetes Masterclass',
@@ -504,15 +476,14 @@ select
   'de000000-0000-0000-0000-000000000016',
   now() + interval '3 days 3 hours', now() + interval '3 days 7 hours',
   'Block 32 Auditorium 2', 'EXTERNAL'::public.registration_mode, 'https://cloud.lpu.in/devops-masterclass',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 200, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1790, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 200, 'PUBLISHED'::public.event_status, 1790
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 17: Robo-Soccer & Autonomous Drone Derby
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000017', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Robo-Soccer & Autonomous Drone Derby',
@@ -521,15 +492,14 @@ select
   'de000000-0000-0000-0000-000000000017',
   now() + interval '4 days 2 hours', now() + interval '4 days 6 hours',
   'Robotics Innovation Lab Arena', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2140, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2140
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 18: K-Pop & Urban Street Dance Showdown
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000018', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'K-Pop & Urban Street Dance Showdown',
@@ -538,15 +508,14 @@ select
   'de000000-0000-0000-0000-000000000018',
   now() + interval '4 days 4 hours', now() + interval '4 days 8 hours',
   'LPU Open Air Theatre', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 3100, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 3100
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 19: Inter-Hostel Badminton Super Cup
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000019', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-Hostel Badminton Super Cup',
@@ -555,15 +524,14 @@ select
   'de000000-0000-0000-0000-000000000019',
   now() + interval '4 days 1 hour', now() + interval '4 days 7 hours',
   'Indoor Badminton Courts 1-4', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1590, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1590
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 20: FinTech & Algorithmic Trading Conclave
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000020', '77777777-7777-7777-7777-777777777777', au.id, au.id,
   'FinTech & Algorithmic Trading Conclave',
@@ -572,15 +540,14 @@ select
   'de000000-0000-0000-0000-000000000020',
   now() + interval '4 days 3 hours', now() + interval '4 days 7 hours',
   'Mittal School of Business Hall 2', 'EXTERNAL'::public.registration_mode, 'https://fintech.lpu.in/conclave-2026',
-  'PAID'::public.event_pricing_type, 249.0, 'INDIVIDUAL', 120, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1870, null
+  'PAID'::public.event_pricing_type, 249.0, 'INDIVIDUAL', 120, 'PUBLISHED'::public.event_status, 1870
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 21: Full-Stack React & Next.js Hack Jam
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000021', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Full-Stack React & Next.js Hack Jam',
@@ -589,15 +556,14 @@ select
   'de000000-0000-0000-0000-000000000021',
   now() + interval '5 days 2 hours', now() + interval '5 days 8 hours',
   'Block 34 Computer Labs 5-6', 'EXTERNAL'::public.registration_mode, 'https://dev.lpu.in/nextjs-hackjam',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 150, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 2450, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 150, 'PUBLISHED'::public.event_status, 2450
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 22: Stand-up Comedy & Campus Open Mic Showcase
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000022', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Stand-up Comedy & Campus Open Mic Showcase',
@@ -606,15 +572,14 @@ select
   'de000000-0000-0000-0000-000000000022',
   now() + interval '5 days 4 hours', now() + interval '5 days 7 hours',
   'Shanti Devi Mittal Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2890, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2890
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 23: Lawn Tennis Summer Open Championship
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000023', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Lawn Tennis Summer Open Championship',
@@ -623,15 +588,14 @@ select
   'de000000-0000-0000-0000-000000000023',
   now() + interval '5 days 1 hour', now() + interval '5 days 6 hours',
   'Tennis Complex Courts 1-2', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1420, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 24: Renewable Energy & EV Mobility Symposium
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000024', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Renewable Energy & EV Mobility Symposium',
@@ -640,15 +604,14 @@ select
   'de000000-0000-0000-0000-000000000024',
   now() + interval '5 days 3 hours', now() + interval '5 days 7 hours',
   'Block 32 Auditorium 3', 'EXTERNAL'::public.registration_mode, 'https://ev.lpu.in/symposium-2026',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 300, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1680, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 300, 'PUBLISHED'::public.event_status, 1680
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 25: Data Science & Kaggle Predictathon
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000025', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Data Science & Kaggle Predictathon',
@@ -657,15 +620,14 @@ select
   'de000000-0000-0000-0000-000000000025',
   now() + interval '6 days 2 hours', now() + interval '6 days 10 hours',
   'Block 34 Data Analytics Lab', 'EXTERNAL'::public.registration_mode, 'https://ds.lpu.in/predictathon',
-  'FREE'::public.event_pricing_type, null, 'TEAM', 100, 'TEAMS', null, 'PUBLISHED'::public.event_status, 2190, null
+  'FREE'::public.event_pricing_type, null, 'TEAM', 100, 'PUBLISHED'::public.event_status, 2190
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 26: National Theatre & Dramatic Play Gala
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000026', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'National Theatre & Dramatic Play Gala',
@@ -674,15 +636,14 @@ select
   'de000000-0000-0000-0000-000000000026',
   now() + interval '6 days 4 hours', now() + interval '6 days 9 hours',
   'Shanti Devi Mittal Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2630, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2630
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 27: Campus Powerlifting & Fitness Expo
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000027', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Campus Powerlifting & Fitness Expo',
@@ -691,15 +652,14 @@ select
   'de000000-0000-0000-0000-000000000027',
   now() + interval '6 days 1 hour', now() + interval '6 days 6 hours',
   'University Fitness & Conditioning Arena', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1920, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1920
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 28: BioTech & CRISPR Gene Therapy Summit
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000028', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'BioTech & CRISPR Gene Therapy Summit',
@@ -708,15 +668,14 @@ select
   'de000000-0000-0000-0000-000000000028',
   now() + interval '6 days 3 hours', now() + interval '6 days 7 hours',
   'School of Bio-Engineering Seminar Hall', 'EXTERNAL'::public.registration_mode, 'https://biotech.lpu.in/summit-2026',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 200, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1510, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 200, 'PUBLISHED'::public.event_status, 1510
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 29: AR/VR Metaverse Creation Sprint
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000029', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'AR/VR Metaverse Creation Sprint',
@@ -725,15 +684,14 @@ select
   'de000000-0000-0000-0000-000000000029',
   now() + interval '7 days 2 hours', now() + interval '7 days 8 hours',
   'Virtual Reality & Immersive Media Studio', 'EXTERNAL'::public.registration_mode, 'https://vr.lpu.in/metaverse-sprint',
-  'FREE'::public.event_pricing_type, null, 'TEAM', 80, 'TEAMS', null, 'PUBLISHED'::public.event_status, 2380, null
+  'FREE'::public.event_pricing_type, null, 'TEAM', 80, 'PUBLISHED'::public.event_status, 2380
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 30: Fashion Runway: Ethnic Fusion 2026
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000030', '55555555-5555-5555-5555-555555555555', au.id, au.id,
   'Fashion Runway: Ethnic Fusion 2026',
@@ -742,15 +700,14 @@ select
   'de000000-0000-0000-0000-000000000030',
   now() + interval '7 days 4 hours', now() + interval '7 days 8 hours',
   'Unipolis Fashion Pavilion', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 3420, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 3420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 31: Inter-College Volleyball Clash
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000031', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-College Volleyball Clash',
@@ -759,15 +716,14 @@ select
   'de000000-0000-0000-0000-000000000031',
   now() + interval '7 days 1 hour', now() + interval '7 days 6 hours',
   'Outdoor Volleyball Courts 1-3', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1720, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1720
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 32: Product Management Case Crackathon
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000032', '77777777-7777-7777-7777-777777777777', au.id, au.id,
   'Product Management Case Crackathon',
@@ -776,15 +732,14 @@ select
   'de000000-0000-0000-0000-000000000032',
   now() + interval '7 days 3 hours', now() + interval '7 days 7 hours',
   'Mittal School of Business Conclave Hall', 'EXTERNAL'::public.registration_mode, 'https://pm.lpu.in/crackathon-2026',
-  'PAID'::public.event_pricing_type, 299.0, 'TEAM', 60, 'TEAMS', 'FIXED_TEAM_PRICE', 'PUBLISHED'::public.event_status, 1840, null
+  'PAID'::public.event_pricing_type, 299.0, 'TEAM', 60, 'PUBLISHED'::public.event_status, 1840
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 33: Formula Student Electric Vehicle Expo
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000033', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Formula Student Electric Vehicle Expo',
@@ -793,15 +748,14 @@ select
   'de000000-0000-0000-0000-000000000033',
   now() + interval '8 days 2 hours', now() + interval '8 days 7 hours',
   'Mechanical Engineering Proving Grounds', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 2740, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 2740
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 34: Campus Acoustic Night & Unplugged Live
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000034', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Campus Acoustic Night & Unplugged Live',
@@ -810,15 +764,14 @@ select
   'de000000-0000-0000-0000-000000000034',
   now() + interval '8 days 4 hours', now() + interval '8 days 8 hours',
   'Student Center Garden Amphitheatre', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 3180, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 3180
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 35: Chess Grandmaster Blitz Invitational
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000035', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Chess Grandmaster Blitz Invitational',
@@ -827,15 +780,14 @@ select
   'de000000-0000-0000-0000-000000000035',
   now() + interval '8 days 1 hour', now() + interval '8 days 6 hours',
   'Central Library Grand Reading Hall', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1690, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1690
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 36: Placement Readiness & FAANG Mock Interviews
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000036', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Placement Readiness & FAANG Mock Interviews',
@@ -844,15 +796,14 @@ select
   'de000000-0000-0000-0000-000000000036',
   now() + interval '8 days 3 hours', now() + interval '8 days 7 hours',
   'Division of Career Services Hall 1', 'EXTERNAL'::public.registration_mode, 'https://careers.lpu.in/mock-drills',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 250, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 2890, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 250, 'PUBLISHED'::public.event_status, 2890
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 37: Quantum Computing Research Conclave
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000037', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Quantum Computing Research Conclave',
@@ -861,15 +812,14 @@ select
   'de000000-0000-0000-0000-000000000037',
   now() + interval '9 days 2 hours', now() + interval '9 days 7 hours',
   'Block 32 International Auditorium', 'EXTERNAL'::public.registration_mode, 'https://quantum.lpu.in/conclave-2026',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 300, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 1980, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 300, 'PUBLISHED'::public.event_status, 1980
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 38: Mega Bollywood DJ Night & Laser Fiesta
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000038', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Mega Bollywood DJ Night & Laser Fiesta',
@@ -878,15 +828,14 @@ select
   'de000000-0000-0000-0000-000000000038',
   now() + interval '9 days 4 hours', now() + interval '9 days 9 hours',
   'Unipolis Main Grounds', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 6150, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 6150
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 39: Inter-University Swimming & Water Polo Gala
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000039', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-University Swimming & Water Polo Gala',
@@ -895,15 +844,14 @@ select
   'de000000-0000-0000-0000-000000000039',
   now() + interval '9 days 1 hour', now() + interval '9 days 6 hours',
   'Olympic Aquatic Center Pool 1', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'PUBLISHED'::public.event_status, 1780, null
+  'FREE'::public.event_pricing_type, null, null, null, 'PUBLISHED'::public.event_status, 1780
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 40: Space Exploration & CubeSat Satellite Seminar
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'e0000000-0000-0000-0000-000000000040', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Space Exploration & CubeSat Satellite Seminar',
@@ -912,15 +860,14 @@ select
   'de000000-0000-0000-0000-000000000040',
   now() + interval '9 days 3 hours', now() + interval '9 days 7 hours',
   'Aerospace Engineering Auditorium', 'EXTERNAL'::public.registration_mode, 'https://space.lpu.in/cubesat-seminar',
-  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 350, 'STUDENTS', null, 'PUBLISHED'::public.event_status, 2120, null
+  'FREE'::public.event_pricing_type, null, 'INDIVIDUAL', 350, 'PUBLISHED'::public.event_status, 2120
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 41: Competitive Programming CodeSprint 2026
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Competitive Programming CodeSprint 2026',
@@ -929,15 +876,14 @@ select
   'de000000-0000-0000-0000-000000000041',
   now() - interval '1 day 6 hours', now() - interval '1 day',
   'Block 34 Computer Labs 1-4', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 3140, now() - interval '1 day'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 3140
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 42: Kavi Sammelan & Hindi Poetry Fest
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Kavi Sammelan & Hindi Poetry Fest',
@@ -946,15 +892,14 @@ select
   'de000000-0000-0000-0000-000000000042',
   now() - interval '1 day 5 hours', now() - interval '1 day 1 hour',
   'Shanti Devi Mittal Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2420, now() - interval '1 day 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 43: Inter-Department Football Derby
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-Department Football Derby',
@@ -963,15 +908,14 @@ select
   'de000000-0000-0000-0000-000000000043',
   now() - interval '1 day 7 hours', now() - interval '1 day 2 hours',
   'LPU Main Football Stadium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 4120, now() - interval '1 day 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 4120
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 44: UI/UX Micro-Interactions Studio
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000004', '55555555-5555-5555-5555-555555555555', au.id, au.id,
   'UI/UX Micro-Interactions Studio',
@@ -980,15 +924,14 @@ select
   'de000000-0000-0000-0000-000000000044',
   now() - interval '1 day 6 hours', now() - interval '1 day 3 hours',
   'Block 32 Design Studio 2', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 1980, now() - interval '1 day 3 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 1980
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 45: Smart Hardware & IoT Hackathon
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Smart Hardware & IoT Hackathon',
@@ -997,15 +940,14 @@ select
   'de000000-0000-0000-0000-000000000045',
   now() - interval '2 days 8 hours', now() - interval '2 days',
   'Embedded Systems & IoT Lab', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2890, now() - interval '2 days'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2890
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 46: Western Solo Dance Championship
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000006', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Western Solo Dance Championship',
@@ -1014,15 +956,14 @@ select
   'de000000-0000-0000-0000-000000000046',
   now() - interval '2 days 6 hours', now() - interval '2 days 2 hours',
   'LPU Open Air Theatre', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 3560, now() - interval '2 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 3560
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 47: North Zone Collegiate Athletics Meet
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000007', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'North Zone Collegiate Athletics Meet',
@@ -1031,15 +972,14 @@ select
   'de000000-0000-0000-0000-000000000047',
   now() - interval '2 days 7 hours', now() - interval '2 days 1 hour',
   'LPU Main Athletics Track', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 3940, now() - interval '2 days 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 3940
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 48: Angel Investors & Venture Pitch Summit
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000008', '77777777-7777-7777-7777-777777777777', au.id, au.id,
   'Angel Investors & Venture Pitch Summit',
@@ -1048,15 +988,14 @@ select
   'de000000-0000-0000-0000-000000000048',
   now() - interval '2 days 6 hours', now() - interval '2 days 2 hours',
   'Incubation Center Executive Hall', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2180, now() - interval '2 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2180
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 49: Ethical Hacking & Bug Bounty Workshop
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000009', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Ethical Hacking & Bug Bounty Workshop',
@@ -1065,15 +1004,14 @@ select
   'de000000-0000-0000-0000-000000000049',
   now() - interval '3 days 6 hours', now() - interval '3 days 1 hour',
   'Block 34 Cyber Lab 3', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2870, now() - interval '3 days 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2870
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 50: Battle of the Rock Bands 2026
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000010', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Battle of the Rock Bands 2026',
@@ -1082,15 +1020,14 @@ select
   'de000000-0000-0000-0000-000000000050',
   now() - interval '3 days 5 hours', now() - interval '3 days 1 hour',
   'Unipolis Open Stage', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 4780, now() - interval '3 days 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 4780
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 51: 5v5 Campus Futsal Tournament
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000011', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   '5v5 Campus Futsal Tournament',
@@ -1099,15 +1036,14 @@ select
   'de000000-0000-0000-0000-000000000051',
   now() - interval '3 days 7 hours', now() - interval '3 days 2 hours',
   'Outdoor Turf Arena 1', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2340, now() - interval '3 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2340
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 52: Mobile App Development with Flutter
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000012', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'Mobile App Development with Flutter',
@@ -1116,15 +1052,14 @@ select
   'de000000-0000-0000-0000-000000000052',
   now() - interval '3 days 6 hours', now() - interval '3 days 2 hours',
   'Block 32 Computer Lab 4', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 1920, now() - interval '3 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 1920
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 53: TEDx LPU: Beyond Boundaries
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000013', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'TEDx LPU: Beyond Boundaries',
@@ -1133,15 +1068,14 @@ select
   'de000000-0000-0000-0000-000000000053',
   now() - interval '4 days 6 hours', now() - interval '4 days 1 hour',
   'Shanti Devi Mittal Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 5120, now() - interval '4 days 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 5120
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 54: Classical Bharatanatyam Solo Recital
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000014', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'Classical Bharatanatyam Solo Recital',
@@ -1150,15 +1084,14 @@ select
   'de000000-0000-0000-0000-000000000054',
   now() - interval '4 days 5 hours', now() - interval '4 days 2 hours',
   'Block 14 Fine Arts Auditorium', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2350, now() - interval '4 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2350
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 55: Inter-Hostel Carrom & Billiards Cup
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000015', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   'Inter-Hostel Carrom & Billiards Cup',
@@ -1167,15 +1100,14 @@ select
   'de000000-0000-0000-0000-000000000055',
   now() - interval '4 days 7 hours', now() - interval '4 days 3 hours',
   'Indoor Recreation Center Lounge', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 1480, now() - interval '4 days 3 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 1480
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 56: AI in Medical Sciences & Genomics Symposium
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000016', '44444444-4444-4444-4444-444444444444', au.id, au.id,
   'AI in Medical Sciences & Genomics Symposium',
@@ -1184,15 +1116,14 @@ select
   'de000000-0000-0000-0000-000000000056',
   now() - interval '4 days 6 hours', now() - interval '4 days 2 hours',
   'Medical Sciences Lecture Hall 1', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2190, now() - interval '4 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2190
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 57: One World International Culture Carnival
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000017', '22222222-2222-2222-2222-222222222222', au.id, au.id,
   'One World International Culture Carnival',
@@ -1201,15 +1132,14 @@ select
   'de000000-0000-0000-0000-000000000057',
   now() - interval '5 days 8 hours', now() - interval '5 days 1 hour',
   'Unipolis Main Grounds & Stage', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 7420, now() - interval '5 days 1 hour'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 7420
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 58: Campus Photography & Short Film Expo
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000018', '55555555-5555-5555-5555-555555555555', au.id, au.id,
   'Campus Photography & Short Film Expo',
@@ -1218,15 +1148,14 @@ select
   'de000000-0000-0000-0000-000000000058',
   now() - interval '5 days 6 hours', now() - interval '5 days 2 hours',
   'Block 14 Fine Arts Gallery', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2810, now() - interval '5 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2810
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 59: 10k Campus Marathon & Health Run
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000019', '33333333-3333-3333-3333-333333333333', au.id, au.id,
   '10k Campus Marathon & Health Run',
@@ -1235,15 +1164,14 @@ select
   'de000000-0000-0000-0000-000000000059',
   now() - interval '5 days 7 hours', now() - interval '5 days 4 hours',
   'LPU Campus Perimeter Course', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 4890, now() - interval '5 days 4 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 4890
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- Event 60: Drone Cinematography Masterclass
 insert into public.events (
   id, organization_id, created_by, updated_by, name, description, category_id, subcategory_id,
   banner_media_id, start_at, end_at, venue_name, registration_mode, external_registration_url,
-  pricing_type, price_amount, registration_format, capacity_limit, capacity_counts_by, team_pricing_mode, status, view_count, completed_at
-)
+  pricing_type, price_amount, registration_format, capacity_limit, status, view_count)
 select
   'ea000000-0000-0000-0000-000000000020', '11111111-1111-1111-1111-111111111111', au.id, au.id,
   'Drone Cinematography Masterclass',
@@ -1252,7 +1180,7 @@ select
   'de000000-0000-0000-0000-000000000060',
   now() - interval '5 days 5 hours', now() - interval '5 days 2 hours',
   'Aviation Ground Flight Zone', 'NONE'::public.registration_mode, null,
-  'FREE'::public.event_pricing_type, null, null, null, null, null, 'COMPLETED'::public.event_status, 2340, now() - interval '5 days 2 hours'
+  'FREE'::public.event_pricing_type, null, null, null, 'COMPLETED'::public.event_status, 2340
 from public.admin_users au where au.email = 'subhamkumar86032@gmail.com';
 
 -- ==============================================================================
@@ -1321,48 +1249,8 @@ on conflict do nothing;
 
 
 -- ==============================================================================
--- 12. SEED SPONSORS & PARTNERS
 -- ==============================================================================
-insert into public.sponsors (
-  id, name, logo_media_id, website_url, status, sort_order, created_by, updated_by
-)
-select
-  'f1111111-1111-1111-1111-111111111111', 'Google Cloud',
-  'd3333333-3333-3333-3333-333333333333', 'https://cloud.google.com',
-  'PUBLISHED'::public.content_status, 1, au.id, au.id
-from public.admin_users au where au.email = 'subhamkumar86032@gmail.com'
-on conflict (id) do update set status = excluded.status;
-
-insert into public.sponsors (
-  id, name, logo_media_id, website_url, status, sort_order, created_by, updated_by
-)
-select
-  'f2222222-2222-2222-2222-222222222222', 'GitHub Campus Program',
-  'd3333333-3333-3333-3333-333333333333', 'https://github.com',
-  'PUBLISHED'::public.content_status, 2, au.id, au.id
-from public.admin_users au where au.email = 'subhamkumar86032@gmail.com'
-on conflict (id) do update set status = excluded.status;
-
-
--- ==============================================================================
--- 13. SEED EVENT MEMORIES
--- ==============================================================================
-insert into public.event_memories (
-  id, event_id, title, description, cover_media_id, status, created_by, updated_by
-)
-select
-  'f5555555-5555-5555-5555-555555555555',
-  'ea000000-0000-0000-0000-000000000017',
-  'One World International Culture Carnival 2026 Memories',
-  'Relive the grand cultural performances, international traditional dances, and state pavilions.',
-  'de000000-0000-0000-0000-000000000057',
-  'PUBLISHED'::public.content_status, au.id, au.id
-from public.admin_users au where au.email = 'subhamkumar86032@gmail.com'
-on conflict (id) do update set status = excluded.status;
-
-
--- ==============================================================================
--- 14. SEED HERO CAROUSEL ITEMS
+-- 12. SEED HERO CAROUSEL ITEMS
 -- ==============================================================================
 insert into public.carousel_items (
   id, item_type, event_id, sort_order, is_active, created_by, updated_by
@@ -1392,15 +1280,6 @@ from public.admin_users au where au.email = 'subhamkumar86032@gmail.com'
 on conflict (id) do update set is_active = true, sort_order = 3;
 
 insert into public.carousel_items (
-  id, item_type, memory_id, sort_order, is_active, created_by, updated_by
-)
-select
-  'c0000000-0000-0000-0000-000000000004', 'MEMORY'::public.carousel_item_type,
-  'f5555555-5555-5555-5555-555555555555', 4, true, au.id, au.id
-from public.admin_users au where au.email = 'subhamkumar86032@gmail.com'
-on conflict (id) do update set is_active = true, sort_order = 4;
-
-insert into public.carousel_items (
   id, item_type, advertisement_id, sort_order, is_active, created_by, updated_by
 )
 select
@@ -1411,7 +1290,7 @@ on conflict (id) do update set is_active = true, sort_order = 5;
 
 
 -- ==============================================================================
--- 15. SEED GLOBAL SETTINGS
+-- 13. SEED GLOBAL SETTINGS
 -- ==============================================================================
 insert into public.global_settings (key, value, description, updated_by)
 select
@@ -1443,7 +1322,7 @@ on conflict (key) do update set value = excluded.value;
 
 
 -- ==============================================================================
--- 16. ENSURE RESOURCE VERSIONS INITIALIZED
+-- 14. ENSURE RESOURCE VERSIONS INITIALIZED
 -- ==============================================================================
 insert into public.resource_versions (resource, version)
 values
@@ -1451,8 +1330,6 @@ values
   ('categories', 1),
   ('ads', 1),
   ('featured', 1),
-  ('memories', 1),
   ('carousel', 1),
-  ('sponsors', 1),
   ('settings', 1)
 on conflict (resource) do update set version = public.resource_versions.version + 1;

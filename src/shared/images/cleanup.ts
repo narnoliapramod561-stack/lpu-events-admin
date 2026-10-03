@@ -83,18 +83,11 @@ export async function cleanupPhysicalMediaAssets(
       p_lease_interval: '15 minutes'
     });
 
-    let candidates = claimedAssets;
-
-    // Fallback if RPC is not available in local test environment
-    if (claimErr || !candidates) {
-      const { data: fallbackCandidates } = await supabase
-        .from('media_assets')
-        .select('id, bucket, object_key, file_size_bytes, metadata, status, created_at, deleted_at')
-        .eq('status', 'PENDING_DELETE')
-        .limit(maxBatchSize);
-
-      candidates = fallbackCandidates || [];
+    if (claimErr || !claimedAssets) {
+      result.errors.push(`Atomic media deletion claim failed: ${claimErr?.message || 'No candidates returned.'}`);
+      return result;
     }
+    const candidates = claimedAssets;
 
     result.scannedCount = candidates.length;
     if (candidates.length === 0) return result;
@@ -109,7 +102,8 @@ export async function cleanupPhysicalMediaAssets(
         await supabase
           .from('media_assets')
           .update({ status: 'READY', claimed_at: null, deleted_at: null })
-          .eq('id', mediaId);
+          .eq('id', mediaId)
+          .eq('status', 'DELETING');
         continue;
       }
 
@@ -199,7 +193,8 @@ export async function cleanupPhysicalMediaAssets(
             claimed_at: null,
             deleted_at: new Date().toISOString()
           })
-          .eq('id', mediaId);
+          .eq('id', mediaId)
+          .eq('status', 'DELETING');
 
         if (!updateErr) {
           result.deletedMediaIds.push(mediaId);
@@ -221,7 +216,8 @@ export async function cleanupPhysicalMediaAssets(
               last_cleanup_attempt: new Date().toISOString()
             }
           })
-          .eq('id', mediaId);
+          .eq('id', mediaId)
+          .eq('status', 'DELETING');
       }
     }
 

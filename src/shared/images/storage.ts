@@ -42,6 +42,7 @@ export class CloudflareR2StorageProvider implements MediaStorage {
   public bucketName: string;
   public publicBaseUrl: string;
   public accountId?: string;
+  private supabase: any;
 
   constructor(config?: {
     accountId?: string;
@@ -49,11 +50,13 @@ export class CloudflareR2StorageProvider implements MediaStorage {
     secretAccessKey?: string;
     bucketName?: string;
     publicBaseUrl?: string;
+    supabaseClient?: any;
   }) {
     const globalEnv = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : (typeof process !== 'undefined' ? process.env : undefined);
 
     this.bucketName = config?.bucketName || globalEnv?.R2_BUCKET_NAME || globalEnv?.VITE_R2_BUCKET_NAME || 'lpu-events-images';
     this.accountId = config?.accountId || globalEnv?.R2_ACCOUNT_ID;
+    this.supabase = config?.supabaseClient;
     
     const configuredPublicUrl = config?.publicBaseUrl || globalEnv?.VITE_R2_PUBLIC_URL || globalEnv?.EXPO_PUBLIC_R2_PUBLIC_URL;
     this.publicBaseUrl = configuredPublicUrl ? configuredPublicUrl.replace(/\/+$/, '') : 'https://images.lpuevents.live';
@@ -74,9 +77,10 @@ export class CloudflareR2StorageProvider implements MediaStorage {
 
     try {
       return {
-        success: true,
+        success: false,
         objectKey: cleanKey,
-        publicUrl
+        publicUrl,
+        error: 'R2 writes must use the authenticated r2-upload Edge Function.'
       };
     } catch (err: any) {
       return {
@@ -99,11 +103,20 @@ export class CloudflareR2StorageProvider implements MediaStorage {
     }
 
     try {
-      // Physical deletion against Cloudflare R2 bucket
+      if (!this.supabase?.functions?.invoke) {
+        throw new Error('Authenticated r2-storage Edge Function is unavailable.');
+      }
+      const { data, error } = await this.supabase.functions.invoke('r2-storage', {
+        body: { action: 'delete_objects', object_keys: keys }
+      });
+      if (error) throw error;
+      const deletedKeys = Array.isArray(data?.deleted) ? data.deleted : [];
+      const failedKeys = Array.isArray(data?.failed) ? data.failed : keys.filter((key) => !deletedKeys.includes(key));
       return {
-        success: true,
-        deletedKeys: keys,
-        failedKeys: []
+        success: data?.success === true && failedKeys.length === 0,
+        deletedKeys,
+        failedKeys,
+        error: failedKeys.length > 0 ? 'One or more R2 objects were not deleted.' : undefined
       };
     } catch (err: any) {
       return {
@@ -237,12 +250,5 @@ export class SupabaseStorageAdapter implements MediaStorage {
  * Storage Provider Factory
  */
 export function getMediaStorage(supabaseClient?: any, bucketName: string = 'lpu-events-images'): MediaStorage {
-  // If Supabase client is supplied and running in dev/emulation mode without R2 configured
-  if (supabaseClient && typeof supabaseClient.storage?.from === 'function') {
-    const globalEnv = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : (typeof process !== 'undefined' ? process.env : undefined);
-    if (!globalEnv?.R2_ACCOUNT_ID && !globalEnv?.VITE_R2_PUBLIC_URL) {
-      return new SupabaseStorageAdapter(supabaseClient, 'media');
-    }
-  }
-  return new CloudflareR2StorageProvider({ bucketName });
+  return new CloudflareR2StorageProvider({ bucketName, supabaseClient });
 }

@@ -1,29 +1,19 @@
 -- Migration: 20260920000001_fix_superadmin_role_isolation.sql
 -- Description: Fix Super Admin role isolation and prevent unauthorized accounts from inheriting SUPER_ADMIN privileges.
 
--- 1. Remove non-superadmin accounts from platform_admin_roles
-delete from public.platform_admin_roles
-where admin_user_id <> (
-  select id from public.admin_users 
-  where lower(email) = 'subhamkumar86032@gmail.com' 
-  limit 1
-);
-
--- 2. Ensure the designated Super Admin has the SUPER_ADMIN role
+-- 1. Bootstrap the designated platform identity by immutable Auth user ID.
 insert into public.platform_admin_roles (admin_user_id, role)
 select id, 'SUPER_ADMIN'::public.platform_admin_role
 from public.admin_users
-where lower(email) = 'subhamkumar86032@gmail.com'
-on conflict (admin_user_id) do update set role = 'SUPER_ADMIN';
+where auth_user_id = '81fee0bd-ed64-4247-8b2a-862cd549823c'::uuid
+on conflict (admin_user_id) do nothing;
 
--- 3. Enforce strictly at most ONE Super Admin in platform_admin_roles
+-- Enforce at most one Super Admin while preserving any explicit role rows.
 create unique index if not exists platform_admin_roles_one_super_admin_idx
 on public.platform_admin_roles (role)
 where (role = 'SUPER_ADMIN');
 
--- 4. Harden handle_new_auth_user trigger function
---    - Prevent duplicate key crash on email conflict by updating auth_user_id on pre-existing admin_users
---    - Strictly restrict SUPER_ADMIN bootstrapping to 'subhamkumar86032@gmail.com'
+-- 2. Harden profile linking and grant the bootstrap role only to the stable Auth user ID.
 create or replace function public.handle_new_auth_user()
 returns trigger security definer
 set search_path = pg_catalog, public
@@ -41,6 +31,7 @@ begin
       display_name = coalesce(new.raw_user_meta_data->>'display_name', display_name, split_part(v_clean_email, '@', 1)),
       is_active = true
   where lower(email) = v_clean_email
+    and (auth_user_id is null or auth_user_id = new.id)
   returning id into v_admin_id;
 
   -- Otherwise insert new admin_user:
@@ -60,14 +51,10 @@ begin
     select id into v_admin_id from public.admin_users where auth_user_id = new.id;
   end if;
 
-  -- ONLY the canonical Super Admin email receives SUPER_ADMIN
-  if v_clean_email = 'subhamkumar86032@gmail.com' then
+  if new.id = '81fee0bd-ed64-4247-8b2a-862cd549823c'::uuid then
     insert into public.platform_admin_roles (admin_user_id, role)
     values (v_admin_id, 'SUPER_ADMIN')
-    on conflict (admin_user_id) do update set role = 'SUPER_ADMIN';
-  else
-    -- Explicitly remove SUPER_ADMIN if any other email had it
-    delete from public.platform_admin_roles where admin_user_id = v_admin_id and role = 'SUPER_ADMIN';
+    on conflict (admin_user_id) do nothing;
   end if;
 
   -- Auto-link pre-approved organizer invitations if configured

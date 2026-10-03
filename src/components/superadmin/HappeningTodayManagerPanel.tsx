@@ -131,7 +131,6 @@ export const HappeningTodayManagerPanel: React.FC = () => {
         .from('events')
         .select('id, name, description, start_at, end_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket), organizations(name)')
         .eq('status', 'PUBLISHED')
-        .is('deleted_at', null)
         .lte('start_at', todayEnd)
         .gte('end_at', todayStart)
         .order('start_at', { ascending: true });

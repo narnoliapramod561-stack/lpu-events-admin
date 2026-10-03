@@ -153,9 +153,8 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
     return events.filter((evt) => {
       const endTimestamp = new Date(evt.end_at).getTime();
-      const isCancelledOrDeleted = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-      const isEventActive = !isCancelledOrDeleted && endTimestamp >= curTime && evt.status === 'PUBLISHED';
-      const isEventPast = !isCancelledOrDeleted && (evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime));
+      const isEventActive = endTimestamp >= curTime && evt.status === 'PUBLISHED';
+      const isEventPast = evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
 
       // Strict active mode
       if (mode === 'active' && !isEventActive) return false;
@@ -185,14 +184,11 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
 
   const now = new Date();
   const liveNowCount = events.filter(
-    (e) => e.status === 'PUBLISHED' && !e.deleted_at && new Date(e.start_at) <= now && new Date(e.end_at) >= now
+    (e) => e.status === 'PUBLISHED' && new Date(e.start_at) <= now && new Date(e.end_at) >= now
   ).length;
-  const activeCount = events.filter((e) => e.status === 'PUBLISHED' && !e.deleted_at && new Date(e.end_at) >= now).length;
+  const activeCount = events.filter((e) => e.status === 'PUBLISHED' && new Date(e.end_at) >= now).length;
   const pastCount = events.filter(
     (e) =>
-      e.status !== 'CANCELLED' &&
-      e.status !== 'DELETED' &&
-      !e.deleted_at &&
       (e.status === 'COMPLETED' || (e.status === 'PUBLISHED' && new Date(e.end_at) < now))
   ).length;
   const paidCount = filteredEvents.filter((e) => e.pricing_type === 'PAID').length;
@@ -452,10 +448,9 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
           {filteredEvents.map((evt) => {
             const start = new Date(evt.start_at);
             const end = new Date(evt.end_at);
-            const isCancelled = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-            const isLive = !isCancelled && start <= now && end >= now && evt.status === 'PUBLISHED';
-            const isUpcoming = !isCancelled && start > now && evt.status === 'PUBLISHED';
-            const isEnded = !isCancelled && (end < now || evt.status === 'COMPLETED');
+            const isLive = start <= now && end >= now && evt.status === 'PUBLISHED';
+            const isUpcoming = start > now && evt.status === 'PUBLISHED';
+            const isEnded = end < now || evt.status === 'COMPLETED';
             const bannerUrl = getEventImage(evt, 'event-card');
 
             return (
@@ -485,11 +480,6 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                         <span className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white text-[10px] font-black tracking-wide shadow-md flex items-center gap-1">
                           <span>🔥</span>
                           <span>TRENDING</span>
-                        </span>
-                      )}
-                      {isCancelled && (
-                        <span className="px-2.5 py-1 rounded-xl bg-red-600/90 text-white text-[10px] font-bold backdrop-blur-md">
-                          CANCELLED
                         </span>
                       )}
                       {isLive && (
@@ -598,7 +588,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                     </button>
 
                     <div className="flex items-center gap-1.5">
-                      {!isEnded && !isCancelled && (
+                      {!isEnded && (
                         <button
                           type="button"
                           onClick={() => handleToggleTrending(evt)}
@@ -673,10 +663,9 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                 {filteredEvents.map((evt) => {
                   const start = new Date(evt.start_at);
                   const end = new Date(evt.end_at);
-                  const isCancelled = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-                  const isLive = !isCancelled && start <= now && end >= now && evt.status === 'PUBLISHED';
-                  const isUpcoming = !isCancelled && start > now && evt.status === 'PUBLISHED';
-                  const isEnded = !isCancelled && (end < now || evt.status === 'COMPLETED');
+                  const isLive = start <= now && end >= now && evt.status === 'PUBLISHED';
+                  const isUpcoming = start > now && evt.status === 'PUBLISHED';
+                  const isEnded = end < now || evt.status === 'COMPLETED';
                   const bannerUrl = getEventImage(evt, 'thumbnail');
 
                   return (
@@ -751,11 +740,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                       </td>
 
                       <td className="p-3.5">
-                        {isCancelled ? (
-                          <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] font-bold">
-                            CANCELLED
-                          </span>
-                        ) : isLive ? (
+                        {isLive ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black tracking-wide flex items-center gap-1 w-fit shadow-xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                             LIVE NOW
@@ -793,7 +778,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                             <span className="material-symbols-outlined text-[18px]">visibility</span>
                           </button>
 
-                          {!isEnded && !isCancelled && (
+                          {!isEnded && (
                             <button
                               type="button"
                               onClick={() => handleToggleTrending(evt)}

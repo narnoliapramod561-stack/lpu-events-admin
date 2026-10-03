@@ -27,7 +27,7 @@ interface OrganizerDashboardProps {
   onSelectEvent: (eventId: string) => void;
   onCreateEventTrigger: () => void;
   mode?: 'all' | 'active' | 'past';
-  initialStatusFilter?: 'ALL' | 'ACTIVE' | 'COMPLETED' | 'DRAFT';
+  initialStatusFilter?: 'ALL' | 'ACTIVE' | 'COMPLETED';
 }
 
 export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
@@ -42,7 +42,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewEvent, setPreviewEvent] = useState<any | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'DRAFT'>(
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>(
     mode === 'active' ? 'ACTIVE' : mode === 'past' ? 'COMPLETED' : initialStatusFilter
   );
 
@@ -90,14 +90,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const activeEvents = events.filter(
     (e) =>
       e.status === 'PUBLISHED' &&
-      !e.deleted_at &&
       new Date(e.end_at) >= now
   );
   const completedEvents = events.filter(
     (e) =>
-      e.status !== 'CANCELLED' &&
-      e.status !== 'DELETED' &&
-      !e.deleted_at &&
       (e.status === 'COMPLETED' || (e.status === 'PUBLISHED' && new Date(e.end_at) < now))
   );
   const totalViews = events.reduce((sum, e) => sum + (e.view_count || 0), 0);
@@ -106,9 +102,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     const curTime = new Date().getTime();
     return events.filter(evt => {
       const endTimestamp = new Date(evt.end_at).getTime();
-      const isEvtCancelled = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-      const isEvtActive = !isEvtCancelled && endTimestamp >= curTime && evt.status === 'PUBLISHED';
-      const isEvtPast = !isEvtCancelled && (evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime));
+      const isEvtActive = endTimestamp >= curTime && evt.status === 'PUBLISHED';
+      const isEvtPast = evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
 
       // Strict mode checks
       if (mode === 'active' && !isEvtActive) return false;
@@ -118,7 +113,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       if (mode === 'all') {
         if (statusFilter === 'ACTIVE' && !isEvtActive) return false;
         if (statusFilter === 'COMPLETED' && !isEvtPast) return false;
-        if (statusFilter === 'DRAFT' && evt.status !== 'DRAFT') return false;
       }
 
       // Search filter
@@ -422,7 +416,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', backgroundColor: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '3px', border: '1px solid var(--border-subtle)' }}>
-                {(['ALL', 'ACTIVE', 'COMPLETED', 'DRAFT'] as const).map((tab) => (
+                {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setStatusFilter(tab)}
@@ -478,9 +472,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 </thead>
                 <tbody>
                   {filteredEvents.map((evt) => {
-                    const isCancelled = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-                    const isLive = !isCancelled && new Date(evt.end_at) >= now && evt.status === 'PUBLISHED';
-                    const isPast = !isCancelled && (new Date(evt.end_at) < now || evt.status === 'COMPLETED');
+                    const isLive = new Date(evt.end_at) >= now && evt.status === 'PUBLISHED';
+                    const isPast = new Date(evt.end_at) < now || evt.status === 'COMPLETED';
                     const bannerUrl = getEventImage(evt, 'thumbnail');
 
                     return (
@@ -515,9 +508,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           </span>
                         </td>
                         <td>
-                          {isCancelled ? (
-                            <span className="badge badge-danger">CANCELLED</span>
-                          ) : isLive ? (
+                          {isLive ? (
                             <span className="badge badge-success">LIVE</span>
                           ) : isPast ? (
                             <span className="badge">COMPLETED</span>

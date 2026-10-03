@@ -439,7 +439,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
             {(() => {
               const slide = activeSlides[previewIndex];
               if (!slide) return null;
-              const img = getSlideImage(slide) || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop';
+              const img = getSlideImage(slide) || '/defaults/events/subcategories/academics_seminar.webp';
               const title = getSlideTitle(slide);
               const typeCfg = SLIDE_TYPE_CONFIG[slide.item_type];
 
@@ -451,7 +451,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                       src={img} 
                       alt={title} 
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop';
+                        (e.currentTarget as HTMLImageElement).src = '/defaults/events/subcategories/academics_seminar.webp';
                       }}
                       className="w-full h-full object-cover" 
                     />
@@ -592,7 +592,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                           src={slideImg} 
                           alt={slideTitle} 
                           onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=800&auto=format&fit=crop';
+                            (e.currentTarget as HTMLImageElement).src = '/defaults/events/subcategories/academics_seminar.webp';
                           }}
                           className="w-full h-full object-cover" 
                         />

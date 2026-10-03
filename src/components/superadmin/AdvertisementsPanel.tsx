@@ -181,7 +181,6 @@ export const AdvertisementsPanel: React.FC = () => {
           supabase,
           file: selectedFile,
           context: 'advertisement',
-          adminUserId: adminId
         });
         mediaAssetId = optResult.mediaId;
       } else {
@@ -233,7 +232,7 @@ export const AdvertisementsPanel: React.FC = () => {
   };
 
   const toggleStatus = async (adId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'active' ? 'paused' : 'active';
+    const nextStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
       const { error } = await supabase
         .from('advertisements')
@@ -272,7 +271,7 @@ export const AdvertisementsPanel: React.FC = () => {
     const end = new Date(ad.end_at);
     const isAdActive = ad.status === 'active' && start <= now && end >= now;
     const isAdScheduled = start > now;
-    const isAdEnded = end < now || ad.status === 'expired' || ad.status === 'paused';
+    const isAdEnded = end < now;
 
     if (filter === 'active' && !isAdActive) return false;
     if (filter === 'scheduled' && !isAdScheduled) return false;
@@ -563,6 +562,13 @@ export const AdvertisementsPanel: React.FC = () => {
                   const start = new Date(ad.start_at);
                   const end = new Date(ad.end_at);
                   const isActive = ad.status === 'active' && start <= now && end >= now;
+                  const statusLabel = ad.status === 'inactive'
+                    ? 'Inactive'
+                    : end < now
+                      ? 'Expired'
+                      : start > now
+                        ? 'Scheduled'
+                        : 'Active';
                   const bannerUrl = getAdBannerUrl(ad);
 
                   return (
@@ -608,7 +614,7 @@ export const AdvertisementsPanel: React.FC = () => {
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 rounded-full bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-bold text-[10px] uppercase">
-                            {ad.status}
+                            {statusLabel}
                           </span>
                         )}
                       </td>
@@ -619,7 +625,7 @@ export const AdvertisementsPanel: React.FC = () => {
                             type="button"
                             onClick={() => toggleStatus(ad.id, ad.status)}
                             className="p-1.5 rounded-lg border border-[#e2bfb0] dark:border-[#5a4136] text-[#5a4136] hover:text-[#ff6b00] hover:border-[#ff6b00] transition-colors cursor-pointer"
-                            title={ad.status === 'active' ? 'Pause Campaign' : 'Activate Campaign'}
+                            title={ad.status === 'active' ? 'Deactivate Campaign' : 'Activate Campaign'}
                           >
                             <span className="material-symbols-outlined text-[16px]">
                               {ad.status === 'active' ? 'pause' : 'play_arrow'}

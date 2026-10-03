@@ -13,7 +13,7 @@ import { LoadingSpinner } from '../shell/LoadingState';
 export const PlatformEventsPanel: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PUBLISHED' | 'COMPLETED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchEvents = async () => {
@@ -41,12 +41,8 @@ export const PlatformEventsPanel: React.FC = () => {
 
   const filteredEvents = useMemo(() => {
     return events.filter(evt => {
-      const isCancelledOrDeleted = evt.status === 'CANCELLED' || evt.status === 'DELETED' || Boolean(evt.deleted_at);
-
-      if (statusFilter === 'PUBLISHED' && (evt.status !== 'PUBLISHED' || isCancelledOrDeleted)) return false;
-      if (statusFilter === 'CANCELLED' && evt.status !== 'CANCELLED') return false;
+      if (statusFilter === 'PUBLISHED' && evt.status !== 'PUBLISHED') return false;
       if (statusFilter === 'COMPLETED') {
-        if (isCancelledOrDeleted) return false;
         if (!(new Date(evt.end_at) < now || evt.status === 'COMPLETED')) return false;
       }
 
@@ -89,7 +85,7 @@ export const PlatformEventsPanel: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {/* Status Pills */}
             <div style={{ display: 'flex', backgroundColor: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '3px', border: '1px solid var(--border-subtle)' }}>
-              {(['ALL', 'PUBLISHED', 'COMPLETED', 'CANCELLED'] as const).map(f => (
+              {(['ALL', 'PUBLISHED', 'COMPLETED'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setStatusFilter(f)}
@@ -187,11 +183,6 @@ export const PlatformEventsPanel: React.FC = () => {
                         ) : isCompleted ? (
                           <span className="badge badge-secondary" style={{ backgroundColor: 'var(--bg-surface-raised)', color: 'var(--text-muted)' }}>
                             <span>COMPLETED</span>
-                          </span>
-                        ) : evt.status === 'CANCELLED' ? (
-                          <span className="badge badge-danger">
-                            <span className="badge-dot" />
-                            <span>CANCELLED</span>
                           </span>
                         ) : (
                           <span className="badge badge-warning">

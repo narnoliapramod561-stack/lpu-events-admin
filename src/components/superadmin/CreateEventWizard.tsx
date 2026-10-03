@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
 import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage } from '@lpu-events/shared';
@@ -51,7 +51,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   const [bannerFileName, setBannerFileName] = useState('');
   const [bannerMediaId, setBannerMediaId] = useState<string | null>(null);
   const [slotPreviews, setSlotPreviews] = useState<Record<string, string> | null>(null);
-  const [activeSlotPreview, setActiveSlotPreview] = useState<'card' | 'banner' | 'thumb'>('card');
+  const [activeSlotPreview, setActiveSlotPreview] = useState<'16:9' | '7:5'>('16:9');
   const [optimizingImage, setOptimizingImage] = useState(false);
   const [uploadProgressStep, setUploadProgressStep] = useState<string>('');
   const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
@@ -364,10 +364,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     }
   };
 
+  // Race-condition guard: ensures stale uploads don't overwrite fresher ones
+  const uploadGenerationRef = useRef(0);
+
   // Handle direct file image upload for banner with automated optimization & Cloudflare R2 upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const currentGeneration = ++uploadGenerationRef.current;
 
     setError('');
     setOptimizingImage(true);
@@ -383,14 +388,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         adminUserId: profile?.id,
         entityId: editEventId || undefined,
         onProgress: (step) => {
+          if (uploadGenerationRef.current !== currentGeneration) return;
           if (step === 'validating') {
             setUploadProgressStep('Validating format & magic bytes...');
             setUploadProgressPercent(25);
           } else if (step === 'enhancing') {
-            setUploadProgressStep('Enhancing fidelity & typography...');
+            setUploadProgressStep('Generating canonical presentations...');
             setUploadProgressPercent(50);
           } else if (step === 'compressing') {
-            setUploadProgressStep('Generating WebP responsive variants...');
+            setUploadProgressStep('Encoding WebP derivatives...');
             setUploadProgressPercent(75);
           } else if (step === 'uploading') {
             setUploadProgressStep('Storing into Cloudflare R2...');
@@ -402,13 +408,24 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         }
       });
 
+      // Guard against stale upload results
+      if (uploadGenerationRef.current !== currentGeneration) return;
+
       setBannerUrl(result.dataUrl || result.publicUrl);
       setBannerMediaId(result.mediaId);
-      if (result.slots) {
+
+      // V2: Show presentation previews (16:9 and 7:5)
+      if (result.presentations) {
         setSlotPreviews({
-          card: result.slots.card?.dataUrl || result.slots.card?.publicUrl || '',
-          banner: result.slots.banner?.dataUrl || result.slots.banner?.publicUrl || '',
-          thumb: result.slots.thumb?.dataUrl || result.slots.thumb?.publicUrl || ''
+          '16:9': result.presentations['16:9']?.dataUrl || result.presentations['16:9']?.publicUrl || '',
+          '7:5': result.presentations['7:5']?.dataUrl || result.presentations['7:5']?.publicUrl || ''
+        });
+        setActiveSlotPreview('16:9');
+      } else if (result.slots) {
+        // Legacy fallback
+        setSlotPreviews({
+          '16:9': result.slots.card?.dataUrl || result.slots.card?.publicUrl || '',
+          '7:5': result.slots.banner?.dataUrl || result.slots.banner?.publicUrl || ''
         });
       } else {
         setSlotPreviews(null);
@@ -422,6 +439,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       });
       setError('');
     } catch (err: any) {
+      if (uploadGenerationRef.current !== currentGeneration) return;
       console.error('Image optimization upload error:', err);
       setError('Image upload failed: ' + (err.message || 'Validation or network failed.'));
       setBannerUrl('');
@@ -429,9 +447,11 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       setBannerFileName('');
       setSlotPreviews(null);
     } finally {
-      setOptimizingImage(false);
-      setUploadProgressStep('');
-      setUploadProgressPercent(0);
+      if (uploadGenerationRef.current === currentGeneration) {
+        setOptimizingImage(false);
+        setUploadProgressStep('');
+        setUploadProgressPercent(0);
+      }
     }
   };
 
@@ -1162,42 +1182,39 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                       <div className="p-2.5 bg-[#fee3d8]/80 dark:bg-[#2d1e17] border-b border-[#e2bfb0]/80 dark:border-[#5a4136] flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] font-black uppercase tracking-wider text-[#5a4136] dark:text-[#ffb693] px-1 font-heading">
-                            Auto Synthesized Slots:
+                            Canonical Presentations:
                           </span>
-                          {(['card', 'banner', 'thumb'] as const).map((slotKey) => (
+                          {(['16:9', '7:5'] as const).map((ratioKey) => (
                             <button
-                              key={slotKey}
+                              key={ratioKey}
                               type="button"
-                              onClick={() => setActiveSlotPreview(slotKey)}
+                              onClick={() => setActiveSlotPreview(ratioKey)}
                               className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                                activeSlotPreview === slotKey
+                                activeSlotPreview === ratioKey
                                   ? 'bg-[#ff6b00] text-white shadow-sm'
                                   : 'bg-white/80 dark:bg-black/40 text-[#5a4136] dark:text-[#ffede6] hover:bg-white dark:hover:bg-black/60 border border-[#e2bfb0]/40 dark:border-white/10'
                               }`}
                             >
-                              {slotKey === 'card' ? 'Event Card (16:9)' : slotKey === 'banner' ? 'Details Banner (2.4:1)' : 'Thumbnail (1:1)'}
+                              {ratioKey === '16:9' ? 'Widescreen 16:9 (1600×900)' : 'Mobile 7:5 (1050×750)'}
                             </button>
                           ))}
                         </div>
                         <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Full Cover • Stretched Edge-to-Edge
+                          100% Poster Preserved • Zero Crop
                         </span>
                       </div>
                     )}
 
                     <div className={`w-full overflow-hidden relative flex items-center justify-center bg-black/90 ${
-                      activeSlotPreview === 'thumb'
-                        ? 'h-52 max-w-[208px] mx-auto rounded-xl my-2 border border-white/10'
-                        : activeSlotPreview === 'banner'
-                        ? 'h-44 sm:h-52'
+                      activeSlotPreview === '7:5'
+                        ? 'h-56 sm:h-64'
                         : 'h-48 sm:h-60'
                     }`}>
                       <img
                         src={(slotPreviews && slotPreviews[activeSlotPreview]) || bannerUrl}
                         alt="Event Banner Preview"
-                        className="w-full h-full object-fill"
-                        style={{ objectFit: 'fill' }}
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                       {imageStats && (

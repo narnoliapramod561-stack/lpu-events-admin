@@ -24,7 +24,22 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
     return base.replace('.webp', '_desktop.webp');
   }
 
-  // 2. Multi-slot responsive derivatives for Cloudflare R2
+  // 2. V2 placement responsive derivatives for Cloudflare R2
+  if (url.includes('/events/v2/')) {
+    if (url.endsWith('/card.webp') && effectiveWidth <= 480) {
+      return url.replace('/card.webp', '/card_480w.webp');
+    }
+    if (url.endsWith('/details.webp')) {
+      if (effectiveWidth <= 640) return url.replace('/details.webp', '/details_640w.webp');
+      if (effectiveWidth <= 800) return url.replace('/details.webp', '/details_800w.webp');
+    }
+    if (url.endsWith('/hero.webp')) {
+      if (effectiveWidth <= 800) return url.replace('/hero.webp', '/hero_800w.webp');
+      if (effectiveWidth <= 1200) return url.replace('/hero.webp', '/hero_1200w.webp');
+    }
+  }
+
+  // 2b. Multi-slot responsive derivatives for Cloudflare R2
   if (url.includes('_card.webp') && effectiveWidth <= 800) {
     return url.replace('_card.webp', '_card_mobile.webp');
   }

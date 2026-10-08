@@ -61,7 +61,7 @@ assert(
 
 assert(
   migrationContent.includes("'governance_eval_prune'") &&
-  migrationContent.includes('RETENTION'),
+  migrationContent.toLowerCase().includes('retention'),
   '1.5: governance_eval_prune job registered in ops_jobs canonical table'
 );
 

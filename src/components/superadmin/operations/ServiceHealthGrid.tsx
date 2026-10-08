@@ -25,12 +25,14 @@ interface ServiceHealthGridProps {
   services: OperationsServiceDefinition[];
   probes: OperationsHealthProbe[];
   loading: boolean;
+  isFailed?: boolean;
 }
 
 export const ServiceHealthGrid: React.FC<ServiceHealthGridProps> = ({
   services,
   probes,
   loading,
+  isFailed,
 }) => {
   const [selectedService, setSelectedService] = useState<OperationsServiceDefinition | null>(null);
 
@@ -162,6 +164,10 @@ export const ServiceHealthGrid: React.FC<ServiceHealthGridProps> = ({
               <div className="h-6 w-24 bg-gray-200 dark:bg-white/10 rounded" />
             </div>
           ))}
+        </div>
+      ) : isFailed ? (
+        <div className="p-12 text-center text-xs text-red-600 dark:text-red-400 font-mono">
+          UNAVAILABLE: Unable to retrieve operational services. Gateway request failed.
         </div>
       ) : services.length === 0 ? (
         <div className="p-12 text-center text-xs text-gray-500">

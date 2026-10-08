@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS public.ops_slo_definitions (
     service_id TEXT NOT NULL,
     sli_key TEXT NOT NULL REFERENCES public.ops_sli_definitions(sli_key) ON DELETE RESTRICT,
     target NUMERIC NOT NULL,
-    window TEXT NOT NULL CHECK (
-        window IN ('24h', '7d', '30d', '90d')
+    "window" TEXT NOT NULL CHECK (
+        "window" IN ('24h', '7d', '30d', '90d')
     ),
     direction TEXT NOT NULL CHECK (
         direction IN ('GREATER_EQUAL', 'LESS_EQUAL')
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.ops_slo_evaluations (
     slo_key TEXT NOT NULL REFERENCES public.ops_slo_definitions(slo_key) ON DELETE CASCADE,
     version INTEGER NOT NULL DEFAULT 1,
     evaluated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    window TEXT NOT NULL,
+    "window" TEXT NOT NULL,
     window_start TIMESTAMPTZ NOT NULL,
     window_end TIMESTAMPTZ NOT NULL,
     sample_count INTEGER NOT NULL DEFAULT 0,
@@ -272,29 +272,33 @@ $$;
 -- 9. Register Canonical Maintenance Job in ops_jobs
 INSERT INTO public.ops_jobs (
     job_key,
-    name,
+    display_name,
     description,
     job_type,
-    category,
-    schedule_cron,
+    schedule_description,
     expected_interval_minutes,
-    enabled
+    enabled,
+    criticality,
+    owner,
+    source
 )
 VALUES (
     'governance_eval_prune',
     'Governance History & Readiness Pruning',
     'Prunes historical SLO evaluations and production readiness audit logs older than the retention threshold',
     'MAINTENANCE',
-    'RETENTION',
-    '0 4 * * 0', -- Weekly Sunday at 04:00 UTC
+    'Weekly Sunday at 04:00 UTC (0 4 * * 0)',
     10080,
-    true
+    true,
+    'LOW',
+    'governance_engine',
+    'cron'
 )
 ON CONFLICT (job_key) DO UPDATE
 SET
-    name = EXCLUDED.name,
+    display_name = EXCLUDED.display_name,
     description = EXCLUDED.description,
-    schedule_cron = EXCLUDED.schedule_cron,
+    schedule_description = EXCLUDED.schedule_description,
     expected_interval_minutes = EXCLUDED.expected_interval_minutes,
     updated_at = now();
 
@@ -387,7 +391,7 @@ INSERT INTO public.ops_slo_definitions (
     service_id,
     sli_key,
     target,
-    window,
+    "window",
     direction,
     warning_threshold,
     description,
@@ -464,7 +468,7 @@ ON CONFLICT (slo_key) DO UPDATE
 SET
     name = EXCLUDED.name,
     target = EXCLUDED.target,
-    window = EXCLUDED.window,
+    "window" = EXCLUDED."window",
     direction = EXCLUDED.direction,
     warning_threshold = EXCLUDED.warning_threshold,
     description = EXCLUDED.description,

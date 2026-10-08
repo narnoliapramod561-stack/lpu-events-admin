@@ -28,6 +28,9 @@ CREATE INDEX IF NOT EXISTS idx_ops_incidents_resolution_provenance
 -- ============================================================================
 -- 2. Authoritative Incident Acknowledgement RPC with Internal Actor Derivation
 -- ============================================================================
+DROP FUNCTION IF EXISTS public.acknowledge_operations_incident(uuid, text);
+DROP FUNCTION IF EXISTS public.acknowledge_operations_incident(uuid);
+
 CREATE OR REPLACE FUNCTION public.acknowledge_operations_incident(
   p_incident_id uuid,
   p_actor_id text DEFAULT NULL
@@ -167,6 +170,9 @@ $$;
 -- ============================================================================
 -- 3. Authoritative Manual Resolution RPC with Internal Actor & Provenance
 -- ============================================================================
+DROP FUNCTION IF EXISTS public.resolve_operations_incident(uuid, text, text);
+DROP FUNCTION IF EXISTS public.resolve_operations_incident(uuid, text);
+
 CREATE OR REPLACE FUNCTION public.resolve_operations_incident(
   p_incident_id uuid,
   p_reason text,

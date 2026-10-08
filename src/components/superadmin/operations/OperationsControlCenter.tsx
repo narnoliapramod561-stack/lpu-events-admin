@@ -84,6 +84,12 @@ export const OperationsControlCenter: React.FC = () => {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(true);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
+  // Granular failure state tracking (prevents masking failures as healthy zeros)
+  const [syncFailed, setSyncFailed] = useState<boolean>(false);
+  const [servicesFailed, setServicesFailed] = useState<boolean>(false);
+  const [incidentsFailed, setIncidentsFailed] = useState<boolean>(false);
+  const [jobsFailed, setJobsFailed] = useState<boolean>(false);
+
   // Stale detection
   const isStale = useMemo(() => {
     if (!overview?.latest_collection_run?.started_at) return false;
@@ -102,41 +108,74 @@ export const OperationsControlCenter: React.FC = () => {
 
     try {
       // Stage 1: Critical Operational Overview & Incidents
-      const [overviewRes, incidentsRes, servicesRes] = await Promise.all([
+      const [overviewResult, incidentsResult, servicesResult] = await Promise.allSettled([
         client.invokeOperation<OperationsOverview>('overview'),
-        client.getIncidents({ limit: 50 }).catch(() => ({ incidents: [], count: 0, summary: {} as any })),
-        client.getServices().catch(() => []),
+        client.getIncidents({ limit: 50 }),
+        client.getServices(),
       ]);
 
       if (currentSyncId !== syncCounterRef.current) return; // Prevent race condition overwrite
 
-      setOverview(overviewRes.data);
-      setEnvironment(overviewRes.meta?.environment || 'UNKNOWN');
-      setIncidents(incidentsRes.incidents || []);
-      setServices(servicesRes || []);
+      if (overviewResult.status === 'fulfilled') {
+        setOverview(overviewResult.value.data);
+        setEnvironment(overviewResult.value.meta?.environment || 'UNKNOWN');
+        setSyncFailed(false);
+      } else {
+        setOverview(null);
+        setSyncFailed(true);
+        const err = overviewResult.reason;
+        const msg = err instanceof Error ? err.message : String(err);
+        setErrorBanner(`Failed to synchronize operational state: ${msg}`);
+      }
+
+      if (incidentsResult.status === 'fulfilled') {
+        setIncidents(incidentsResult.value.incidents || []);
+        setIncidentsFailed(false);
+      } else {
+        setIncidents([]);
+        setIncidentsFailed(true);
+      }
+
+      if (servicesResult.status === 'fulfilled') {
+        setServices(servicesResult.value || []);
+        setServicesFailed(false);
+      } else {
+        setServices([]);
+        setServicesFailed(true);
+      }
+
       setLastFetchedAt(new Date());
 
       // If this was initial load, drop the initial skeleton
       if (initialLoading) setInitialLoading(false);
 
       // Stage 2: Infrastructure Telemetry, Probes, Jobs & Metrics
-      const [probesRes, metricsRes, jobsRes, runsRes] = await Promise.all([
-        client.getHealthProbes().catch(() => []),
-        client.getMetrics().catch(() => []),
-        client.getJobs().catch(() => []),
-        client.getJobRuns().catch(() => []),
+      const [probesResult, metricsResult, jobsResult, runsResult] = await Promise.allSettled([
+        client.getHealthProbes(),
+        client.getMetrics(),
+        client.getJobs(),
+        client.getJobRuns(),
       ]);
 
       if (currentSyncId !== syncCounterRef.current) return;
 
-      setProbes(probesRes || []);
-      setMetrics(metricsRes || []);
-      setJobs(jobsRes || []);
-      setJobRuns(runsRes || []);
+      setProbes(probesResult.status === 'fulfilled' ? probesResult.value || [] : []);
+      const metricsData = metricsResult.status === 'fulfilled' ? metricsResult.value || [] : [];
+      setMetrics(metricsData);
+
+      if (jobsResult.status === 'fulfilled') {
+        setJobs(jobsResult.value || []);
+        setJobsFailed(false);
+      } else {
+        setJobs([]);
+        setJobsFailed(true);
+      }
+
+      setJobRuns(runsResult.status === 'fulfilled' ? runsResult.value || [] : []);
 
       // Stage 3: Projections & Metric History for Key Available Metrics
-      if (metricsRes && metricsRes.length > 0) {
-        const topMetrics = metricsRes.slice(0, 6);
+      if (metricsData.length > 0) {
+        const topMetrics = metricsData.slice(0, 6);
         const projectionEntries = await Promise.all(
           topMetrics.map(async (m) => {
             const cacheKey = `${m.service_id}:${m.metric_key}`;
@@ -270,12 +309,14 @@ export const OperationsControlCenter: React.FC = () => {
       <OperationsSummaryCards
         overview={overview}
         loading={initialLoading}
+        isFailed={syncFailed}
       />
 
       {/* SECTION 2: Active Incidents & Investigation Surface (Top Urgency) */}
       <ActiveIncidentsList
         incidents={incidents}
         loading={initialLoading}
+        isFailed={incidentsFailed}
         client={client}
         onRefreshIncidents={() => synchronizeOperations(false)}
       />
@@ -285,6 +326,7 @@ export const OperationsControlCenter: React.FC = () => {
         services={services}
         probes={probes}
         loading={initialLoading}
+        isFailed={servicesFailed}
       />
 
       {/* SECTION 4: Operational Metrics, Trends & Threshold Projections */}
@@ -300,6 +342,7 @@ export const OperationsControlCenter: React.FC = () => {
         jobs={jobs}
         runs={jobRuns}
         loading={initialLoading}
+        isFailed={jobsFailed}
       />
 
       {/* SECTION 6: Historical Operations & Rollup Analytics */}

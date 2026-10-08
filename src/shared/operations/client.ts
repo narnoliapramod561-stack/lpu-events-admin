@@ -147,10 +147,15 @@ export class OperationsClient {
           );
         }
 
+        let userFriendlyMsg = error.message;
+        if (!userFriendlyMsg || userFriendlyMsg.includes('Failed to send a request to the Edge Function')) {
+          userFriendlyMsg = 'Operations Gateway unavailable. Could not reach the Super Admin Operations service.';
+        }
+
         throw new OperationsClientError(
-          error.message || 'Failed to invoke superadmin-operations gateway.',
-          error.status === 401 ? 'UNAUTHENTICATED' : error.status === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR',
-          error.status || 500,
+          userFriendlyMsg,
+          error.status === 401 ? 'UNAUTHENTICATED' : error.status === 403 ? 'FORBIDDEN' : 'PROVIDER_UNAVAILABLE',
+          error.status || 503,
           undefined,
           correlationId
         );

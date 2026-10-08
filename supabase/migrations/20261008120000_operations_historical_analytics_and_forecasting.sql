@@ -61,8 +61,8 @@ CREATE OR REPLACE VIEW public.ops_metric_history AS
 -- 3. Register Phase 6 Canonical Maintenance Jobs into ops_jobs
 -- ============================================================================
 INSERT INTO public.ops_jobs (
-  job_key, name, description, category, target_service,
-  expected_interval_minutes, enabled, metadata
+  job_key, display_name, description, job_type, schedule_description,
+  expected_interval_minutes, enabled, criticality, owner, source, metadata
 )
 VALUES
   (
@@ -70,25 +70,32 @@ VALUES
     'Historical Metrics Rollup Aggregator',
     'Pre-computes hourly and daily metric rollups from raw snapshots into ops_metric_aggregates.',
     'MAINTENANCE',
-    'observability_engine',
+    'Every 1 hour',
     60,
     true,
+    'MEDIUM',
+    'observability_engine',
+    'supabase_rpc',
     '{"rollup_resolutions": ["HOURLY", "DAILY"], "batch_hours": 24}'::jsonb
   ),
   (
     'historical_metrics_prune',
     'Historical Operational Analytics Pruning',
     'Prunes historical raw snapshots and aggregates older than bounded retention windows without deleting active operational records.',
-    'CLEANUP',
-    'observability_engine',
-    10080, -- Weekly
+    'MAINTENANCE',
+    'Weekly',
+    10080,
     true,
+    'LOW',
+    'observability_engine',
+    'supabase_rpc',
     '{"raw_retention_days": 30, "hourly_retention_days": 90, "daily_retention_days": 365}'::jsonb
   )
 ON CONFLICT (job_key) DO UPDATE
 SET
-  name = EXCLUDED.name,
+  display_name = EXCLUDED.display_name,
   description = EXCLUDED.description,
+  schedule_description = EXCLUDED.schedule_description,
   expected_interval_minutes = EXCLUDED.expected_interval_minutes,
   metadata = EXCLUDED.metadata;
 

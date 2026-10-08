@@ -21,8 +21,10 @@ DECLARE
   v_is_recovery boolean := false;
   v_result jsonb;
 BEGIN
-  -- 1. Strict Super Admin Authorization Gate
-  IF auth.uid() IS NULL OR NOT public.is_super_admin() THEN
+  -- 1. Strict Super Admin, Service Role, or System Caller Authorization Gate
+  IF current_user NOT IN ('postgres', 'supabase_admin')
+     AND COALESCE(auth.role(), '') <> 'service_role'
+     AND (auth.uid() IS NULL OR NOT public.is_super_admin()) THEN
     RAISE EXCEPTION 'Access denied: Super Administrator privilege required.'
       USING errcode = '42501';
   END IF;

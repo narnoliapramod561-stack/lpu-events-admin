@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import { createRequestContext, logOperationsEvent } from "./request-context.ts";
 import { verifySuperAdmin } from "./auth.ts";
 import { executeOperation } from "./operations.ts";
-import { corsHeaders, buildSuccessResponse, buildErrorResponse } from "./responses.ts";
+import { corsHeaders, resolveCorsHeaders, buildSuccessResponse, buildErrorResponse } from "./responses.ts";
 import { normalizeError, OperationsError } from "./errors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -16,7 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 serve(async (req: Request) => {
   // 1. CORS Preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: resolveCorsHeaders(req.headers.get("origin") || undefined) });
   }
 
   // 2. Request context & correlation ID generation

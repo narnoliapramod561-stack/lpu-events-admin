@@ -4,13 +4,41 @@
 import { OperationsErrorCode } from "./errors.ts";
 import { OperationsRequestContext } from "./request-context.ts";
 
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-correlation-id",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Cache-Control": "no-cache, no-store, must-revalidate",
-  "Content-Type": "application/json",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://admin.lpuevents.live",
+  "https://lpueventsadmin.live",
+  "https://www.lpueventsadmin.live",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://127.0.0.1:3000",
+]);
+
+export function resolveCorsHeaders(origin?: string): Record<string, string> {
+  let allowedOrigin = "https://admin.lpuevents.live";
+  if (origin) {
+    if (
+      ALLOWED_ORIGINS.has(origin) ||
+      origin.endsWith(".lpueventsadmin.live") ||
+      origin.endsWith(".lpuevents.live")
+    ) {
+      allowedOrigin = origin;
+    }
+  }
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-correlation-id",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Vary": "Origin",
+    "Content-Type": "application/json",
+  };
+}
+
+export const corsHeaders = resolveCorsHeaders();
 
 export interface OperationsMeta {
   generated_at: string;
@@ -81,7 +109,7 @@ export function buildSuccessResponse<T>(
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      ...corsHeaders,
+      ...resolveCorsHeaders(ctx.origin),
       "x-request-id": ctx.requestId,
       "x-correlation-id": ctx.correlationId,
     },
@@ -114,7 +142,7 @@ export function buildErrorResponse(
   return new Response(JSON.stringify(payload), {
     status: error.status,
     headers: {
-      ...corsHeaders,
+      ...resolveCorsHeaders(ctx.origin),
       "x-request-id": ctx.requestId,
       "x-correlation-id": ctx.correlationId,
     },

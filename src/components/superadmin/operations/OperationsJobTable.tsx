@@ -21,12 +21,14 @@ interface OperationsJobTableProps {
   jobs: OperationsJob[];
   runs: OperationsJobRun[];
   loading: boolean;
+  isFailed?: boolean;
 }
 
 export const OperationsJobTable: React.FC<OperationsJobTableProps> = ({
   jobs,
   runs,
   loading,
+  isFailed,
 }) => {
   const [selectedJob, setSelectedJob] = useState<OperationsJob | null>(null);
   const [statusFilter, setStatusFilter] = useState<JobFilterStatus>('ALL');
@@ -156,6 +158,10 @@ export const OperationsJobTable: React.FC<OperationsJobTableProps> = ({
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-12 bg-gray-50 dark:bg-white/[0.02] rounded-lg animate-pulse" />
           ))}
+        </div>
+      ) : isFailed ? (
+        <div className="p-12 text-center text-xs text-red-600 dark:text-red-400 font-mono">
+          UNAVAILABLE: Unable to retrieve background maintenance jobs. Gateway request failed.
         </div>
       ) : filteredJobs.length === 0 ? (
         <div className="p-12 text-center text-xs text-gray-500">

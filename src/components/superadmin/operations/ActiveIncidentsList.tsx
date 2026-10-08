@@ -21,6 +21,7 @@ import { IncidentDetailModal } from './IncidentDetailModal';
 interface ActiveIncidentsListProps {
   incidents: OperationsIncident[];
   loading: boolean;
+  isFailed?: boolean;
   client: OperationsClient;
   onRefreshIncidents: () => void;
 }
@@ -28,6 +29,7 @@ interface ActiveIncidentsListProps {
 export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
   incidents,
   loading,
+  isFailed,
   client,
   onRefreshIncidents,
 }) => {
@@ -180,6 +182,18 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
               <div className="h-8 w-24 bg-gray-200 dark:bg-white/10 rounded" />
             </div>
           ))}
+        </div>
+      ) : isFailed ? (
+        <div className="p-12 text-center flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-3 border border-red-500/20">
+            <Flame size={26} />
+          </div>
+          <h3 className="text-base font-bold font-['Outfit'] text-[#261812] dark:text-white">
+            Incident Telemetry Unavailable
+          </h3>
+          <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] max-w-sm mt-1">
+            Unable to retrieve active incidents from the Operations Gateway.
+          </p>
         </div>
       ) : filteredIncidents.length === 0 ? (
         <div className="p-12 text-center flex flex-col items-center justify-center">

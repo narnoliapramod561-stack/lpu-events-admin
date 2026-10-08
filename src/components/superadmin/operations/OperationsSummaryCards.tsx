@@ -17,6 +17,7 @@ import { OperationsOverview } from '../../../shared/operations/types';
 interface OperationsSummaryCardsProps {
   overview: OperationsOverview | null;
   loading: boolean;
+  isFailed?: boolean;
   onNavigateToIncidents?: () => void;
   onNavigateToJobs?: () => void;
   onNavigateToServices?: () => void;
@@ -25,6 +26,7 @@ interface OperationsSummaryCardsProps {
 export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
   overview,
   loading,
+  isFailed,
   onNavigateToIncidents,
   onNavigateToJobs,
   onNavigateToServices,
@@ -42,6 +44,8 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
       </div>
     );
   }
+
+  const isUnavailable = !overview || !!isFailed;
 
   // Derive authoritative states strictly from backend payload
   const statusStr = (overview?.overall_status || 'UNKNOWN').toUpperCase();
@@ -81,6 +85,15 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
 
   // Overall status styling
   const getOverallBadge = () => {
+    if (isUnavailable) {
+      return {
+        label: 'UNAVAILABLE',
+        icon: <AlertTriangle size={18} className="text-red-500" />,
+        bg: 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400',
+        ring: 'border-red-500/30',
+        description: 'Unable to retrieve operational telemetry from gateway',
+      };
+    }
     if (isCritical) {
       return {
         label: 'CRITICAL',
@@ -144,7 +157,7 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
         <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[11px] text-[#5a4136] dark:text-[#8e8e93]">
           <span className="flex items-center gap-1">
             <Database size={12} />
-            Postgres: <strong className="font-mono text-[#261812] dark:text-white">{dbHealth}</strong>
+            Postgres: <strong className="font-mono text-[#261812] dark:text-white">{isUnavailable ? 'UNAVAILABLE' : dbHealth}</strong>
           </span>
           <span className="font-mono text-[10px]">Gateway v1</span>
         </div>
@@ -162,7 +175,11 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
             <Flame size={14} className="text-red-500" />
             Active Incidents
           </span>
-          {incidentsSummary.critical > 0 ? (
+          {isUnavailable ? (
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-500/30">
+              UNAVAILABLE
+            </span>
+          ) : incidentsSummary.critical > 0 ? (
             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
               {incidentsSummary.critical} CRITICAL
             </span>
@@ -178,13 +195,21 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
         </div>
         <div className="my-1">
           <div className="text-3xl font-black font-['Outfit'] text-[#261812] dark:text-white flex items-baseline gap-2">
-            <span>{incidentsSummary.open}</span>
-            <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">
-              open ({incidentsSummary.acknowledged} acked)
-            </span>
+            {isUnavailable ? (
+              <span className="text-lg text-red-600 dark:text-red-400">UNAVAILABLE</span>
+            ) : (
+              <>
+                <span>{incidentsSummary.open}</span>
+                <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">
+                  open ({incidentsSummary.acknowledged} acked)
+                </span>
+              </>
+            )}
           </div>
           <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] mt-1">
-            {alertsSummary.total_open} machine alerts active ({alertsSummary.open_critical} crit, {alertsSummary.open_high} high)
+            {isUnavailable
+              ? 'Unable to retrieve incident telemetry'
+              : `${alertsSummary.total_open} machine alerts active (${alertsSummary.open_critical} crit, ${alertsSummary.open_high} high)`}
           </p>
         </div>
         <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[11px] text-[#5a4136] dark:text-[#8e8e93]">
@@ -205,17 +230,31 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
             <Server size={14} className="text-[#a04100] dark:text-orange-400" />
             Registered Services
           </span>
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-            {servicesSummary.total_registered} TOTAL
-          </span>
+          {isUnavailable ? (
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-500/30">
+              UNAVAILABLE
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
+              {servicesSummary.total_registered} TOTAL
+            </span>
+          )}
         </div>
         <div className="my-1">
           <div className="text-3xl font-black font-['Outfit'] text-[#261812] dark:text-white flex items-baseline gap-2">
-            <span>{(servicesSummary as any).healthy_services ?? servicesSummary.total_registered}</span>
-            <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">healthy</span>
+            {isUnavailable ? (
+              <span className="text-lg text-red-600 dark:text-red-400">UNAVAILABLE</span>
+            ) : (
+              <>
+                <span>{(servicesSummary as any).healthy_services ?? servicesSummary.total_registered}</span>
+                <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">healthy</span>
+              </>
+            )}
           </div>
           <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] mt-1">
-            {(servicesSummary as any).unconfigured || 0} not configured • {servicesSummary.unmonitored || 0} unmonitored
+            {isUnavailable
+              ? 'Unable to retrieve service catalog'
+              : `${(servicesSummary as any).unconfigured || 0} not configured • ${servicesSummary.unmonitored || 0} unmonitored`}
           </p>
         </div>
         <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[11px] text-[#5a4136] dark:text-[#8e8e93]">
@@ -236,7 +275,11 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
             <Layers size={14} className="text-[#a04100] dark:text-orange-400" />
             Maintenance Jobs
           </span>
-          {jobsSummary.failed_jobs > 0 ? (
+          {isUnavailable ? (
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-500/30">
+              UNAVAILABLE
+            </span>
+          ) : jobsSummary.failed_jobs > 0 ? (
             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
               {jobsSummary.failed_jobs} FAILED
             </span>
@@ -252,13 +295,21 @@ export const OperationsSummaryCards: React.FC<OperationsSummaryCardsProps> = ({
         </div>
         <div className="my-1">
           <div className="text-3xl font-black font-['Outfit'] text-[#261812] dark:text-white flex items-baseline gap-2">
-            <span>{jobsSummary.healthy_jobs}</span>
-            <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">
-              / {jobsSummary.total_jobs} healthy
-            </span>
+            {isUnavailable ? (
+              <span className="text-lg text-red-600 dark:text-red-400">UNAVAILABLE</span>
+            ) : (
+              <>
+                <span>{jobsSummary.healthy_jobs}</span>
+                <span className="text-xs font-normal text-[#5a4136] dark:text-[#8e8e93]">
+                  / {jobsSummary.total_jobs} healthy
+                </span>
+              </>
+            )}
           </div>
           <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] mt-1">
-            {jobsSummary.running_jobs} currently running • {jobsSummary.stale_jobs} stale runs
+            {isUnavailable
+              ? 'Unable to retrieve job telemetry'
+              : `${jobsSummary.running_jobs} currently running • ${jobsSummary.stale_jobs} stale runs`}
           </p>
         </div>
         <div className="mt-3 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[11px] text-[#5a4136] dark:text-[#8e8e93]">

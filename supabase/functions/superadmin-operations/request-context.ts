@@ -8,6 +8,7 @@ export interface OperationsRequestContext {
   startTimeMs: number;
   adminUserId?: string;
   operation?: string;
+  origin?: string;
 }
 
 export function createRequestContext(req: Request): OperationsRequestContext {
@@ -20,11 +21,14 @@ export function createRequestContext(req: Request): OperationsRequestContext {
     correlationId = incomingCorrelation;
   }
 
+  const origin = req.headers.get("origin") || undefined;
+
   return {
     requestId,
     correlationId,
     startedAt: new Date().toISOString(),
     startTimeMs: performance.now(),
+    origin,
   };
 }
 

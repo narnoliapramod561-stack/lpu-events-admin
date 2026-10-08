@@ -136,8 +136,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const getHeaderDescription = () => {
     if (mode === 'active') return 'Visual banner showcase of live and upcoming events published by your club.';
-    if (mode === 'past') return 'Archive of completed events, historical attendance, and impressions.';
-    return 'Monitor real-time event analytics, metrics, and manage registrations.';
+    if (mode === 'past') return 'Archive of completed events and student view records.';
+    return "Overview of your club's published events, student pageviews, and registrations.";
   };
 
   return (
@@ -211,13 +211,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
           <div className="stat-card">
             <div className="stat-card-header">
-              <span className="stat-card-title">Total Impressions</span>
+              <span className="stat-card-title">Total Pageviews</span>
               <div className="stat-card-icon-box" style={{ color: 'var(--accent-primary)', backgroundColor: 'var(--accent-subtle)' }}>
                 <TrendingUp size={18} />
               </div>
             </div>
             <div className="stat-card-value">{totalViews.toLocaleString()}</div>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Public student views</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Cumulative student pageviews</span>
           </div>
         </div>
       )}

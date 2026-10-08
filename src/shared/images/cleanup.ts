@@ -227,3 +227,81 @@ export async function cleanupPhysicalMediaAssets(
     return result;
   }
 }
+
+/**
+ * Phase 4: Executes physical R2 orphan cleanup with automated job telemetry & single-flight locking
+ */
+export async function executeInstrumentedR2Cleanup(
+  options: CleanupOptions & {
+    triggerSource?: 'SCHEDULE' | 'MANUAL';
+    requestId?: string;
+    correlationId?: string;
+  }
+): Promise<PhysicalCleanupResult & { jobRunId?: string }> {
+  const { supabase, triggerSource = 'SCHEDULE', requestId, correlationId } = options;
+  let jobRunId: string | undefined;
+
+  // 1. Single-Flight Job Start Lock
+  try {
+    const { data: lockResult } = await supabase.rpc('start_operations_job_run', {
+      p_job_key: 'r2_orphan_cleanup',
+      p_trigger_source: triggerSource,
+      p_request_id: requestId || `r2_clean_${Date.now()}`,
+      p_correlation_id: correlationId || null,
+      p_metadata: { bucket: options.bucketName || 'media' },
+      p_timeout_minutes: 30,
+    });
+
+    if (lockResult && lockResult.acquired === false) {
+      return {
+        scannedCount: 0,
+        unreferencedCount: 0,
+        deletedObjectsCount: 0,
+        freedBytes: 0,
+        deletedMediaIds: [],
+        failedMediaIds: [],
+        errors: [`Single-flight active: ${lockResult.reason}`],
+      };
+    }
+    if (lockResult?.run_id) {
+      jobRunId = lockResult.run_id;
+    }
+  } catch (telemetryStartErr: any) {
+    // Failure isolation: log warning but continue cleanup work
+    console.warn('R2 cleanup telemetry start warning:', telemetryStartErr?.message || telemetryStartErr);
+  }
+
+  // 2. Perform Physical Deletion Work
+  const result = await cleanupPhysicalMediaAssets(options);
+
+  // 3. Finalize Job Run Telemetry
+  if (jobRunId) {
+    try {
+      const status = result.errors.length === 0
+        ? 'COMPLETED'
+        : result.deletedObjectsCount > 0
+        ? 'PARTIAL'
+        : 'FAILED';
+
+      await supabase.rpc('finish_operations_job_run', {
+        p_run_id: jobRunId,
+        p_status: status,
+        p_records_scanned: result.scannedCount,
+        p_records_processed: result.unreferencedCount,
+        p_records_deleted: result.deletedObjectsCount,
+        p_records_failed: result.failedMediaIds.length,
+        p_error_code: result.errors.length > 0 ? 'R2_PHYSICAL_DELETE_ERRORS' : null,
+        p_error_summary: result.errors.length > 0 ? result.errors.slice(0, 3).join('; ') : null,
+        p_metadata: {
+          freed_bytes: result.freedBytes,
+          deleted_media_ids_count: result.deletedMediaIds.length,
+          failed_media_ids_count: result.failedMediaIds.length,
+        },
+      });
+    } catch (telemetryFinishErr: any) {
+      console.warn('R2 cleanup telemetry finish warning:', telemetryFinishErr?.message || telemetryFinishErr);
+    }
+  }
+
+  return { ...result, jobRunId };
+}

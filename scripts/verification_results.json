@@ -1,0 +1,175 @@
+{
+  "cacheInvalidation": {
+    "status": 200,
+    "data": {
+      "ok": true,
+      "invalidatedCount": 5,
+      "invalidatedUrls": [
+        "https://lpuevents.live/api/public/homepage",
+        "https://lpuevents.live/api/public/events?limit=20&offset=0",
+        "https://lpuevents.live/api/public/featured",
+        "https://lpuevents.live/api/public/trending",
+        "https://lpuevents.live/api/public/carousel"
+      ],
+      "warmed": [
+        "/api/public/homepage"
+      ]
+    }
+  },
+  "databaseDirect": {
+    "count": 50,
+    "sample": [
+      {
+        "id": "e0000001-0000-0000-0000-000000000000",
+        "name": "National AI & Large Language Models Symposium 2026",
+        "start_at": "2026-09-07T06:00:00+00:00",
+        "end_at": "2026-09-07T08:00:00+00:00",
+        "status": "PUBLISHED",
+        "venue_name": "Shanti Devi Mittal Auditorium, Block 32",
+        "category_id": "c4444444-4444-4444-4444-444444444444",
+        "categories": {
+          "key": "academics",
+          "name": "Academics"
+        },
+        "subcategories": {
+          "key": "seminar",
+          "name": "Seminar"
+        },
+        "organizations": {
+          "name": "Coding & Robotics Club LPU"
+        }
+      },
+      {
+        "id": "e0000002-0000-0000-0000-000000000000",
+        "name": "Quantum Computing & Cryptography Workshop",
+        "start_at": "2026-09-07T06:30:00+00:00",
+        "end_at": "2026-09-07T09:00:00+00:00",
+        "status": "PUBLISHED",
+        "venue_name": "Block 34, Auditorium Hall 102",
+        "category_id": "c4444444-4444-4444-4444-444444444444",
+        "categories": {
+          "key": "academics",
+          "name": "Academics"
+        },
+        "subcategories": {
+          "key": "guest-lecture",
+          "name": "Guest Lecture"
+        },
+        "organizations": {
+          "name": "Cultural & Youth Welfare Society"
+        }
+      },
+      {
+        "id": "e0000003-0000-0000-0000-000000000000",
+        "name": "Full-Stack Cloud Architecture Masterclass",
+        "start_at": "2026-09-07T07:00:00+00:00",
+        "end_at": "2026-09-07T09:30:00+00:00",
+        "status": "PUBLISHED",
+        "venue_name": "Block 38, Computer Lab 4",
+        "category_id": "c4444444-4444-4444-4444-444444444444",
+        "categories": {
+          "key": "academics",
+          "name": "Academics"
+        },
+        "subcategories": {
+          "key": "workshop",
+          "name": "Workshop"
+        },
+        "organizations": {
+          "name": "Google Developer Student Club LPU"
+        }
+      }
+    ]
+  },
+  "publicWorkerEvents": {
+    "status": 200,
+    "count": 20,
+    "dataSample": {
+      "id": "e0000001-0000-0000-0000-000000000000",
+      "name": "National AI & Large Language Models Symposium 2026",
+      "description": "Explore cutting-edge developments in Artificial Intelligence, Large Language Models, and Scalable Data Engineering with leading researchers and industry experts.",
+      "start_at": "2026-09-07T06:00:00+00:00",
+      "end_at": "2026-09-07T08:00:00+00:00",
+      "venue_name": "Shanti Devi Mittal Auditorium, Block 32",
+      "registration_mode": "EXTERNAL",
+      "pricing_type": "FREE",
+      "price_amount": 0,
+      "external_registration_url": "https://lpuevents.live/register/national-ai-large-language-models-symposium-2026",
+      "registration_format": "INDIVIDUAL",
+      "banner_media_id": "d2222222-2222-2222-2222-222222222222",
+      "status": "PUBLISHED",
+      "category_id": "c4444444-4444-4444-4444-444444444444",
+      "subcategory_id": "ba100001-0000-0000-0000-000000000001",
+      "media_assets": {
+        "id": "d2222222-2222-2222-2222-222222222222",
+        "object_key": "ads/placement_drive.png"
+      },
+      "organizations": {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "Coding & Robotics Club LPU"
+      },
+      "categories": {
+        "key": "academics",
+        "name": "Academics"
+      },
+      "subcategories": {
+        "key": "seminar",
+        "name": "Seminar"
+      }
+    }
+  },
+  "publicWorkerHomepage": {
+    "status": 200,
+    "keys": [
+      "categories",
+      "carousel",
+      "featured",
+      "trending",
+      "advertisements",
+      "settings",
+      "events"
+    ],
+    "featuredCount": 3,
+    "trendingCount": 5,
+    "carouselCount": 3
+  },
+  "publicWorkerFeatured": null,
+  "publicWorkerTrending": null,
+  "publicWorkerCarousel": null,
+  "eventDetail": {
+    "count": 6,
+    "sample": {
+      "id": "911722d2-1c92-457e-942a-34d965ba7b6e",
+      "event_id": "e0000004-0000-0000-0000-000000000000",
+      "section_type": "about",
+      "title": "About the Event",
+      "content": {
+        "text": "Showcasing student-built autonomous rovers, drone swarms, and computer vision powered robotic arms. Organized in collaboration with university faculty, student chapters, and industry partners to foster interdisciplinary learning."
+      }
+    }
+  },
+  "searchRpc": {
+    "status": 404,
+    "count": 0
+  },
+  "categoriesDistribution": {
+    "Academics": 8,
+    "Innovation": 4,
+    "Cultural": 9,
+    "Entrepreneurship": 3,
+    "Co-Curricular": 5,
+    "Student Clubs & Org": 1,
+    "NCC": 2,
+    "NSS": 2,
+    "Community Services": 2,
+    "Fashion": 2,
+    "Day Celebrations": 3,
+    "Schools": 5,
+    "Others": 4
+  },
+  "temporalDistribution": {
+    "today": 16,
+    "tomorrow": 17,
+    "dayAfter": 17
+  }
+}

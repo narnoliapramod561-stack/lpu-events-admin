@@ -21,3 +21,4 @@ export * from './ad_frequency';
 export * from './date';
 export * from './slug';
 export * from './persistentCache';
+export * from './operations';

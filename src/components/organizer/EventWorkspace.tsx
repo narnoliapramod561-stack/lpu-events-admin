@@ -242,16 +242,16 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
           )}
         </div>
 
-        {/* Right Column: Telemetry & Actions */}
+        {/* Right Column: Engagement & Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Card: Canonical Event QR Code */}
           <EventQrCard eventId={event.id} eventName={event.name} />
 
-          {/* Card: Live Telemetry */}
+          {/* Card: Engagement & Capacity */}
           <div className="card-box">
             <div className="card-box-header">
-              <h3 className="card-box-title">Live Engagement</h3>
+              <h3 className="card-box-title">Engagement & Capacity</h3>
             </div>
             <div className="card-box-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

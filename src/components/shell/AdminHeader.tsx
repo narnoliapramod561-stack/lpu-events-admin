@@ -22,6 +22,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   const getTitle = () => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
+      case 'operations': return 'Operations Control Center';
       case 'access-requests': return 'Organizer Access Requests';
       case 'approved-organizers': return 'Approved Organizers Registry';
       case 'all-events':

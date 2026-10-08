@@ -531,15 +531,15 @@ export const HappeningTodayManagerPanel: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-[#261812] dark:text-white font-['Outfit']">
-                    Student Live Preview
+                    Student Preview
                   </h3>
                   <p className="text-xs text-[#5a4136] dark:text-zinc-400">
-                    Real-time simulation of the student homepage carousel
+                    Interactive preview of the student homepage carousel
                   </p>
                 </div>
               </div>
 
-              {/* Play / Pause Simulator */}
+              {/* Play / Pause Carousel Preview */}
               <button
                 onClick={() => setPreviewPlaying(!previewPlaying)}
                 className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-bold text-[#5a4136] dark:text-white hover:bg-black/10 dark:hover:bg-white/15 transition-colors cursor-pointer"

@@ -38,7 +38,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       case 'categories-management': return 'Taxonomy & Categories';
       case 'settings-management': return 'Global System Configurations';
       case 'audit-logs': return 'Security & Audit Trail';
-      case 'system-health': return 'System Telemetry & Health';
+      case 'system-health': return 'System & Data Overview';
+      case 'operations': return 'Operations Control Center';
       default: return 'LPU Events Console';
     }
   };

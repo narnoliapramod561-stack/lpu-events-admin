@@ -428,7 +428,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
           <div className="px-5 py-3 border-b border-[#e2bfb0] dark:border-[#5a4136] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Play size={14} className="text-emerald-500" />
-              <span className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">Live Preview — Simulating Student Homepage</span>
+              <span className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">Carousel Preview — Student Homepage Display</span>
             </div>
             <span className="text-[10px] font-semibold text-[#5a4136] dark:text-[#ffb693]">
               Slide {previewIndex + 1} of {activeSlides.length} · {(activeSlides[previewIndex]?.display_duration_ms / 1000).toFixed(1)}s

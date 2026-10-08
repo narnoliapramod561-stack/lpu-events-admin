@@ -17,6 +17,7 @@ import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselManagerPanel';
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
 import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
+import { OperationsControlCenter } from './components/superadmin/operations';
 import { useAuth } from './auth';
 
 interface SuperAdminAppProps {
@@ -157,6 +158,12 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
           {visitedTabs.has('dashboard') && (
             <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
               <DashboardOverview onNavigate={setActiveTab} />
+            </div>
+          )}
+
+          {visitedTabs.has('operations') && (
+            <div style={{ display: activeTab === 'operations' ? 'block' : 'none' }}>
+              <OperationsControlCenter />
             </div>
           )}
 

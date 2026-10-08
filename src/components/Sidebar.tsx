@@ -23,6 +23,7 @@ export type AdminTab =
   | 'org-workspace'
   | 'org-info'
   // Super Admin Tabs
+  | 'operations'
   | 'access-requests'
   | 'platform-events'
   | 'ads-management'
@@ -129,6 +130,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab,
               <span className="admin-sidebar-group-label">Core Operations</span>
               
               <button
+                className={`admin-nav-item ${activeTab === 'operations' ? 'active-purple' : ''}`}
+                onClick={() => handleTabClick('operations')}
+              >
+                <Activity size={17} />
+                <span>Operations Center</span>
+              </button>
+
+              <button
                 className={`admin-nav-item ${activeTab === 'access-requests' ? 'active-purple' : ''}`}
                 onClick={() => handleTabClick('access-requests')}
               >
@@ -197,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab,
                 onClick={() => handleTabClick('system-health')}
               >
                 <Activity size={17} />
-                <span>System Telemetry</span>
+                <span>System & Data Overview</span>
               </button>
             </div>
           </>

@@ -1210,13 +1210,13 @@ export const AdControlPanel: React.FC = () => {
 
       </div>
 
-      {/* Live Sequence Simulator */}
+      {/* Ad Placement Sequence Preview */}
       <div className="p-6 rounded-3xl bg-white dark:bg-[#202023] border border-[#e2bfb0] dark:border-white/10 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e2bfb0]/30 dark:border-white/10">
           <div className="flex items-center gap-2">
             <Eye className="w-5 h-5 text-[#fc721e]" />
             <h3 className="text-base font-black font-['Outfit'] text-[#261812] dark:text-white">
-              Live Presentation Sequence Simulator
+              Ad Placement Sequence Preview
             </h3>
           </div>
 

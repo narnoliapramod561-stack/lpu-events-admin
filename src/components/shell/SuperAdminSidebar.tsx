@@ -4,6 +4,7 @@ import { LpuLogo } from '../common/LpuLogo';
 
 export type AdminNavTab =
   | 'dashboard'
+  | 'operations'
   | 'access-requests'
   | 'approved-organizers'
   | 'create-event'
@@ -66,6 +67,11 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
       group: 'Main',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+        { 
+          id: 'operations', 
+          label: 'Operations Center', 
+          icon: 'dvr' 
+        },
         { 
           id: 'access-requests', 
           label: 'Access Requests', 

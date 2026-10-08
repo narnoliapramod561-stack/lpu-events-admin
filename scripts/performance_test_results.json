@@ -1,0 +1,336 @@
+{
+  "timestamp": "2026-09-12T02:59:51.365Z",
+  "verdict": "PASS",
+  "pagePerf": {
+    "studentCold": {
+      "url": "http://localhost:3000",
+      "status": 200,
+      "headers": {},
+      "duration": 29.418333000000004,
+      "ttfb": 28.673333,
+      "bodyLength": 4346,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () => {};\nwindow.$RefreshSig$ = () => (type) => type;</script>\n\n    <script type=\"module\" src=\"/@vite/client\"></script>\n\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <link rel=\"apple-touch-icon\" href=\"/logo.jpeg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#06070a\" />\n    \n    <!-- Preconnect & High-Performance Fonts -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap\" />\n\n    <!-- Primary SEO Metadata -->\n    <title>LPU Events — Discover Campus Events, Clubs & Festivities</title>\n    <meta name=\"description\" content=\"Discover and participate in student events, workshops, technical competitions, cultural fests, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"keywords\" content=\"LPU Events, Lovely Professional University, Campus Events, Student Clubs, Workshops, Hackathons, Fests\" />\n    <meta name=\"robots\" content=\"index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1\" />\n    <link rel=\"canonical\" href=\"https://lpuevents.live/\" />\n\n    <!-- Open Graph / Facebook / WhatsApp -->\n    <meta property=\"og:type\" content=\"website\" />\n    <meta property=\"og:url\" content=\"https://lpuevents.live/\" />\n    <meta property=\"og:site_name\" content=\"LPU Events\" />\n    <meta property=\"og:title\" content=\"LPU Events — Student Discovery Hub\" />\n    <meta property=\"og:description\" content=\"Your central hub for discovering and participating in the vibrant campus life at Lovely Professional University.\" />\n    <meta property=\"og:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n    <meta property=\"og:image:width\" content=\"1200\" />\n    <meta property=\"og:image:height\" content=\"630\" />\n\n    <!-- Twitter / X -->\n    <meta name=\"twitter:card\" content=\"summary_large_image\" />\n    <meta name=\"twitter:title\" content=\"LPU Events — Discover Campus Life\" />\n    <meta name=\"twitter:description\" content=\"Discover and participate in student events, workshops, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"twitter:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n\n    <!-- Google Search Console Verification (configured dynamically or via build) -->\n    <meta name=\"google-site-verification\" content=\"\" />\n\n    <!-- Google AdSense Account Verification -->\n    <meta name=\"google-adsense-account\" content=\"ca-pub-5513043165999517\">\n\n    <!-- Google AdSense Library (Async & Sandboxed) -->\n    <script\n      async\n      src=\"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5513043165999517\"\n      crossorigin=\"anonymous\"\n    ></script>\n  </head>\n\n  <body>\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx?t=1789181890623\"></script>\n  </body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "UNKNOWN",
+      "originRefreshed": false
+    },
+    "studentWarm": {
+      "url": "http://localhost:3000",
+      "status": 200,
+      "headers": {},
+      "duration": 1.872833,
+      "ttfb": 1.7755829999999975,
+      "bodyLength": 4346,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () => {};\nwindow.$RefreshSig$ = () => (type) => type;</script>\n\n    <script type=\"module\" src=\"/@vite/client\"></script>\n\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <link rel=\"apple-touch-icon\" href=\"/logo.jpeg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#06070a\" />\n    \n    <!-- Preconnect & High-Performance Fonts -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap\" />\n\n    <!-- Primary SEO Metadata -->\n    <title>LPU Events — Discover Campus Events, Clubs & Festivities</title>\n    <meta name=\"description\" content=\"Discover and participate in student events, workshops, technical competitions, cultural fests, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"keywords\" content=\"LPU Events, Lovely Professional University, Campus Events, Student Clubs, Workshops, Hackathons, Fests\" />\n    <meta name=\"robots\" content=\"index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1\" />\n    <link rel=\"canonical\" href=\"https://lpuevents.live/\" />\n\n    <!-- Open Graph / Facebook / WhatsApp -->\n    <meta property=\"og:type\" content=\"website\" />\n    <meta property=\"og:url\" content=\"https://lpuevents.live/\" />\n    <meta property=\"og:site_name\" content=\"LPU Events\" />\n    <meta property=\"og:title\" content=\"LPU Events — Student Discovery Hub\" />\n    <meta property=\"og:description\" content=\"Your central hub for discovering and participating in the vibrant campus life at Lovely Professional University.\" />\n    <meta property=\"og:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n    <meta property=\"og:image:width\" content=\"1200\" />\n    <meta property=\"og:image:height\" content=\"630\" />\n\n    <!-- Twitter / X -->\n    <meta name=\"twitter:card\" content=\"summary_large_image\" />\n    <meta name=\"twitter:title\" content=\"LPU Events — Discover Campus Life\" />\n    <meta name=\"twitter:description\" content=\"Discover and participate in student events, workshops, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"twitter:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n\n    <!-- Google Search Console Verification (configured dynamically or via build) -->\n    <meta name=\"google-site-verification\" content=\"\" />\n\n    <!-- Google AdSense Account Verification -->\n    <meta name=\"google-adsense-account\" content=\"ca-pub-5513043165999517\">\n\n    <!-- Google AdSense Library (Async & Sandboxed) -->\n    <script\n      async\n      src=\"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5513043165999517\"\n      crossorigin=\"anonymous\"\n    ></script>\n  </head>\n\n  <body>\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx?t=1789181890623\"></script>\n  </body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "UNKNOWN",
+      "originRefreshed": false
+    },
+    "adminCold": {
+      "url": "http://localhost:3001",
+      "status": 200,
+      "headers": {},
+      "duration": 4.543040999999988,
+      "ttfb": 4.452374999999989,
+      "bodyLength": 4072,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () => {};\nwindow.$RefreshSig$ = () => (type) => type;</script>\n\n    <script type=\"module\" src=\"/@vite/client\"></script>\n\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <meta name=\"robots\" content=\"noindex, nofollow, noarchive, nosnippet\" />\n    <meta name=\"googlebot\" content=\"noindex, nofollow, noarchive\" />\n    <title>LPU Events — Super Admin Portal</title>\n\n    <!-- Google Fonts: Outfit & Inter -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap\" rel=\"stylesheet\" />\n\n    <!-- Google Material Symbols Outlined -->\n    <link href=\"https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap\" rel=\"stylesheet\" />\n\n    <!-- Tailwind CSS with custom styling -->\n    <script src=\"https://cdn.tailwindcss.com?plugins=forms,container-queries\"></script>\n    <script>\n      tailwind.config = {\n        darkMode: \"class\",\n        theme: {\n          extend: {\n            colors: {\n              primary: \"#ff6b00\",\n              \"primary-hover\": \"#a04100\",\n              \"primary-container\": \"#ff6b00\",\n              \"on-primary-container\": \"#ffffff\",\n              secondary: \"#a04100\",\n              \"secondary-container\": \"#fc721e\",\n              background: \"#fff8f6\",\n              surface: \"#ffffff\",\n              \"surface-bright\": \"#fff8f6\",\n              \"surface-container\": \"#ffeae1\",\n              \"surface-container-high\": \"#fee3d8\",\n              \"surface-container-highest\": \"#f8ddd2\",\n              \"surface-container-low\": \"#fff1eb\",\n              \"surface-container-lowest\": \"#ffffff\",\n              \"on-surface\": \"#261812\",\n              \"on-surface-variant\": \"#5a4136\",\n              \"outline-variant\": \"#e2bfb0\",\n              outline: \"#8e7164\",\n              tertiary: \"#0062a1\",\n              \"tertiary-container\": \"#059eff\",\n              error: \"#ba1a1a\",\n              \"error-container\": \"#ffdad6\"\n            },\n            fontFamily: {\n              sans: ['Inter', 'sans-serif'],\n              display: ['Outfit', 'sans-serif'],\n              heading: ['Outfit', 'sans-serif']\n            }\n          }\n        }\n      }\n    </script>\n    <style>\n      .material-symbols-outlined {\n        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;\n        display: inline-block;\n        vertical-align: middle;\n        user-select: none;\n      }\n    </style>\n  </head>\n  <body data-clarity-mask=\"True\">\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx?t=1789179516947\"></script>\n  </body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "UNKNOWN",
+      "originRefreshed": false
+    },
+    "adminWarm": {
+      "url": "http://localhost:3001",
+      "status": 200,
+      "headers": {},
+      "duration": 2.165416999999991,
+      "ttfb": 2.098124999999996,
+      "bodyLength": 4072,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () => {};\nwindow.$RefreshSig$ = () => (type) => type;</script>\n\n    <script type=\"module\" src=\"/@vite/client\"></script>\n\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <meta name=\"robots\" content=\"noindex, nofollow, noarchive, nosnippet\" />\n    <meta name=\"googlebot\" content=\"noindex, nofollow, noarchive\" />\n    <title>LPU Events — Super Admin Portal</title>\n\n    <!-- Google Fonts: Outfit & Inter -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap\" rel=\"stylesheet\" />\n\n    <!-- Google Material Symbols Outlined -->\n    <link href=\"https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap\" rel=\"stylesheet\" />\n\n    <!-- Tailwind CSS with custom styling -->\n    <script src=\"https://cdn.tailwindcss.com?plugins=forms,container-queries\"></script>\n    <script>\n      tailwind.config = {\n        darkMode: \"class\",\n        theme: {\n          extend: {\n            colors: {\n              primary: \"#ff6b00\",\n              \"primary-hover\": \"#a04100\",\n              \"primary-container\": \"#ff6b00\",\n              \"on-primary-container\": \"#ffffff\",\n              secondary: \"#a04100\",\n              \"secondary-container\": \"#fc721e\",\n              background: \"#fff8f6\",\n              surface: \"#ffffff\",\n              \"surface-bright\": \"#fff8f6\",\n              \"surface-container\": \"#ffeae1\",\n              \"surface-container-high\": \"#fee3d8\",\n              \"surface-container-highest\": \"#f8ddd2\",\n              \"surface-container-low\": \"#fff1eb\",\n              \"surface-container-lowest\": \"#ffffff\",\n              \"on-surface\": \"#261812\",\n              \"on-surface-variant\": \"#5a4136\",\n              \"outline-variant\": \"#e2bfb0\",\n              outline: \"#8e7164\",\n              tertiary: \"#0062a1\",\n              \"tertiary-container\": \"#059eff\",\n              error: \"#ba1a1a\",\n              \"error-container\": \"#ffdad6\"\n            },\n            fontFamily: {\n              sans: ['Inter', 'sans-serif'],\n              display: ['Outfit', 'sans-serif'],\n              heading: ['Outfit', 'sans-serif']\n            }\n          }\n        }\n      }\n    </script>\n    <style>\n      .material-symbols-outlined {\n        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;\n        display: inline-block;\n        vertical-align: middle;\n        user-select: none;\n      }\n    </style>\n  </head>\n  <body data-clarity-mask=\"True\">\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx?t=1789179516947\"></script>\n  </body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "UNKNOWN",
+      "originRefreshed": false
+    },
+    "edgeCold": {
+      "url": "https://lpuevents.live/",
+      "status": 200,
+      "headers": {},
+      "duration": 318.484333,
+      "ttfb": 316.026916,
+      "bodyLength": 5111,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <link rel=\"apple-touch-icon\" href=\"/logo.jpeg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#06070a\" />\n    \n    <!-- Preconnect & High-Performance Fonts -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap\" />\n\n    <!-- Primary SEO Metadata -->\n    <title>LPU Events — Discover Campus Events, Clubs & Festivities</title>\n    <meta name=\"description\" content=\"Discover and participate in student events, workshops, technical competitions, cultural fests, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"keywords\" content=\"LPU Events, Lovely Professional University, Campus Events, Student Clubs, Workshops, Hackathons, Fests\" />\n    <meta name=\"robots\" content=\"index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1\" />\n    <link rel=\"canonical\" href=\"https://lpuevents.live/\" />\n\n    <!-- Open Graph / Facebook / WhatsApp -->\n    <meta property=\"og:type\" content=\"website\" />\n    <meta property=\"og:url\" content=\"https://lpuevents.live/\" />\n    <meta property=\"og:site_name\" content=\"LPU Events\" />\n    <meta property=\"og:title\" content=\"LPU Events — Student Discovery Hub\" />\n    <meta property=\"og:description\" content=\"Your central hub for discovering and participating in the vibrant campus life at Lovely Professional University.\" />\n    <meta property=\"og:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n    <meta property=\"og:image:width\" content=\"1200\" />\n    <meta property=\"og:image:height\" content=\"630\" />\n\n    <!-- Twitter / X -->\n    <meta name=\"twitter:card\" content=\"summary_large_image\" />\n    <meta name=\"twitter:title\" content=\"LPU Events — Discover Campus Life\" />\n    <meta name=\"twitter:description\" content=\"Discover and participate in student events, workshops, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"twitter:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n\n    <!-- Google Search Console Verification (configured dynamically or via build) -->\n    <meta name=\"google-site-verification\" content=\"\" />\n\n    <!-- Google AdSense Account Verification -->\n    <meta name=\"google-adsense-account\" content=\"ca-pub-5513043165999517\">\n\n    <!-- Google AdSense Library (Async & Sandboxed) -->\n    <script\n      async\n      src=\"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5513043165999517\"\n      crossorigin=\"anonymous\"\n    ></script>\n    <script type=\"module\" crossorigin src=\"/assets/index-CNTUTKW1.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DDhOj_ly.css\">\n  </head>\n\n  <body>\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n  <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML=\"window.__CF$cv$params={r:'a39ba7e9dc91f87a',t:'MTc4OTE4MTk2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);\";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "HIT",
+      "originRefreshed": false
+    },
+    "edgeWarm": {
+      "url": "https://lpuevents.live/",
+      "status": 200,
+      "headers": {},
+      "duration": 107.30433399999998,
+      "ttfb": 106.090709,
+      "bodyLength": 5111,
+      "json": null,
+      "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n\n      gtag('config', 'G-HXC7S26FSN');\n    </script>\n    <!-- Google Tag Manager -->\n    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\n    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\n    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>\n    <!-- End Google Tag Manager -->\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/logo.svg\" />\n    <link rel=\"apple-touch-icon\" href=\"/logo.jpeg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#06070a\" />\n    \n    <!-- Preconnect & High-Performance Fonts -->\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap\" />\n\n    <!-- Primary SEO Metadata -->\n    <title>LPU Events — Discover Campus Events, Clubs & Festivities</title>\n    <meta name=\"description\" content=\"Discover and participate in student events, workshops, technical competitions, cultural fests, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"keywords\" content=\"LPU Events, Lovely Professional University, Campus Events, Student Clubs, Workshops, Hackathons, Fests\" />\n    <meta name=\"robots\" content=\"index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1\" />\n    <link rel=\"canonical\" href=\"https://lpuevents.live/\" />\n\n    <!-- Open Graph / Facebook / WhatsApp -->\n    <meta property=\"og:type\" content=\"website\" />\n    <meta property=\"og:url\" content=\"https://lpuevents.live/\" />\n    <meta property=\"og:site_name\" content=\"LPU Events\" />\n    <meta property=\"og:title\" content=\"LPU Events — Student Discovery Hub\" />\n    <meta property=\"og:description\" content=\"Your central hub for discovering and participating in the vibrant campus life at Lovely Professional University.\" />\n    <meta property=\"og:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n    <meta property=\"og:image:width\" content=\"1200\" />\n    <meta property=\"og:image:height\" content=\"630\" />\n\n    <!-- Twitter / X -->\n    <meta name=\"twitter:card\" content=\"summary_large_image\" />\n    <meta name=\"twitter:title\" content=\"LPU Events — Discover Campus Life\" />\n    <meta name=\"twitter:description\" content=\"Discover and participate in student events, workshops, clubs, and campus life at Lovely Professional University.\" />\n    <meta name=\"twitter:image\" content=\"https://lpuevents.live/logo.jpeg\" />\n\n    <!-- Google Search Console Verification (configured dynamically or via build) -->\n    <meta name=\"google-site-verification\" content=\"\" />\n\n    <!-- Google AdSense Account Verification -->\n    <meta name=\"google-adsense-account\" content=\"ca-pub-5513043165999517\">\n\n    <!-- Google AdSense Library (Async & Sandboxed) -->\n    <script\n      async\n      src=\"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5513043165999517\"\n      crossorigin=\"anonymous\"\n    ></script>\n    <script type=\"module\" crossorigin src=\"/assets/index-CNTUTKW1.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DDhOj_ly.css\">\n  </head>\n\n  <body>\n    <!-- Google Tag Manager (noscript) -->\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM\"\n    height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n    <!-- End Google Tag Manager (noscript) -->\n    <div id=\"root\"></div>\n  <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML=\"window.__CF$cv$params={r:'a39ba7ea9ef5f87a',t:'MTc4OTE4MTk2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);\";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>\n</html>\n",
+      "error": null,
+      "cacheStatus": "HIT",
+      "originRefreshed": false
+    },
+    "studentJsSize": 1178899,
+    "studentJsGzip": 335065,
+    "studentCssSize": 183547,
+    "studentCssGzip": 23834,
+    "adminJsSize": 1263718,
+    "adminJsGzip": 336758,
+    "adminCssSize": 11720,
+    "adminCssGzip": 2933,
+    "imagePayloadBytes": 269686,
+    "estimatedLCP": 461.84479835546875,
+    "estimatedCLS": 0.005,
+    "estimatedINP": 28,
+    "apiTimings": {
+      "Homepage Bundle": {
+        "coldMs": 159.7,
+        "warmMs": 376.4,
+        "sizeBytes": 46347,
+        "cache": "HIT"
+      },
+      "Categories Taxonomy": {
+        "coldMs": 107.6,
+        "warmMs": 120,
+        "sizeBytes": 10472,
+        "cache": "HIT"
+      },
+      "Events Feed (limit=20)": {
+        "coldMs": 112,
+        "warmMs": 125.2,
+        "sizeBytes": 18786,
+        "cache": "HIT"
+      },
+      "Carousel Slides": {
+        "coldMs": 104.9,
+        "warmMs": 118.6,
+        "sizeBytes": 6235,
+        "cache": "HIT"
+      },
+      "Featured Events": {
+        "coldMs": 104.3,
+        "warmMs": 116.3,
+        "sizeBytes": 4340,
+        "cache": "HIT"
+      },
+      "Trending Events": {
+        "coldMs": 104,
+        "warmMs": 120.8,
+        "sizeBytes": 4738,
+        "cache": "HIT"
+      },
+      "Search RPC (\"workshop\")": {
+        "coldMs": 226.3,
+        "warmMs": 122.9,
+        "sizeBytes": 1310,
+        "cache": "HIT"
+      }
+    }
+  },
+  "cacheLifecycle": {
+    "Cache Hit Verification": true,
+    "Cache Invalidation API": true,
+    "Proactive Background Warm-Up": true,
+    "Unauthorized Invalidation Blocked": true,
+    "Cache Canonicalization": true,
+    "Cache Policy Headers": true
+  },
+  "stampede": {
+    "concurrency": 50,
+    "status200": 50,
+    "originRefreshes": 1,
+    "coalesced": 49,
+    "percentiles": {
+      "min": 209.7,
+      "p50": 379,
+      "p95": 449.5,
+      "p99": 452.1,
+      "max": 452.1,
+      "avg": 381
+    },
+    "passed": true
+  },
+  "apiDb": {
+    "dbBenchmarks": {
+      "Direct REST: Events Feed (Limit 20)": {
+        "latencies": [
+          635.1193750000002,
+          625.729542,
+          306.15858300000036,
+          281.24445899999955,
+          262.82908300000054,
+          279.52570800000103,
+          341.4601249999996,
+          372.0397919999996,
+          253.36562500000036,
+          302.8910419999993
+        ],
+        "percentiles": {
+          "min": 253.4,
+          "p50": 306.2,
+          "p95": 635.1,
+          "p99": 635.1,
+          "max": 635.1,
+          "avg": 366
+        },
+        "errors": 0
+      },
+      "Direct REST: Categories Taxonomy": {
+        "latencies": [
+          292.90983400000005,
+          255.66862500000025,
+          326.6315829999985,
+          267.90029200000026,
+          308.9554160000007,
+          290.91762500000004,
+          366.57916699999987,
+          271.75895800000035,
+          534.3519579999993,
+          373.63654199999837
+        ],
+        "percentiles": {
+          "min": 255.7,
+          "p50": 309,
+          "p95": 534.4,
+          "p99": 534.4,
+          "max": 534.4,
+          "avg": 328.9
+        },
+        "errors": 0
+      },
+      "Direct RPC: search_events (\"workshop\")": {
+        "latencies": [
+          263.9612500000003,
+          291.3235420000001,
+          311.7827499999985,
+          281.32887500000106,
+          265.1540419999983,
+          282.6719580000008,
+          291.766708000001,
+          260.18291599999975,
+          259.55162500000006,
+          254.51545799999985
+        ],
+        "percentiles": {
+          "min": 254.5,
+          "p50": 281.3,
+          "p95": 311.8,
+          "p99": 311.8,
+          "max": 311.8,
+          "avg": 276.2
+        },
+        "errors": 0
+      },
+      "Direct RPC: increment_event_view": {
+        "latencies": [
+          308.1270000000004,
+          328.9813750000012,
+          328.88166700000147,
+          307.22087499999907,
+          263.93312499999956,
+          260.56037500000093,
+          258.12724999999773,
+          349.174583,
+          312.9463750000032,
+          261.924417000002
+        ],
+        "percentiles": {
+          "min": 258.1,
+          "p50": 308.1,
+          "p95": 349.2,
+          "p99": 349.2,
+          "max": 349.2,
+          "avg": 298
+        },
+        "errors": 0
+      }
+    },
+    "poolConcurrency": {
+      "total": 25,
+      "successful": 25,
+      "percentiles": {
+        "min": 271.8,
+        "p50": 330.5,
+        "p95": 373.6,
+        "p99": 384.5,
+        "max": 384.5,
+        "avg": 331.6
+      }
+    }
+  },
+  "loadSummary": {
+    "10": {
+      "rps": 18.6,
+      "p50": 400.5,
+      "p95": 532.8,
+      "p99": 532.8,
+      "errorRate": 0,
+      "hitRatio": 100,
+      "totalDurationMs": 536.8
+    },
+    "50": {
+      "rps": 52.7,
+      "p50": 476.1,
+      "p95": 701.8,
+      "p99": 930.6,
+      "errorRate": 0,
+      "hitRatio": 86,
+      "totalDurationMs": 948.3
+    },
+    "100": {
+      "rps": 152.9,
+      "p50": 271.9,
+      "p95": 594.1,
+      "p99": 627.3,
+      "errorRate": 0,
+      "hitRatio": 81,
+      "totalDurationMs": 654.1
+    },
+    "250": {
+      "rps": 130,
+      "p50": 513.6,
+      "p95": 1808,
+      "p99": 1836.9,
+      "errorRate": 0,
+      "hitRatio": 96,
+      "totalDurationMs": 1923.7
+    },
+    "500": {
+      "rps": 133.8,
+      "p50": 716.8,
+      "p95": 3529.7,
+      "p99": 3637.7,
+      "errorRate": 0,
+      "hitRatio": 95,
+      "totalDurationMs": 3736.2
+    }
+  },
+  "platformUsage": {
+    "totalEventsInDb": 21,
+    "supabaseFreeEgressMonthlyMB": 5000,
+    "projectedMonthlyEgressMB": 52.5,
+    "supabaseEgressUtilizationPct": "1.05",
+    "cfWorkersFreeLimitDaily": 100000,
+    "projectedDailyWorkerReqs": 15000,
+    "cfWorkersUtilizationPct": "15.00",
+    "r2FreeReadsMonthly": 10000000,
+    "projectedMonthlyR2Reads": 500000,
+    "r2ReadsUtilizationPct": "5.00"
+  },
+  "failureChecks": {
+    "Negative 404 Caching": true,
+    "Public Endpoint Cookie/Auth Guard": true,
+    "Query String Length Guard": true,
+    "Graceful SWR Configuration": true
+  }
+}

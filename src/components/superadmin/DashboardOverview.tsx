@@ -6,6 +6,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
     totalEvents: 0,
     publishedEvents: 0,
     trendingEvents: 0,
+    featuredEvents: 0,
     pendingAccessRequests: 0,
     activeAds: 0
   });
@@ -18,6 +19,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
           { count: totalCount },
           { count: pubCount },
           { count: trendCount },
+          { count: featCount },
           { count: pendingReqCount },
           { count: adCount },
           { data: recentReqs }
@@ -25,6 +27,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
           supabase.from('events').select('id', { count: 'exact', head: true }),
           supabase.from('events').select('id', { count: 'exact', head: true }).eq('status', 'PUBLISHED'),
           supabase.from('trending_events').select('event_id', { count: 'exact', head: true }),
+          supabase.from('featured_events').select('event_id', { count: 'exact', head: true }),
           supabase.from('organizer_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
           supabase.from('advertisements').select('id', { count: 'exact', head: true }).eq('status', 'active'),
           supabase
@@ -39,6 +42,7 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
           totalEvents: totalCount || 0,
           publishedEvents: pubCount || 0,
           trendingEvents: trendCount || 0,
+          featuredEvents: featCount || 0,
           pendingAccessRequests: pendingReqCount || 0,
           activeAds: adCount || 0
         });
@@ -210,9 +214,14 @@ export const DashboardOverview: React.FC<{ onNavigate: (tab: any) => void }> = (
                   </span>
                   <span className="text-[11px] font-bold bg-white dark:bg-[#261812] px-2 py-0.5 rounded border border-[#e2bfb0] dark:border-[#5a4136]">Max 5</span>
                 </div>
-                <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-[#ffede6]">3 <span className="text-sm font-normal text-[#5a4136] dark:text-[#ffb693]">/ 5 Active</span></div>
+                <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
+                  {stats.featuredEvents} <span className="text-sm font-normal text-[#5a4136] dark:text-[#ffb693]">/ 5 Active</span>
+                </div>
                 <div className="w-full bg-[#fee3d8] dark:bg-[#3d2d26] h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-[#ff6b00] h-full rounded-full w-[60%]" />
+                  <div 
+                    className="bg-[#ff6b00] h-full rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.max(0, (stats.featuredEvents / 5) * 100))}%` }}
+                  />
                 </div>
               </div>
 

@@ -23,6 +23,7 @@ import { LoadingSpinner } from './components/shell/LoadingState';
 import { LpuLogo } from './components/common/LpuLogo';
 
 import { SuperAdminApp } from './SuperAdminApp';
+import { OperationsControlCenter } from './components/superadmin/operations';
 
 function AdminDashboard() {
   const { user, profile, signOut, refreshProfile } = useAuth();
@@ -146,6 +147,7 @@ function AdminDashboard() {
         case 'settings-management': return <SettingsPanel />;
         case 'audit-logs': return <AuditLogsPanel />;
         case 'system-health': return <SystemHealthPanel />;
+        case 'operations': return <OperationsControlCenter />;
         default: return <AccessRequestsPanel />;
       }
     }

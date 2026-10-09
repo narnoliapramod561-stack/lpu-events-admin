@@ -29,7 +29,7 @@ export async function verifySuperAdmin(
 ): Promise<AuthenticatedSuperAdmin> {
   const authHeader = req.headers.get("Authorization");
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader || !/^Bearer\s+/i.test(authHeader)) {
     throw new OperationsError(
       "UNAUTHENTICATED",
       "Missing or invalid Authorization header. Bearer token required.",

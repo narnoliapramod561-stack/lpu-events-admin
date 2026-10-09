@@ -16,7 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 serve(async (req: Request) => {
   // 1. CORS Preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: resolveCorsHeaders(req.headers.get("origin") || undefined) });
+    return new Response("ok", { headers: resolveCorsHeaders(req) });
   }
 
   // 2. Request context & correlation ID generation

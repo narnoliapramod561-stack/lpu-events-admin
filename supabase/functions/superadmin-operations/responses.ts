@@ -8,32 +8,58 @@ const ALLOWED_ORIGINS = new Set([
   "https://admin.lpuevents.live",
   "https://lpueventsadmin.live",
   "https://www.lpueventsadmin.live",
+  "https://lpuevents.live",
+  "https://www.lpuevents.live",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:3000",
+  "http://localhost:3001",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
   "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
 ]);
 
-export function resolveCorsHeaders(origin?: string): Record<string, string> {
-  let allowedOrigin = "https://admin.lpuevents.live";
-  if (origin) {
-    if (
-      ALLOWED_ORIGINS.has(origin) ||
-      origin.endsWith(".lpueventsadmin.live") ||
-      origin.endsWith(".lpuevents.live")
-    ) {
-      allowedOrigin = origin;
+export function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  if (origin.endsWith(".lpueventsadmin.live") || origin.endsWith(".lpuevents.live")) return true;
+  if (origin.endsWith(".pages.dev") || origin.endsWith(".workers.dev")) return true;
+  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
+  return false;
+}
+
+export function resolveCorsHeaders(originOrReq?: string | Request): Record<string, string> {
+  let origin = "";
+  let requestedHeaders = "";
+
+  if (originOrReq) {
+    if (typeof originOrReq === "string") {
+      origin = originOrReq;
+    } else if (originOrReq instanceof Request || (originOrReq as any).headers) {
+      origin = (originOrReq as Request).headers.get("origin") || "";
+      requestedHeaders = (originOrReq as Request).headers.get("access-control-request-headers") || "";
     }
   }
 
+  let allowedOrigin = "https://lpueventsadmin.live";
+  if (origin && isAllowedOrigin(origin)) {
+    allowedOrigin = origin;
+  }
+
+  const baseHeaders = "authorization, x-client-info, apikey, content-type, x-correlation-id, sentry-trace, baggage, prefer, range, x-requested-with, accept";
+  const allowHeaders = requestedHeaders
+    ? `${baseHeaders}, ${requestedHeaders}`
+    : baseHeaders;
+
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-correlation-id",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": allowHeaders,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
+    "Access-Control-Expose-Headers": "x-request-id, x-correlation-id, content-type",
+    "Access-Control-Max-Age": "86400",
     "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Vary": "Origin",
+    "Vary": "Origin, Access-Control-Request-Headers",
     "Content-Type": "application/json",
   };
 }

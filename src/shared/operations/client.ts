@@ -127,21 +127,53 @@ export class OperationsClient {
         );
       }
 
+      // Ensure session token is attached explicitly if available
+      const invokeHeaders: Record<string, string> = {
+        'x-correlation-id': correlationId,
+      };
+      try {
+        const { data: sessionData } = await this.supabase.auth.getSession();
+        if (sessionData?.session?.access_token) {
+          invokeHeaders['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+        }
+      } catch {
+        // Fall back to client internal auth
+      }
+
       const { data, error } = await this.supabase.functions.invoke('superadmin-operations', {
         body: { action, ...(options?.payload || {}) },
-        headers: {
-          'x-correlation-id': correlationId,
-        },
+        headers: invokeHeaders,
       });
 
       if (error) {
-        // If the edge function returned an HTTP 4xx/5xx, data may contain the standard error envelope
-        if (data && typeof data === 'object' && data.success === false) {
-          const errEnvelope = data as OperationsErrorResponse;
+        let errEnvelope: OperationsErrorResponse | null = null;
+        let httpStatus = (error as any).status || 500;
+
+        // Try to read structured response from data or error.context (FunctionsHttpError)
+        if (data && typeof data === 'object' && (data as any).success === false) {
+          errEnvelope = data as OperationsErrorResponse;
+        } else if ((error as any).context) {
+          const ctxResponse = (error as any).context as Response;
+          if (typeof ctxResponse.status === 'number') {
+            httpStatus = ctxResponse.status;
+          }
+          if (typeof ctxResponse.clone === 'function') {
+            try {
+              const bodyJson = await ctxResponse.clone().json();
+              if (bodyJson && typeof bodyJson === 'object' && bodyJson.success === false) {
+                errEnvelope = bodyJson as OperationsErrorResponse;
+              }
+            } catch {
+              // Context response body might not be JSON
+            }
+          }
+        }
+
+        if (errEnvelope) {
           throw new OperationsClientError(
-            errEnvelope.error.message || error.message || 'Operation failed',
-            errEnvelope.error.code || 'INTERNAL_ERROR',
-            error.status || 500,
+            errEnvelope.error?.message || error.message || 'Operation failed',
+            errEnvelope.error?.code || (httpStatus === 401 ? 'UNAUTHENTICATED' : httpStatus === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR'),
+            httpStatus,
             errEnvelope.request_id,
             errEnvelope.correlation_id || correlationId
           );
@@ -154,8 +186,8 @@ export class OperationsClient {
 
         throw new OperationsClientError(
           userFriendlyMsg,
-          error.status === 401 ? 'UNAUTHENTICATED' : error.status === 403 ? 'FORBIDDEN' : 'PROVIDER_UNAVAILABLE',
-          error.status || 503,
+          httpStatus === 401 ? 'UNAUTHENTICATED' : httpStatus === 403 ? 'FORBIDDEN' : 'PROVIDER_UNAVAILABLE',
+          httpStatus,
           undefined,
           correlationId
         );

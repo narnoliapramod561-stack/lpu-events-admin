@@ -40,6 +40,31 @@ function AdminDashboard() {
     return <SuperAdminApp onLogout={signOut} />;
   }
 
+  // Theme state
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('lpu_admin_theme');
+      if (saved) return saved === 'dark';
+      return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        localStorage.setItem('lpu_admin_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+        localStorage.setItem('lpu_admin_theme', 'light');
+      }
+    } catch {}
+  }, [darkMode]);
+
   // Navigation state with session persistence
   const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
     try {
@@ -147,7 +172,11 @@ function AdminDashboard() {
         case 'settings-management': return <SettingsPanel />;
         case 'audit-logs': return <AuditLogsPanel />;
         case 'system-health': return <SystemHealthPanel />;
-        case 'operations': return <OperationsControlCenter />;
+        case 'operations': return (
+          <ErrorBoundary>
+            <OperationsControlCenter />
+          </ErrorBoundary>
+        );
         default: return <AccessRequestsPanel />;
       }
     }
@@ -160,9 +189,12 @@ function AdminDashboard() {
       role={role}
       activeTab={activeTab}
       setActiveTab={(tab) => { setSelectedEventId(null); setActiveTab(tab); }}
-      userEmail={user.email}
+      userEmail={user?.email || profile?.email || ''}
+      displayName={profile?.display_name || profile?.org_name || ''}
       roleDisplay={getRoleDisplay()}
       badgeClass={getBadgeClass()}
+      darkMode={darkMode}
+      onToggleDarkMode={() => setDarkMode(!darkMode)}
       onLogout={signOut}
     >
       {renderContent()}

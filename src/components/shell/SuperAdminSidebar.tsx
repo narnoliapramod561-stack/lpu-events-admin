@@ -19,6 +19,8 @@ export type AdminNavTab =
   | 'happening-today'
   | 'categories'
   | 'ad-control'
+  | 'site-controls'
+  | 'student-inquiries'
   | 'analytics'
   | 'audit-logs'
   | 'system-health'
@@ -29,10 +31,20 @@ interface SidebarProps {
   setActiveTab: (tab: AdminNavTab) => void;
   userEmail?: string;
   displayName?: string;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
   onLogout?: () => void;
 }
 
-export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userEmail, displayName, onLogout }) => {
+export const SuperAdminSidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  setActiveTab,
+  userEmail,
+  displayName,
+  darkMode,
+  onToggleDarkMode,
+  onLogout,
+}) => {
   const [pendingCount, setPendingCount] = useState<number>(0);
 
   useEffect(() => {
@@ -107,16 +119,15 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
     {
       group: 'Control',
       items: [
+        { id: 'site-controls', label: 'Broadcast & Maintenance', icon: 'campaign' },
+        { id: 'student-inquiries', label: 'Student Inquiries', icon: 'mark_email_unread' },
         { id: 'ad-control', label: 'Ad Control', icon: 'settings_applications' }
       ]
     },
     {
       group: 'Insights & System',
       items: [
-        { id: 'analytics', label: 'Analytics', icon: 'monitoring' },
-        { id: 'audit-logs', label: 'Audit Logs', icon: 'receipt_long' },
-        { id: 'system-health', label: 'System Health', icon: 'health_and_safety' },
-        { id: 'settings', label: 'Settings', icon: 'settings' }
+        { id: 'analytics', label: 'Analytics', icon: 'monitoring' }
       ]
     }
   ];
@@ -146,7 +157,7 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id as AdminNavTab)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus:outline-none ${
                       isActive
                         ? 'bg-[#fee3d8] dark:bg-orange-500/15 text-[#a04100] dark:text-orange-400 border-l-4 border-[#ff6b00] shadow-sm font-bold scale-[0.99]'
                         : 'text-[#5a4136] dark:text-[#aeaeb2] hover:text-[#a04100] dark:hover:text-white hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5'
@@ -192,13 +203,27 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActive
             </div>
           </div>
         )}
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-[#ba1a1a] dark:text-red-400 hover:bg-[#ffdad6]/40 dark:hover:bg-red-950/40 transition-colors"
-        >
-          <span className="material-symbols-outlined text-[20px]">logout</span>
-          <span>Logout</span>
-        </button>
+        <div className="flex items-center gap-2 pt-1">
+          {onToggleDarkMode && (
+            <button
+              type="button"
+              onClick={onToggleDarkMode}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#5a4136] dark:text-[#aeaeb2] hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5 border border-[#e2bfb0]/50 dark:border-white/10 transition-colors cursor-pointer"
+              title="Toggle dark/light theme"
+            >
+              <span className="material-symbols-outlined text-[18px]">{darkMode ? 'light_mode' : 'dark_mode'}</span>
+              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
+          )}
+          <button
+            onClick={onLogout}
+            className={`${onToggleDarkMode ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] dark:text-red-400 hover:bg-[#ffdad6]/40 dark:hover:bg-red-950/40 border border-red-200/50 dark:border-red-900/30 transition-colors cursor-pointer`}
+            title="Sign out of Super Admin"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

@@ -7,8 +7,11 @@ export interface AdminShellProps {
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
   userEmail: string;
+  displayName?: string;
   roleDisplay: string;
   badgeClass: string;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
   onLogout: () => void;
   children: ReactNode;
 }
@@ -18,8 +21,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
   activeTab,
   setActiveTab,
   userEmail,
+  displayName,
   roleDisplay,
   badgeClass,
+  darkMode,
+  onToggleDarkMode,
   onLogout,
   children,
 }) => {
@@ -51,6 +57,10 @@ export const AdminShell: React.FC<AdminShellProps> = ({
         role={role}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        userEmail={userEmail}
+        displayName={displayName}
+        roleDisplay={roleDisplay}
+        onLogout={onLogout}
         isOpenMobile={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
       />
@@ -74,8 +84,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
         <Header
           title={getSectionTitle(activeTab)}
           userEmail={userEmail}
+          displayName={displayName}
           roleDisplay={roleDisplay}
           badgeClass={badgeClass}
+          darkMode={darkMode}
+          onToggleDarkMode={onToggleDarkMode}
           onLogout={onLogout}
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
@@ -87,3 +100,4 @@ export const AdminShell: React.FC<AdminShellProps> = ({
     </div>
   );
 };
+

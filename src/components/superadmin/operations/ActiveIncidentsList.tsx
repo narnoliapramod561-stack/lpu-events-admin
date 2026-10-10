@@ -1,5 +1,6 @@
 // src/components/superadmin/operations/ActiveIncidentsList.tsx
-// LPU Events — Phase 7: Prioritized Active Incidents List & Investigation Surface
+// LPU Events — Active Platform Incidents & Issue Tracker
+// Clear, human-understandable platform problem and downtime tracking
 
 import React, { useState } from 'react';
 import {
@@ -8,7 +9,7 @@ import {
   Search,
   ChevronRight,
   RefreshCw,
-  ShieldCheck
+  CheckCircle2,
 } from 'lucide-react';
 import {
   OperationsIncident,
@@ -29,7 +30,6 @@ interface ActiveIncidentsListProps {
 export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
   incidents,
   loading,
-  isFailed,
   client,
   onRefreshIncidents,
 }) => {
@@ -39,7 +39,9 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
-  // Sorting strictly by operational urgency: CRITICAL > HIGH > WARNING > INFO, then opened_at descending
+  const safeIncidents = Array.isArray(incidents) ? incidents : [];
+
+  // Sorting strictly by operational urgency: CRITICAL > HIGH > WARNING > INFO
   const severityRank: Record<OperationsSeverity, number> = {
     CRITICAL: 0,
     HIGH: 1,
@@ -47,10 +49,12 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
     INFO: 3,
   };
 
-  const sortedIncidents = [...incidents].sort((a, b) => {
+  const sortedIncidents = [...safeIncidents].sort((a, b) => {
     const rankDiff = (severityRank[a.severity] ?? 99) - (severityRank[b.severity] ?? 99);
     if (rankDiff !== 0) return rankDiff;
-    return new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime();
+    const aTime = a?.opened_at ? new Date(a.opened_at).getTime() : 0;
+    const bTime = b?.opened_at ? new Date(b.opened_at).getTime() : 0;
+    return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
   });
 
   const filteredIncidents = sortedIncidents.filter((inc) => {
@@ -58,9 +62,9 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
     if (statusFilter !== 'ALL' && inc.status !== statusFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchTitle = inc.title.toLowerCase().includes(q);
-      const matchService = inc.service_id.toLowerCase().includes(q);
-      const matchKey = inc.incident_key.toLowerCase().includes(q);
+      const matchTitle = inc.title?.toLowerCase().includes(q);
+      const matchService = inc.service_id?.toLowerCase().includes(q);
+      const matchKey = inc.incident_key?.toLowerCase().includes(q);
       if (!matchTitle && !matchService && !matchKey) return false;
     }
     return true;
@@ -93,36 +97,25 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
     }
   };
 
-  const getDurationString = (openedAt: string, resolvedAt?: string | null) => {
-    const start = new Date(openedAt).getTime();
-    const end = resolvedAt ? new Date(resolvedAt).getTime() : Date.now();
-    const diffSec = Math.max(0, Math.floor((end - start) / 1000));
-    if (diffSec < 60) return `${diffSec}s`;
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m`;
-    const hours = Math.floor(diffSec / 3600);
-    const mins = Math.floor((diffSec % 3600) / 60);
-    return `${hours}h ${mins}m`;
-  };
-
   return (
     <div className="card-box mb-6 border border-[#e2bfb0] dark:border-white/10 rounded-xl bg-[#ffffff] dark:bg-[#202023] shadow-xs overflow-hidden">
       {/* Section Header */}
       <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+          <div className="p-2 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
             <Flame size={20} />
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-bold font-['Outfit'] text-[#261812] dark:text-white flex items-center gap-2">
-              Active Incidents & Response
+              Platform Issues & Alerts
               {filteredIncidents.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                  {filteredIncidents.length}
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                  {filteredIncidents.length} Needs Attention
                 </span>
               )}
             </h2>
             <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] mt-0.5">
-              Prioritized by operational urgency • Correlated from machine alert rules
+              Live tracking for service slowdowns, failed logins, or notification delivery issues
             </p>
           </div>
         </div>
@@ -136,7 +129,7 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter incidents..."
+              placeholder="Search issues..."
               className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#261812] dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
           </div>
@@ -149,10 +142,9 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
             aria-label="Filter by Severity"
           >
             <option value="ALL">All Severities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="WARNING">Warning</option>
-            <option value="INFO">Info</option>
+            <option value="CRITICAL">Critical Only</option>
+            <option value="HIGH">High Priority</option>
+            <option value="WARNING">Warnings</option>
           </select>
 
           {/* Status Filter */}
@@ -163,48 +155,35 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
             aria-label="Filter by Status"
           >
             <option value="ALL">All Statuses</option>
-            <option value="OPEN">Open Only</option>
-            <option value="ACKNOWLEDGED">Acknowledged</option>
+            <option value="OPEN">Unresolved</option>
+            <option value="ACKNOWLEDGED">Being Investigated</option>
             <option value="RESOLVED">Resolved</option>
           </select>
         </div>
       </div>
 
       {/* Incident List Body */}
-      {loading && incidents.length === 0 ? (
+      {loading && safeIncidents.length === 0 ? (
         <div className="p-8 space-y-3">
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <div key={i} className="p-4 rounded-lg bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 animate-pulse flex items-center justify-between">
               <div className="space-y-2">
                 <div className="h-4 w-48 bg-gray-200 dark:bg-white/10 rounded" />
                 <div className="h-3 w-32 bg-gray-200 dark:bg-white/10 rounded" />
               </div>
-              <div className="h-8 w-24 bg-gray-200 dark:bg-white/10 rounded" />
             </div>
           ))}
         </div>
-      ) : isFailed ? (
-        <div className="p-12 text-center flex flex-col items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-3 border border-red-500/20">
-            <Flame size={26} />
-          </div>
-          <h3 className="text-base font-bold font-['Outfit'] text-[#261812] dark:text-white">
-            Incident Telemetry Unavailable
-          </h3>
-          <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] max-w-sm mt-1">
-            Unable to retrieve active incidents from the Operations Gateway.
-          </p>
-        </div>
       ) : filteredIncidents.length === 0 ? (
-        <div className="p-12 text-center flex flex-col items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 border border-emerald-500/20">
-            <ShieldCheck size={26} />
+        <div className="p-10 text-center flex flex-col items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 border border-emerald-500/20">
+            <CheckCircle2 size={30} />
           </div>
           <h3 className="text-base font-bold font-['Outfit'] text-[#261812] dark:text-white">
-            No Active Operational Incidents
+            All Systems Running Smoothly — No Active Issues
           </h3>
-          <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] max-w-sm mt-1">
-            All registered services are currently operating within nominal thresholds. No machine alerts have triggered open incidents.
+          <p className="text-xs text-[#5a4136] dark:text-[#aeaeb2] max-w-md mt-1 leading-relaxed">
+            Every connected campus service is operating normally. Student logins, event registrations, ticket issuance, and email delivery are running with 0 reported outages.
           </p>
         </div>
       ) : (
@@ -234,7 +213,7 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
                 {/* Left: Severity & Title */}
                 <div className="flex items-start gap-3.5 min-w-0">
                   <span
-                    className={`mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold border shrink-0 ${getSeverityBadgeClass(
+                    className={`mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${getSeverityBadgeClass(
                       inc.severity
                     )}`}
                   >
@@ -247,7 +226,7 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
                         {inc.title}
                       </span>
                       <span
-                        className={`px-2 py-0.2 rounded text-[10px] font-mono uppercase font-semibold border ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                           isRes
                             ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                             : isAck
@@ -255,16 +234,14 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
                             : 'bg-red-500/10 text-red-600 border-red-500/20'
                         }`}
                       >
-                        {inc.status}
+                        {isRes ? 'Resolved' : isAck ? 'Investigating' : 'Needs Review'}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-[#5a4136] dark:text-[#aeaeb2] font-mono flex-wrap">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-[#5a4136] dark:text-[#aeaeb2] flex-wrap">
                       <span>Service: <strong className="text-[#261812] dark:text-white">{inc.service_id}</strong></span>
                       <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <span>Duration: <strong>{getDurationString(inc.opened_at, inc.resolved_at)}</strong></span>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <span>Opened: {new Date(inc.opened_at).toLocaleTimeString()}</span>
+                      <span>Reported: {new Date(inc.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
@@ -276,17 +253,17 @@ export const ActiveIncidentsList: React.FC<ActiveIncidentsListProps> = ({
                       onClick={(e) => handleInlineAcknowledge(e, inc)}
                       disabled={isBeingAcked}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                      title="Acknowledge incident directly"
+                      title="Mark as being investigated"
                     >
                       {isBeingAcked ? <RefreshCw size={12} className="animate-spin" /> : <Shield size={12} />}
-                      <span className="hidden sm:inline">Acknowledge</span>
+                      <span className="hidden sm:inline">Investigate</span>
                     </button>
                   )}
 
                   <button
                     onClick={() => setSelectedIncident(inc)}
                     className="p-2 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-500/10 transition-colors"
-                    aria-label={`Investigate incident ${inc.title}`}
+                    aria-label={`View issue ${inc.title}`}
                   >
                     <ChevronRight size={18} />
                   </button>

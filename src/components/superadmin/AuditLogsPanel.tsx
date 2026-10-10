@@ -6,21 +6,48 @@ import {
   RefreshCw, 
   ChevronDown, 
   ChevronUp, 
-  Code2 
+  Code2,
+  Shield,
+  Download,
+  Copy,
+  Check
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
 
+interface AuditLogRecord {
+  id: string;
+  created_at: string;
+  actor_role: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  justification?: string;
+  before_data?: Record<string, unknown> | null;
+  after_data?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  reason?: string;
+  admin_users?: {
+    email?: string;
+    display_name?: string;
+  } | null;
+}
+
+type ActionCategory = 'ALL' | 'EVENTS' | 'ACCESS' | 'SETTINGS' | 'SYSTEM';
+
 export const AuditLogsPanel: React.FC = () => {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [limit, setLimit] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<ActionCategory>('ALL');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
+    setError('');
     try {
       const { data, error: err } = await supabase
         .from('audit_logs')
@@ -28,212 +55,401 @@ export const AuditLogsPanel: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(limit);
       if (err) throw err;
-      setLogs(data || []);
-    } catch (err: any) {
-      setError('Failed to load audit logs: ' + (err.message || ''));
+      setLogs((data as AuditLogRecord[]) || []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError('Failed to load audit logs: ' + msg);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchLogs(); }, [limit]);
+  useEffect(() => { 
+    fetchLogs(); 
+  }, [limit]);
 
-  const filteredLogs = logs.filter(log => {
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleExportCsv = () => {
+    if (filteredLogs.length === 0) return;
+    const headers = ['Timestamp', 'Actor', 'Role', 'Action', 'Target Type', 'Target ID', 'Justification'];
+    const rows = filteredLogs.map((log) => [
+      `"${new Date(log.created_at).toISOString()}"`,
+      `"${log.admin_users?.email || log.admin_users?.display_name || 'System'}"`,
+      `"${log.actor_role}"`,
+      `"${log.action}"`,
+      `"${log.target_type}"`,
+      `"${log.target_id || ''}"`,
+      `"${(log.justification || log.reason || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lpu_audit_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredLogs = logs.filter((log) => {
+    // Category filter
+    if (selectedCategory === 'EVENTS') {
+      const act = log.action.toLowerCase();
+      if (!act.includes('event') && log.target_type.toLowerCase() !== 'events') return false;
+    } else if (selectedCategory === 'ACCESS') {
+      const act = log.action.toLowerCase();
+      if (!act.includes('access') && !act.includes('organizer') && !act.includes('approval')) return false;
+    } else if (selectedCategory === 'SETTINGS') {
+      const act = log.action.toLowerCase();
+      if (!act.includes('setting') && !act.includes('config')) return false;
+    } else if (selectedCategory === 'SYSTEM') {
+      const act = log.action.toLowerCase();
+      if (act.includes('event') || act.includes('access') || act.includes('setting')) return false;
+    }
+
+    // Search query filter
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
       log.action.toLowerCase().includes(q) ||
       log.target_type.toLowerCase().includes(q) ||
+      (log.target_id && log.target_id.toLowerCase().includes(q)) ||
       (log.admin_users?.email && log.admin_users.email.toLowerCase().includes(q)) ||
+      (log.justification && log.justification.toLowerCase().includes(q)) ||
       (log.reason && log.reason.toLowerCase().includes(q))
     );
   });
 
+  const getActionBadgeColor = (action: string) => {
+    const act = action.toUpperCase();
+    if (act.includes('DELETE') || act.includes('REJECT') || act.includes('REMOVE')) {
+      return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20';
+    }
+    if (act.includes('CREATE') || act.includes('APPROVE') || act.includes('INSERT')) {
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20';
+    }
+    if (act.includes('UPDATE') || act.includes('EDIT') || act.includes('MODIFY')) {
+      return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+    }
+    return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20';
+  };
+
+  const getRelativeTime = (dateStr: string) => {
+    const diffSec = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    return `${diffDays}d ago`;
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
-      {/* Header */}
-      <div className="page-header-row">
+    <div className="space-y-6 pb-12 animate-fadeIn select-text">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span className="badge badge-purple">SECURITY AUDIT</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Immutable Activity Ledger</span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+              SECURITY AUDIT TRAIL
+            </span>
+            <span className="text-xs text-[#5a4136] dark:text-[#8e8e93]">
+              Immutable Forensic Activity Ledger
+            </span>
           </div>
-          <h2 className="page-title">Security & Operations Audit Trail</h2>
-          <p className="page-description">Complete forensic activity log tracking before and after states for administrative actions.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-['Outfit'] text-[#261812] dark:text-white flex items-center gap-2.5">
+            <Shield size={26} className="text-purple-600 dark:text-purple-400" />
+            <span>Security & Operations Audit Trail</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-[#5a4136] dark:text-[#8e8e93] mt-1 max-w-2xl">
+            Forensic chronological log tracking administrative state mutations, role elevations, and access decisions.
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={fetchLogs}>
-            <RefreshCw size={15} />
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={filteredLogs.length === 0}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#e2bfb0] dark:border-white/10 text-xs font-bold text-[#261812] dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={fetchLogs}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Ledger</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--danger-subtle)', border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--danger)' }}>
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">
           {error}
         </div>
       )}
 
       {/* Main Table Card */}
-      <div className="card-box">
-        <div className="card-box-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h3 className="card-box-title">Audit Ledger</h3>
-            <span className="badge badge-purple">{filteredLogs.length} Records</span>
+      <div className="card-box rounded-2xl border border-[#e2bfb0] dark:border-white/10 bg-[#ffffff] dark:bg-[#202023] shadow-sm overflow-hidden">
+        {/* Card Header & Controls */}
+        <div className="p-5 border-b border-gray-100 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Quick Category Filter Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[
+              { id: 'ALL', label: 'All Operations' },
+              { id: 'EVENTS', label: 'Events' },
+              { id: 'ACCESS', label: 'Access Requests' },
+              { id: 'SETTINGS', label: 'Settings' },
+              { id: 'SYSTEM', label: 'System' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id as ActionCategory)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  selectedCategory === cat.id
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-gray-100 dark:bg-white/5 text-[#5a4136] dark:text-[#8e8e93] hover:bg-gray-200 dark:hover:bg-white/10'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {/* Limit Selector */}
-            <div style={{ display: 'flex', backgroundColor: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '3px', border: '1px solid var(--border-subtle)' }}>
-              {[50, 100, 200].map(n => (
-                <button
-                  key={n}
-                  onClick={() => setLimit(n)}
-                  className="btn btn-ghost btn-sm"
-                  style={{
-                    backgroundColor: limit === n ? 'var(--bg-surface-raised)' : 'transparent',
-                    color: limit === n ? 'var(--text-main)' : 'var(--text-dim)',
-                    fontWeight: limit === n ? 700 : 500,
-                    padding: '4px 10px',
-                    fontSize: '11px'
-                  }}
-                >
-                  {n} Rows
-                </button>
-              ))}
-            </div>
-
-            {/* Search Input */}
-            <div className="search-input-wrapper" style={{ minWidth: '220px' }}>
-              <Search size={14} className="search-input-icon" />
+          {/* Search & Row Limit */}
+          <div className="flex items-center gap-3">
+            <div className="relative min-w-[240px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Filter by action, actor, target..."
+                placeholder="Filter by actor, action, ID..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="form-input search-input"
-                style={{ padding: '6px 12px 6px 34px', fontSize: '13px' }}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#e2bfb0] dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] text-xs text-[#261812] dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               />
+            </div>
+
+            <div className="flex items-center bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/5">
+              {[50, 100, 200].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setLimit(n)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    limit === n
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#261812] dark:text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
+        {/* Audit Log Table */}
         {loading ? (
-          <LoadingSpinner message="Querying audit trail..." />
+          <div className="py-16">
+            <LoadingSpinner message="Querying security audit trail..." />
+          </div>
         ) : filteredLogs.length === 0 ? (
-          <EmptyState
-            title="No Audit Records"
-            description="No administrative activities found for the selected query."
-            icon={<FileSpreadsheet size={26} />}
-          />
+          <div className="py-16">
+            <EmptyState
+              title="No Audit Records Found"
+              description="No administrative activities matched your search criteria or category filter."
+              icon={<FileSpreadsheet size={32} className="text-gray-400" />}
+            />
+          </div>
         ) : (
-          <div className="table-wrapper">
-            <table className="modern-table">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor & Role</th>
-                  <th>Action Trigger</th>
-                  <th>Target Resource</th>
-                  <th>Justification / Reason</th>
-                  <th style={{ textAlign: 'right' }}>Payload Diff</th>
+                <tr className="border-b border-gray-100 dark:border-white/5 text-[11px] uppercase font-bold text-[#5a4136]/70 dark:text-[#8e8e93] tracking-wider bg-gray-50/50 dark:bg-white/[0.01]">
+                  <th className="py-3 px-4">Timestamp</th>
+                  <th className="py-3 px-4">Actor</th>
+                  <th className="py-3 px-4">Action</th>
+                  <th className="py-3 px-4">Target Entity</th>
+                  <th className="py-3 px-4">Justification</th>
+                  <th className="py-3 px-4 text-right">Payload Diff</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredLogs.map(log => {
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5 text-xs">
+                {filteredLogs.map((log) => {
                   const hasDiff = log.before_data || log.after_data || log.metadata;
+                  const isExpanded = expandedId === log.id;
+                  const email = log.admin_users?.email || log.admin_users?.display_name || 'System Daemon';
+                  const initial = email.charAt(0).toUpperCase();
 
                   return (
                     <React.Fragment key={log.id}>
-                      <tr>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', fontSize: '12px' }}>
-                            <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>
-                              {new Date(log.created_at).toLocaleDateString()}
-                            </span>
-                            <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                              {new Date(log.created_at).toLocaleTimeString()}
+                      <tr className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                        {/* Timestamp */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="font-semibold text-[#261812] dark:text-white">
+                            {new Date(log.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          <div className="text-[11px] text-[#5a4136] dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                            <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>•</span>
+                            <span className="font-medium text-purple-600 dark:text-purple-400">
+                              {getRelativeTime(log.created_at)}
                             </span>
                           </div>
                         </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-main)' }}>
-                              {log.admin_users?.display_name || log.admin_users?.email || 'System Daemon'}
-                            </span>
-                            <span className="badge badge-purple" style={{ fontSize: '9px', padding: '1px 6px', width: 'fit-content' }}>
-                              {log.actor_role}
-                            </span>
+
+                        {/* Actor */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center text-xs shrink-0 border border-purple-500/20">
+                              {initial}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-[#261812] dark:text-white">
+                                {email}
+                              </div>
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">
+                                {log.actor_role}
+                              </span>
+                            </div>
                           </div>
                         </td>
-                        <td>
-                          <span className="badge badge-accent" style={{ fontWeight: 700 }}>
+
+                        {/* Action */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${getActionBadgeColor(log.action)}`}>
                             {log.action}
                           </span>
                         </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span className="font-mono" style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>
-                              {log.target_type}
-                            </span>
-                            <span className="font-mono" style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
-                              {log.target_id?.slice(0, 8)}...
-                            </span>
+
+                        {/* Target Entity */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="font-semibold text-[#261812] dark:text-white uppercase tracking-wider text-[11px]">
+                            {log.target_type}
                           </div>
+                          {log.target_id && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(log.target_id, log.id)}
+                              className="font-mono text-[11px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1 mt-0.5 group cursor-pointer"
+                              title="Click to copy ID"
+                            >
+                              <span>{log.target_id.slice(0, 10)}...</span>
+                              {copiedId === log.id ? (
+                                <Check size={11} className="text-emerald-500" />
+                              ) : (
+                                <Copy size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </button>
+                          )}
                         </td>
-                        <td>
-                          <span style={{ fontSize: '12.5px', color: 'var(--text-muted)', maxWidth: '240px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {log.reason || '—'}
+
+                        {/* Justification */}
+                        <td className="py-3.5 px-4 max-w-xs">
+                          <span className="text-[#5a4136] dark:text-gray-300 line-clamp-2">
+                            {log.justification || log.reason || '—'}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          {hasDiff && (
+
+                        {/* Payload Diff Action */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          {hasDiff ? (
                             <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                              type="button"
+                              onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                isExpanded
+                                  ? 'bg-purple-600 text-white shadow-xs'
+                                  : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20'
+                              }`}
                             >
                               <Code2 size={13} />
-                              <span>{expandedId === log.id ? 'Hide Diff' : 'View Diff'}</span>
-                              {expandedId === log.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              <span>{isExpanded ? 'Hide Diff' : 'View Diff'}</span>
+                              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                             </button>
+                          ) : (
+                            <span className="text-gray-400 text-[11px]">—</span>
                           )}
                         </td>
                       </tr>
 
-                      {/* Expandable JSON Diff Box */}
-                      {expandedId === log.id && (
+                      {/* Expandable Visual State Diff */}
+                      {isExpanded && (
                         <tr>
-                          <td colSpan={6} style={{ backgroundColor: 'var(--bg-base)', padding: '16px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: log.before_data && log.after_data ? '1fr 1fr' : '1fr', gap: '16px' }}>
-                              {log.before_data && (
-                                <div style={{ padding: '14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--danger)', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                    Before State State
+                          <td colSpan={6} className="p-4 bg-gray-50/80 dark:bg-black/20 border-t border-b border-gray-100 dark:border-white/5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Before State */}
+                              {log.before_data ? (
+                                <div className="p-3.5 rounded-xl border border-red-500/30 bg-red-500/[0.03] space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                                      Before State Transition
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(JSON.stringify(log.before_data, null, 2), `before_${log.id}`)}
+                                      className="text-[10px] text-red-600 hover:underline cursor-pointer flex items-center gap-1"
+                                    >
+                                      {copiedId === `before_${log.id}` ? 'Copied' : 'Copy JSON'}
+                                    </button>
                                   </div>
-                                  <pre className="font-mono" style={{ fontSize: '11.5px', color: '#fca5a5', margin: 0, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                                  <pre className="text-[11px] font-mono text-red-900 dark:text-red-300 bg-red-500/[0.04] p-3 rounded-lg overflow-x-auto max-h-60 whitespace-pre-wrap">
                                     {JSON.stringify(log.before_data, null, 2)}
                                   </pre>
                                 </div>
-                              )}
-                              {log.after_data && (
-                                <div style={{ padding: '14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--success)', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                    After State Transition
+                              ) : null}
+
+                              {/* After State */}
+                              {log.after_data ? (
+                                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.03] space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                      After State Transition
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(JSON.stringify(log.after_data, null, 2), `after_${log.id}`)}
+                                      className="text-[10px] text-emerald-600 hover:underline cursor-pointer flex items-center gap-1"
+                                    >
+                                      {copiedId === `after_${log.id}` ? 'Copied' : 'Copy JSON'}
+                                    </button>
                                   </div>
-                                  <pre className="font-mono" style={{ fontSize: '11.5px', color: '#86efac', margin: 0, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                                  <pre className="text-[11px] font-mono text-emerald-900 dark:text-emerald-300 bg-emerald-500/[0.04] p-3 rounded-lg overflow-x-auto max-h-60 whitespace-pre-wrap">
                                     {JSON.stringify(log.after_data, null, 2)}
                                   </pre>
                                 </div>
-                              )}
+                              ) : null}
+
+                              {/* Metadata if no before/after */}
                               {log.metadata && !log.before_data && !log.after_data && (
-                                <div style={{ padding: '14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                    Action Metadata
+                                <div className="col-span-2 p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#202023] space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                      Action Payload & Execution Metadata
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(JSON.stringify(log.metadata, null, 2), `meta_${log.id}`)}
+                                      className="text-[10px] text-purple-600 hover:underline cursor-pointer flex items-center gap-1"
+                                    >
+                                      {copiedId === `meta_${log.id}` ? 'Copied' : 'Copy JSON'}
+                                    </button>
                                   </div>
-                                  <pre className="font-mono" style={{ fontSize: '11.5px', color: 'var(--text-main)', margin: 0, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                                  <pre className="text-[11px] font-mono text-[#261812] dark:text-white bg-gray-50 dark:bg-black/20 p-3 rounded-lg overflow-x-auto max-h-60 whitespace-pre-wrap">
                                     {JSON.stringify(log.metadata, null, 2)}
                                   </pre>
                                 </div>

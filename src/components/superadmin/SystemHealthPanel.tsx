@@ -118,6 +118,32 @@ export const SystemHealthPanel: React.FC = () => {
         </button>
       </div>
 
+      {/* Centralized Telemetry Banner */}
+      <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-[#261812] dark:text-white">
+              Live Infrastructure Telemetry Centralized in Operations Center
+            </div>
+            <div className="text-[11px] text-[#5a4136] dark:text-[#8e8e93]">
+              Live 6 Core Services checkups, Cloud Quota Cost Guard, and Edge Error Telemetry are actively monitored in Operations Center.
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('lpu:navigate-tab', { detail: 'operations' }));
+          }}
+          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+        >
+          Open Operations Center →
+        </button>
+      </div>
+
       {error && (
         <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--danger-subtle)', border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--danger)' }}>
           {error}

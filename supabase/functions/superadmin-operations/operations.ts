@@ -2242,8 +2242,8 @@ export async function executeOperation(
     case 'readiness-evaluate':
     case 'operations.readiness.evaluate': {
       const env = (params.environment || resolveEnvironment()) as any;
-      const correlationId = ctx.correlationId;
-      const actor = ctx.actor.adminUserId || 'superadmin';
+      const correlationId = (params.correlationId as string) || `corr_${requestId}`;
+      const actor = (params.adminUserId as string) || 'superadmin';
       const result = await evaluateProductionReadiness(supabase, env, actor, correlationId);
       return result;
     }

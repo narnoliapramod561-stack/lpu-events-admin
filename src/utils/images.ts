@@ -13,7 +13,7 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
   const effectiveWidth = Math.round(targetWidth * (dpr >= 1.5 ? 1.5 : 1.0));
 
   // 1. Local default category WebP assets have full responsive sets
-  if (url.startsWith('/defaults/events/')) {
+  if (url.startsWith('/defaults/events/') || url.startsWith('/defaults/hero_default')) {
     const base = url.replace(/(_desktop|_tablet|_mobile)\.webp$/, '.webp');
     if (effectiveWidth <= 640) {
       return base.replace('.webp', '_mobile.webp');

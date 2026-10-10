@@ -10,7 +10,8 @@ import {
   FolderTree,
   Sliders,
   FileSpreadsheet,
-  Activity
+  Activity,
+  LogOut
 } from 'lucide-react';
 import { LpuLogo } from './common/LpuLogo';
 
@@ -37,11 +38,25 @@ interface SidebarProps {
   role: 'super-admin' | 'organizer' | 'unapproved';
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
+  userEmail?: string;
+  displayName?: string;
+  roleDisplay?: string;
+  onLogout?: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab, isOpenMobile, onCloseMobile }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  role,
+  activeTab,
+  setActiveTab,
+  userEmail,
+  displayName,
+  roleDisplay,
+  onLogout,
+  isOpenMobile,
+  onCloseMobile,
+}) => {
   if (role === 'unapproved') return null;
 
   const handleTabClick = (tab: AdminTab) => {
@@ -213,13 +228,94 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, setActiveTab,
         )}
       </div>
 
-      {/* Footer info */}
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="pulse-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)', display: 'inline-block' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>System Online</span>
-        </div>
-        <span className="font-mono" style={{ fontSize: '10px', color: 'var(--text-dim)' }}>v2.4</span>
+      {/* Account Info & Logout Footer */}
+      <div style={{
+        padding: '12px 14px',
+        borderTop: '1px solid var(--border-subtle)',
+        marginTop: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        {userEmail && (
+          <div style={{
+            padding: '8px 10px',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-surface-raised)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-primary)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '12px',
+              flexShrink: 0,
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              {(displayName || userEmail || 'A').charAt(0).toUpperCase()}
+            </div>
+            <div style={{ overflow: 'hidden', minWidth: 0, flex: 1, textAlign: 'left' }}>
+              <p style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--text-main)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                margin: 0,
+                lineHeight: 1.2
+              }}>
+                {displayName || roleDisplay || 'Organizer'}
+              </p>
+              <p style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                margin: '2px 0 0 0',
+                lineHeight: 1.2
+              }} title={userEmail}>
+                {userEmail}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: 'var(--danger)',
+              backgroundColor: 'var(--danger-subtle)',
+              border: '1px solid rgba(220, 38, 38, 0.2)',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease'
+            }}
+            title="Sign out of Admin Console"
+          >
+            <LogOut size={15} />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </aside>
   );

@@ -2,9 +2,9 @@ import React from 'react';
 
 interface HeaderProps {
   activeTab: string;
-  darkMode: boolean;
-  onToggleDarkMode: () => void;
-  onCreateClick: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
+  onCreateClick?: () => void;
   userEmail?: string;
   displayName?: string;
   onLogout?: () => void;
@@ -14,10 +14,8 @@ export const AdminHeader: React.FC<HeaderProps> = ({
   activeTab,
   darkMode,
   onToggleDarkMode,
-  onCreateClick,
   userEmail,
   displayName,
-  onLogout
 }) => {
   const getTitle = () => {
     switch (activeTab) {
@@ -37,6 +35,8 @@ export const AdminHeader: React.FC<HeaderProps> = ({
       case 'carousel': return 'Past Events Carousel & Memories';
       case 'categories': return 'Categories & Platform Taxonomy';
       case 'ad-control': return 'Ad Control Center';
+      case 'site-controls': return 'Campus Broadcast & Maintenance';
+      case 'student-inquiries': return 'Student Inquiries & Support Desk';
       case 'analytics': return 'Analytics Overview';
       case 'audit-logs': return 'Platform Audit Logs';
       case 'outbox': return 'Outbox Notifications Queue';
@@ -57,35 +57,29 @@ export const AdminHeader: React.FC<HeaderProps> = ({
         <span className="text-lg font-bold font-['Outfit'] text-[#261812] dark:text-white">{getTitle()}</span>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onCreateClick}
-          className="bg-[#ff6b00] hover:bg-[#a04100] text-white px-5 py-2 rounded-full text-sm font-semibold shadow-sm transition-all flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          <span>Create Event</span>
-        </button>
-
-        <div className="flex items-center gap-1">
+      {/* Top Right: Mode Switcher + Account Name and Super Admin */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {onToggleDarkMode && (
           <button
-            onClick={onToggleDarkMode} 
-            className="w-10 h-10 rounded-full hover:bg-[#fee3d8] dark:hover:bg-white/10 flex items-center justify-center text-[#5a4136] dark:text-[#aeaeb2] transition-colors"
-            title="Toggle theme"
+            type="button"
+            onClick={onToggleDarkMode}
+            className="w-9 h-9 rounded-full flex items-center justify-center border border-[#e2bfb0] dark:border-white/10 bg-white/70 dark:bg-white/[0.04] text-[#5a4136] dark:text-[#aeaeb2] hover:text-[#261812] dark:hover:text-white hover:bg-[#fee3d8] dark:hover:bg-white/10 transition-colors cursor-pointer shadow-xs active:scale-95"
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            <span className="material-symbols-outlined">{darkMode ? 'light_mode' : 'dark_mode'}</span>
+            <span className="material-symbols-outlined text-[18px]">
+              {darkMode ? 'light_mode' : 'dark_mode'}
+            </span>
           </button>
-        </div>
+        )}
 
-        {/* User Identity Chip */}
-        {userEmail && (
-          <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#fee3d8]/80 dark:bg-white/[0.04] border border-[#e2bfb0] dark:border-white/10">
-            <div className="w-8 h-8 rounded-full bg-[#ff6b00] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+        {(userEmail || displayName) && (
+          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#fee3d8]/80 dark:bg-white/[0.04] border border-[#e2bfb0] dark:border-white/10 shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-[#ff6b00] text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
               {initialLetter}
             </div>
-            <div className="flex flex-col text-left max-w-[170px]">
-              <span className="text-xs font-bold text-[#261812] dark:text-white truncate leading-tight">
-                {userEmail}
+            <div className="flex flex-col text-left max-w-[200px] sm:max-w-[260px]">
+              <span className="text-xs font-bold text-[#261812] dark:text-white truncate leading-tight" title={userEmail}>
+                {userEmail || displayName}
               </span>
               <span className="text-[10px] font-extrabold uppercase text-[#ff6b00] tracking-wider leading-none mt-0.5">
                 SUPER ADMIN
@@ -93,19 +87,8 @@ export const AdminHeader: React.FC<HeaderProps> = ({
             </div>
           </div>
         )}
-
-        {/* Logout button */}
-        {onLogout && (
-          <button
-            onClick={onLogout}
-            className="px-3 py-1.5 rounded-full border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/40 hover:bg-red-100 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-            title="Sign out of Admin Console"
-          >
-            <span className="material-symbols-outlined text-[16px]">logout</span>
-            <span>Logout</span>
-          </button>
-        )}
       </div>
     </header>
   );
 };
+

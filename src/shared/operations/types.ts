@@ -750,8 +750,12 @@ export interface OperationsRunbook {
   version: number;
   preconditions: string[];
   postconditions: string[];
+  preconditions_description?: string;
+  postconditions_description?: string;
   rollback_supported: boolean;
   approval_required: boolean;
+  supports_rollback?: boolean;
+  requires_approval?: boolean;
   allowed_environments: RemediationEnvironment[];
   created_at: string;
   updated_at: string;

@@ -314,7 +314,7 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
             <Clock size={14} className="text-amber-500" />
           </div>
           <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-white mt-1">
-            {overviewData?.summary.pending ?? 0}
+            {overviewData?.summary?.pending ?? 0}
           </div>
           <span className="text-[11px] text-[#5a4136] dark:text-[#8e8e93]">Awaiting dispatch worker</span>
         </div>
@@ -326,7 +326,7 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
             <CheckCircle2 size={14} className="text-emerald-500" />
           </div>
           <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-white mt-1">
-            {overviewData?.summary.request_accepted ?? 0}
+            {overviewData?.summary?.request_accepted ?? 0}
           </div>
           <span className="text-[11px] text-emerald-600 dark:text-emerald-400">Accepted by provider</span>
         </div>
@@ -338,7 +338,7 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
             <AlertTriangle size={14} className="text-rose-500" />
           </div>
           <div className="text-2xl font-bold font-['Outfit'] text-[#261812] dark:text-white mt-1">
-            {overviewData?.summary.failed ?? 0}
+            {overviewData?.summary?.failed ?? 0}
           </div>
           <span className="text-[11px] text-rose-600 dark:text-rose-400">Transient or permanent</span>
         </div>
@@ -352,13 +352,13 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
           <div className="text-sm font-bold font-['Outfit'] text-[#261812] dark:text-white mt-2 flex items-center gap-1.5">
             <span
               className={`w-2 h-2 rounded-full ${
-                overviewData?.provider.is_configured ? 'bg-emerald-500' : 'bg-amber-500'
+                overviewData?.provider?.is_configured ? 'bg-emerald-500' : 'bg-amber-500'
               }`}
             />
-            {overviewData?.provider.is_configured ? 'CONFIGURED' : 'NOT_CONFIGURED'}
+            {overviewData?.provider?.is_configured ? 'CONFIGURED' : 'NOT_CONFIGURED'}
           </div>
           <span className="text-[11px] text-[#5a4136] dark:text-[#8e8e93]">
-            {overviewData?.provider.adapter || 'ResendAdapter'}
+            {overviewData?.provider?.adapter || 'ResendAdapter'}
           </span>
         </div>
       </div>

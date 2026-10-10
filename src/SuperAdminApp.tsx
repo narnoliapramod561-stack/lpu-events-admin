@@ -18,6 +18,9 @@ import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselMa
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
 import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
 import { OperationsControlCenter } from './components/superadmin/operations';
+import { SiteControlsPanel } from './components/superadmin/SiteControlsPanel';
+import { StudentInquiriesPanel } from './components/superadmin/StudentInquiriesPanel';
+import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { useAuth } from './auth';
 
 interface SuperAdminAppProps {
@@ -76,6 +79,17 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
     });
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const custom = e as CustomEvent<AdminNavTab>;
+      if (custom.detail) {
+        setActiveTab(custom.detail);
+      }
+    };
+    window.addEventListener('lpu:navigate-tab', handleNavigate);
+    return () => window.removeEventListener('lpu:navigate-tab', handleNavigate);
+  }, []);
+
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
@@ -122,6 +136,8 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
         setActiveTab={setActiveTab} 
         userEmail={userEmail}
         displayName={displayName}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode(!darkMode)}
         onLogout={onLogout} 
       />
 
@@ -138,134 +154,175 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
-          {/* Create / Edit Event Wizard (Standalone modal flow) */}
-          {activeTab === 'create-event' && (
-            <CreateEventWizard
-              editEventId={editingEventId || undefined}
-              onCancel={() => {
-                setEditingEventId(null);
-                setActiveTab('all-events');
-              }}
-              onComplete={() => {
-                setEditingEventId(null);
-                setActiveTab('all-events');
-                window.dispatchEvent(new CustomEvent('lpu:events-updated'));
-              }}
-            />
-          )}
-
-          {/* Visited Tabs Kept Alive in Memory — Zero Re-fetching, Instant Tab Switching */}
-          {visitedTabs.has('dashboard') && (
-            <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
-              <DashboardOverview onNavigate={setActiveTab} />
-            </div>
-          )}
-
-          {visitedTabs.has('operations') && (
-            <div style={{ display: activeTab === 'operations' ? 'block' : 'none' }}>
-              <OperationsControlCenter />
-            </div>
-          )}
-
-          {visitedTabs.has('access-requests') && (
-            <div style={{ display: activeTab === 'access-requests' ? 'block' : 'none' }}>
-              <AccessRequestsPanel onNavigateToApproved={() => setActiveTab('approved-organizers')} />
-            </div>
-          )}
-
-          {visitedTabs.has('approved-organizers') && (
-            <div style={{ display: activeTab === 'approved-organizers' ? 'block' : 'none' }}>
-              <ApprovedOrganizersPanel />
-            </div>
-          )}
-
-          {visitedTabs.has('all-events') && (
-            <div style={{ display: isCurrentActiveEvents ? 'block' : 'none' }}>
-              <ManageEventsPanel
-                key="active-events-panel"
-                mode="active"
-                onCreateClick={handleStartCreate}
-                onEditClick={handleStartEdit}
+          <ErrorBoundary
+            fallback={
+              <div className="p-8 text-center bg-white dark:bg-[#202023] rounded-2xl border border-red-200 dark:border-red-900/40 shadow-sm max-w-xl mx-auto my-12">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                  ⚠️
+                </div>
+                <h3 className="text-lg font-bold text-[#261812] dark:text-white mb-2">Panel Render Warning</h3>
+                <p className="text-sm text-[#5a4136] dark:text-[#aeaeb2] mb-6">
+                  An unexpected render exception occurred while displaying this view. Your administrative shell and navigation tabs remain fully functional.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      sessionStorage.removeItem('lpu_superadmin_active_tab');
+                    } catch {}
+                    setActiveTab('dashboard');
+                    window.location.reload();
+                  }}
+                  className="px-5 py-2.5 rounded-full bg-[#ff6b00] text-white text-sm font-bold shadow-sm hover:bg-[#a04100] transition-colors"
+                >
+                  Return to Main Dashboard
+                </button>
+              </div>
+            }
+          >
+            {/* Create / Edit Event Wizard (Standalone modal flow) */}
+            {activeTab === 'create-event' && (
+              <CreateEventWizard
+                editEventId={editingEventId || undefined}
+                onCancel={() => {
+                  setEditingEventId(null);
+                  setActiveTab('all-events');
+                }}
+                onComplete={() => {
+                  setEditingEventId(null);
+                  setActiveTab('all-events');
+                  window.dispatchEvent(new CustomEvent('lpu:events-updated'));
+                }}
               />
-            </div>
-          )}
+            )}
 
-          {visitedTabs.has('past-events') && (
-            <div style={{ display: isCurrentPastEvents ? 'block' : 'none' }}>
-              <ManageEventsPanel
-                key="past-events-panel"
-                mode="past"
-                onCreateClick={handleStartCreate}
-                onEditClick={handleStartEdit}
-              />
-            </div>
-          )}
+            {/* Visited Tabs Kept Alive in Memory — Zero Re-fetching, Instant Tab Switching */}
+            {visitedTabs.has('dashboard') && (
+              <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
+                <DashboardOverview onNavigate={setActiveTab} />
+              </div>
+            )}
 
-          {visitedTabs.has('featured-events') && (
-            <div style={{ display: activeTab === 'featured-events' ? 'block' : 'none' }}>
-              <FeaturedEventsPanel />
-            </div>
-          )}
+            {visitedTabs.has('operations') && (
+              <div style={{ display: activeTab === 'operations' ? 'block' : 'none' }}>
+                <ErrorBoundary>
+                  <OperationsControlCenter />
+                </ErrorBoundary>
+              </div>
+            )}
 
-          {visitedTabs.has('trending-events') && (
-            <div style={{ display: activeTab === 'trending-events' ? 'block' : 'none' }}>
-              <TrendingEventsPanel />
-            </div>
-          )}
+            {visitedTabs.has('access-requests') && (
+              <div style={{ display: activeTab === 'access-requests' ? 'block' : 'none' }}>
+                <AccessRequestsPanel onNavigateToApproved={() => setActiveTab('approved-organizers')} />
+              </div>
+            )}
 
-          {visitedTabs.has('hero-carousel') && (
-            <div style={{ display: activeTab === 'hero-carousel' ? 'block' : 'none' }}>
-              <HeroCarouselManagerPanel />
-            </div>
-          )}
+            {visitedTabs.has('approved-organizers') && (
+              <div style={{ display: activeTab === 'approved-organizers' ? 'block' : 'none' }}>
+                <ApprovedOrganizersPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('happening-today') && (
-            <div style={{ display: activeTab === 'happening-today' ? 'block' : 'none' }}>
-              <HappeningTodayManagerPanel />
-            </div>
-          )}
+            {visitedTabs.has('all-events') && (
+              <div style={{ display: isCurrentActiveEvents ? 'block' : 'none' }}>
+                <ManageEventsPanel
+                  key="active-events-panel"
+                  mode="active"
+                  onCreateClick={handleStartCreate}
+                  onEditClick={handleStartEdit}
+                />
+              </div>
+            )}
 
-          {visitedTabs.has('advertisements') && (
-            <div style={{ display: activeTab === 'advertisements' ? 'block' : 'none' }}>
-              <AdvertisementsPanel />
-            </div>
-          )}
+            {visitedTabs.has('past-events') && (
+              <div style={{ display: isCurrentPastEvents ? 'block' : 'none' }}>
+                <ManageEventsPanel
+                  key="past-events-panel"
+                  mode="past"
+                  onCreateClick={handleStartCreate}
+                  onEditClick={handleStartEdit}
+                />
+              </div>
+            )}
 
-          {visitedTabs.has('categories') && (
-            <div style={{ display: activeTab === 'categories' ? 'block' : 'none' }}>
-              <CategoriesPanel />
-            </div>
-          )}
+            {visitedTabs.has('featured-events') && (
+              <div style={{ display: activeTab === 'featured-events' ? 'block' : 'none' }}>
+                <FeaturedEventsPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('ad-control') && (
-            <div style={{ display: activeTab === 'ad-control' ? 'block' : 'none' }}>
-              <AdControlPanel />
-            </div>
-          )}
+            {visitedTabs.has('trending-events') && (
+              <div style={{ display: activeTab === 'trending-events' ? 'block' : 'none' }}>
+                <TrendingEventsPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('analytics') && (
-            <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
-              <AnalyticsPanel />
-            </div>
-          )}
+            {visitedTabs.has('hero-carousel') && (
+              <div style={{ display: activeTab === 'hero-carousel' ? 'block' : 'none' }}>
+                <HeroCarouselManagerPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('audit-logs') && (
-            <div style={{ display: activeTab === 'audit-logs' ? 'block' : 'none' }}>
-              <AuditLogsPanel />
-            </div>
-          )}
+            {visitedTabs.has('happening-today') && (
+              <div style={{ display: activeTab === 'happening-today' ? 'block' : 'none' }}>
+                <HappeningTodayManagerPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('system-health') && (
-            <div style={{ display: activeTab === 'system-health' ? 'block' : 'none' }}>
-              <SystemHealthPanel />
-            </div>
-          )}
+            {visitedTabs.has('advertisements') && (
+              <div style={{ display: activeTab === 'advertisements' ? 'block' : 'none' }}>
+                <AdvertisementsPanel />
+              </div>
+            )}
 
-          {visitedTabs.has('settings') && (
-            <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
-              <SettingsPanel />
-            </div>
-          )}
+            {visitedTabs.has('categories') && (
+              <div style={{ display: activeTab === 'categories' ? 'block' : 'none' }}>
+                <CategoriesPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('ad-control') && (
+              <div style={{ display: activeTab === 'ad-control' ? 'block' : 'none' }}>
+                <AdControlPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('site-controls') && (
+              <div style={{ display: activeTab === 'site-controls' ? 'block' : 'none' }}>
+                <SiteControlsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('student-inquiries') && (
+              <div style={{ display: activeTab === 'student-inquiries' ? 'block' : 'none' }}>
+                <StudentInquiriesPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('analytics') && (
+              <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
+                <AnalyticsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('audit-logs') && (
+              <div style={{ display: activeTab === 'audit-logs' ? 'block' : 'none' }}>
+                <AuditLogsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('system-health') && (
+              <div style={{ display: activeTab === 'system-health' ? 'block' : 'none' }}>
+                <SystemHealthPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('settings') && (
+              <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+                <SettingsPanel />
+              </div>
+            )}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

@@ -94,10 +94,10 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
   };
 
   const getEnvBadgeClass = () => {
-    const env = environment.toLowerCase();
-    if (env === 'production') return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30';
-    if (env === 'staging') return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30';
-    if (env === 'development') return 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30';
+    const env = (environment || 'production').toLowerCase();
+    if (env.includes('production')) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30';
+    if (env.includes('staging')) return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30';
+    if (env.includes('development') || env.includes('local')) return 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30';
     return 'bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-500/30';
   };
 
@@ -119,9 +119,10 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <span
-              className={`px-2.5 py-1 text-xs font-mono font-bold uppercase rounded-md border ${getEnvBadgeClass()}`}
-              title="Operational Environment returned by Gateway"
+              className={`px-2.5 py-1 text-xs font-semibold uppercase rounded-md border flex items-center gap-1.5 ${getEnvBadgeClass()}`}
+              title="Cloud environment hosting the live services"
             >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               {environment || 'UNKNOWN'}
             </span>
           </div>
@@ -129,14 +130,16 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
           <div className="h-4 w-px bg-gray-300 dark:bg-white/10 hidden sm:block" />
 
           <div className="flex items-center gap-2 text-xs text-[#5a4136] dark:text-[#aeaeb2]">
-            <span className="font-medium">Synced:</span>
-            <span className="font-mono font-semibold text-[#261812] dark:text-white">{timeAgo}</span>
+            <span className="font-medium text-gray-500">System Status:</span>
+            <span className="font-semibold text-[#261812] dark:text-white">Updated {timeAgo}</span>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-[#5a4136] dark:text-[#aeaeb2]">
             <span className="text-gray-400 dark:text-gray-600">•</span>
-            <span className="font-medium">Collection:</span>
-            <span className="font-mono font-semibold text-[#261812] dark:text-white">{collectionAge}</span>
+            <span className="font-medium text-gray-500">Full Health Check:</span>
+            <span className="font-semibold text-[#261812] dark:text-white">
+              {collectionAge === 'no telemetry captured' ? 'Ready to check' : collectionAge}
+            </span>
           </div>
 
           {isStale && (
@@ -170,7 +173,7 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
                 ? 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400'
                 : 'bg-gray-100 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-600 dark:text-gray-400'
             }`}
-            title="Auto-refresh operations console every 30 seconds"
+            title="Automatically updates dashboard health every 30 seconds"
           >
             <span className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-orange-500 animate-pulse' : 'bg-gray-400'}`} />
             Auto-refresh (30s)
@@ -181,14 +184,14 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
             onClick={handleCollect}
             disabled={isCollecting || isSyncing}
             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#fee3d8] dark:bg-white/5 hover:bg-[#fed6c6] dark:hover:bg-white/10 text-[#a04100] dark:text-orange-300 border border-[#e2bfb0] dark:border-white/10 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-            title="Trigger single-flight server collection sweep across providers"
+            title="Tests all live connections to Database, Auth, Storage, and Email services"
           >
             {isCollecting ? (
               <RefreshCw size={13} className="animate-spin" />
             ) : (
               <Play size={13} />
             )}
-            Collect Telemetry
+            Check All Services
           </button>
 
           {/* Evaluate Alerts */}
@@ -196,14 +199,14 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
             onClick={handleEvaluate}
             disabled={isEvaluating || isSyncing}
             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#fee3d8] dark:bg-white/5 hover:bg-[#fed6c6] dark:hover:bg-white/10 text-[#a04100] dark:text-orange-300 border border-[#e2bfb0] dark:border-white/10 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-            title="Trigger server-side alert evaluation sweep across rules"
+            title="Scans error logs and latency to check if any automated alerts should trigger"
           >
             {isEvaluating ? (
               <RefreshCw size={13} className="animate-spin" />
             ) : (
               <ShieldAlert size={13} />
             )}
-            Evaluate Alerts
+            Scan For Issues
           </button>
 
           {/* Manual Refresh */}
@@ -211,10 +214,10 @@ export const OperationsRefreshIndicator: React.FC<OperationsRefreshIndicatorProp
             onClick={() => onManualRefresh()}
             disabled={isSyncing}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#ff6b00] hover:bg-[#a04100] text-white shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
-            title="Manually synchronize operational dashboard state"
+            title="Reload latest live status from the server"
           >
             <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-            Sync Now
+            Refresh Status
           </button>
         </div>
       </div>

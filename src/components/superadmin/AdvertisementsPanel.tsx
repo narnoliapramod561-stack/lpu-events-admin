@@ -126,6 +126,7 @@ export const AdvertisementsPanel: React.FC = () => {
   }, []);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedMediaId, setUploadedMediaId] = useState<string | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,12 +139,14 @@ export const AdvertisementsPanel: React.FC = () => {
         file,
         context: 'advertisement'
       });
-      setImageUrl(result.dataUrl || result.publicUrl);
+      setImageUrl(result.publicUrl || result.dataUrl);
+      setUploadedMediaId(result.mediaId);
     } catch (err: any) {
       console.error('Ad image upload error:', err);
       setFormError('Image upload failed: ' + (err.message || 'Upload failed.'));
       setImageUrl('');
       setSelectedFile(null);
+      setUploadedMediaId(null);
     }
   };
 
@@ -176,7 +179,9 @@ export const AdvertisementsPanel: React.FC = () => {
 
       let mediaAssetId: string | null = null;
 
-      if (selectedFile) {
+      if (uploadedMediaId) {
+        mediaAssetId = uploadedMediaId;
+      } else if (selectedFile) {
         const optResult = await uploadAndOptimizeImage({
           supabase,
           file: selectedFile,

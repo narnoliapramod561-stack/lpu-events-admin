@@ -24,6 +24,11 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
     return base.replace('.webp', '_desktop.webp');
   }
 
+  // Phase 2: Original image objects must NEVER be rewritten to derivative variants
+  if (url.includes('/originals/') || url.includes('/source.') || url.includes('_source.')) {
+    return url;
+  }
+
   // 2. V2 placement responsive derivatives for Cloudflare R2
   if (url.includes('/events/v2/')) {
     if (url.endsWith('/card.webp') && effectiveWidth <= 480) {

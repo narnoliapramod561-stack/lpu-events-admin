@@ -389,17 +389,11 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         onProgress: (step) => {
           if (uploadGenerationRef.current !== currentGeneration) return;
           if (step === 'validating') {
-            setUploadProgressStep('Validating format & magic bytes...');
-            setUploadProgressPercent(25);
-          } else if (step === 'enhancing') {
-            setUploadProgressStep('Generating canonical presentations...');
-            setUploadProgressPercent(50);
-          } else if (step === 'compressing') {
-            setUploadProgressStep('Encoding WebP derivatives...');
-            setUploadProgressPercent(75);
+            setUploadProgressStep('Validating original image format & bounds...');
+            setUploadProgressPercent(30);
           } else if (step === 'uploading') {
-            setUploadProgressStep('Storing into Cloudflare R2...');
-            setUploadProgressPercent(90);
+            setUploadProgressStep('Uploading original image to Cloudflare R2...');
+            setUploadProgressPercent(80);
           } else if (step === 'completed') {
             setUploadProgressStep('Upload complete!');
             setUploadProgressPercent(100);

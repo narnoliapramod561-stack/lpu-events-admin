@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, lpuClient } from '../../supabase';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 import { EventQrCard } from '../organizer/EventQrCard';
 import { getStudentEventUrl } from '@lpu-events/shared';
 
@@ -460,14 +461,16 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
               >
                 {/* Event Hero Banner Image with Overlays */}
                 <div className="relative h-48 w-full overflow-hidden bg-[#fee3d8] dark:bg-[#3d2d26]">
-                  <img
+                  <ProgressiveImage
                     src={bannerUrl}
+                    fallbackSrc={resolveDefaultEventImage(evt)}
                     alt={evt.name}
+                    containerClassName="h-full w-full"
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                   />
                   {/* Subtle Gradient Overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/40 pointer-events-none" />
 
                   {/* Top Floating Badges */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
@@ -675,11 +678,15 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                     >
                       <td className="p-3.5 pl-5">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={bannerUrl}
-                            alt={evt.name}
-                            className="w-14 h-11 rounded-xl object-cover flex-shrink-0 border border-[#e2bfb0]/60 shadow-xs"
-                          />
+                          <div className="w-14 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-[#e2bfb0]/60 shadow-xs">
+                            <ProgressiveImage
+                              src={bannerUrl}
+                              fallbackSrc={resolveDefaultEventImage(evt)}
+                              alt={evt.name}
+                              containerClassName="w-full h-full"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                           <div>
                             <button
                               type="button"
@@ -842,12 +849,15 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
           <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl overflow-hidden">
             {/* Modal Banner Header Image */}
             <div className="relative h-56 w-full overflow-hidden bg-[#fee3d8]">
-              <img
+              <ProgressiveImage
                 src={getEventImage(previewEvent, 'admin-preview')}
+                fallbackSrc={resolveDefaultEventImage(previewEvent)}
                 alt={previewEvent.name}
+                ambientBackdrop
+                containerClassName="w-full h-full"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
               <button
                 onClick={() => setPreviewEvent(null)}
                 className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer"

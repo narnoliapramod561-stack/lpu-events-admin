@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { uploadAndOptimizeImage, getOptimizedImage } from '@lpu-events/shared';
+import { ProgressiveImage } from '../ProgressiveImage';
 import { 
   Sparkles, 
   Upload, 
@@ -468,7 +469,16 @@ export const AdvertisementsPanel: React.FC = () => {
                   {imageUrl ? (
                     <div className="w-full space-y-3">
                       <div className="w-full h-36 bg-white dark:bg-[#261812] rounded-xl overflow-hidden border border-[#e2bfb0] dark:border-[#5a4136] relative shadow-sm">
-                        <img src={imageUrl} alt="Ad Banner Preview" className="w-full h-full object-cover" />
+                        <ProgressiveImage
+                          src={imageUrl}
+                          alt="Ad Banner Preview"
+                          className="w-full h-full object-cover"
+                          customFallback={
+                            <div className="w-full h-full flex items-center justify-center bg-[#fef5f0] dark:bg-[#1f1510]">
+                              <ImageIcon className="w-8 h-8 text-[#ff6b00]/30" />
+                            </div>
+                          }
+                        />
                         <span className="absolute top-2 left-2 text-[9px] font-black text-white bg-[#ff6b00] px-2 py-0.5 rounded-full uppercase">
                           Sponsored
                         </span>
@@ -580,8 +590,23 @@ export const AdvertisementsPanel: React.FC = () => {
                     <tr key={ad.id} className="hover:bg-[#fff8f6] dark:hover:bg-[#3d2d26]/30 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-16 h-10 rounded-lg overflow-hidden border border-[#e2bfb0] flex-shrink-0">
-                            <img src={bannerUrl} alt={ad.name} className="w-full h-full object-cover" />
+                          <div className="w-16 h-10 rounded-lg overflow-hidden border border-[#e2bfb0] flex-shrink-0 bg-[#fef5f0] dark:bg-[#1f1510]">
+                            {bannerUrl ? (
+                              <ProgressiveImage
+                                src={bannerUrl}
+                                alt={ad.name}
+                                className="w-full h-full object-cover"
+                                customFallback={
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-4 h-4 text-[#ff6b00]/30" />
+                                  </div>
+                                }
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon className="w-4 h-4 text-[#ff6b00]/30" />
+                              </div>
+                            )}
                           </div>
                           <div>
                             <div className="font-bold text-sm text-[#261812] dark:text-[#ffede6]">{ad.name}</div>

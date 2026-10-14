@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
-import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage } from '@lpu-events/shared';
+import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage, resolveDefaultEventImage, reconcileMediaVariants } from '@lpu-events/shared';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -55,6 +55,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   const [optimizingImage, setOptimizingImage] = useState(false);
   const [uploadProgressStep, setUploadProgressStep] = useState<string>('');
   const [uploadProgressPercent, setUploadProgressPercent] = useState<number>(0);
+  const [publishProgressStep, setPublishProgressStep] = useState<string>('');
   const [imageStats, setImageStats] = useState<{
     originalSize: number;
     optimizedSize: number;
@@ -238,6 +239,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     ]);
     setBannerMediaId(null);
     setImageStats(null);
+    uploadVerifiedCompleteRef.current = false;
     setCurrentStep(1);
     setDraftRestored(false);
   };
@@ -366,86 +368,115 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
   // Race-condition guard: ensures stale uploads don't overwrite fresher ones
   const uploadGenerationRef = useRef(0);
+  // Active background upload promise tracker (to allow non-blocking form editing while uploading)
+  const activeUploadPromiseRef = useRef<Promise<any> | null>(null);
+  // Reference to the raw File object for instant client-side reconciliation if needed
+  const rawImageFileRef = useRef<File | null>(null);
+  // Tracks if the newly uploaded image was already verified complete with all variants (skips redundant pre-publish audit)
+  const uploadVerifiedCompleteRef = useRef(false);
 
-  // Handle direct file image upload for banner with automated optimization & Cloudflare R2 upload
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle direct file image upload for banner with automated background optimization & Cloudflare R2 upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    rawImageFileRef.current = file;
+    uploadVerifiedCompleteRef.current = false;
     const currentGeneration = ++uploadGenerationRef.current;
 
     setError('');
+    // Instant 0ms Preview: Show selected poster immediately so organizer never waits
+    try {
+      const instantPreview = URL.createObjectURL(file);
+      setBannerUrl(instantPreview);
+    } catch (_) {}
     setOptimizingImage(true);
-    setUploadProgressStep('Validating image headers...');
-    setUploadProgressPercent(20);
+    setUploadProgressStep('Validating & ingesting to Cloudflare R2...');
+    setUploadProgressPercent(30);
     setBannerFileName(file.name);
 
-    try {
-      const result = await uploadAndOptimizeImage({
-        supabase,
-        file,
-        context: 'event-banner',
-        entityId: editEventId || undefined,
-        onProgress: (step) => {
-          if (uploadGenerationRef.current !== currentGeneration) return;
-          if (step === 'validating') {
-            setUploadProgressStep('Validating original image format & bounds...');
-            setUploadProgressPercent(30);
-          } else if (step === 'uploading') {
-            setUploadProgressStep('Uploading original image to Cloudflare R2...');
-            setUploadProgressPercent(80);
-          } else if (step === 'completed') {
-            setUploadProgressStep('Upload complete!');
-            setUploadProgressPercent(100);
+    // Launch pipeline immediately in background (non-blocking)
+    const uploadPromise = (async () => {
+      try {
+        const result = await uploadAndOptimizeImage({
+          supabase,
+          file,
+          context: 'event-banner',
+          entityId: editEventId || undefined,
+          onProgress: (step) => {
+            if (uploadGenerationRef.current !== currentGeneration) return;
+            if (step === 'validating') {
+              setUploadProgressStep('Validating format & bounds...');
+              setUploadProgressPercent(10);
+            } else if (step === 'compressing') {
+              setUploadProgressStep('Optimizing & reducing size (WebP)...');
+              setUploadProgressPercent(25);
+            } else if (step === 'uploading') {
+              setUploadProgressStep('Streaming to Cloudflare R2...');
+            } else if (step === 'completed') {
+              setUploadProgressStep('Saved in Cloudflare R2!');
+              setUploadProgressPercent(100);
+            }
+          },
+          onUploadPercent: (pct) => {
+            if (uploadGenerationRef.current !== currentGeneration) return;
+            setUploadProgressPercent(pct);
+            setUploadProgressStep(`Streaming to Cloudflare R2 (${pct}%)...`);
           }
+        });
+
+        // Guard against stale upload results
+        if (uploadGenerationRef.current !== currentGeneration) return null;
+
+        setBannerUrl(result.dataUrl || result.publicUrl);
+        setBannerMediaId(result.mediaId);
+        uploadVerifiedCompleteRef.current = true;
+
+        // V2: Show presentation previews (16:9 and 7:5)
+        if (result.presentations) {
+          setSlotPreviews({
+            '16:9': result.presentations['16:9']?.dataUrl || result.presentations['16:9']?.publicUrl || '',
+            '7:5': result.presentations['7:5']?.dataUrl || result.presentations['7:5']?.publicUrl || ''
+          });
+          setActiveSlotPreview('16:9');
+        } else if (result.slots) {
+          // Legacy fallback
+          setSlotPreviews({
+            '16:9': result.slots.card?.dataUrl || result.slots.card?.publicUrl || '',
+            '7:5': result.slots.banner?.dataUrl || result.slots.banner?.publicUrl || ''
+          });
+        } else {
+          setSlotPreviews(null);
         }
-      });
-
-      // Guard against stale upload results
-      if (uploadGenerationRef.current !== currentGeneration) return;
-
-      setBannerUrl(result.dataUrl || result.publicUrl);
-      setBannerMediaId(result.mediaId);
-
-      // V2: Show presentation previews (16:9 and 7:5)
-      if (result.presentations) {
-        setSlotPreviews({
-          '16:9': result.presentations['16:9']?.dataUrl || result.presentations['16:9']?.publicUrl || '',
-          '7:5': result.presentations['7:5']?.dataUrl || result.presentations['7:5']?.publicUrl || ''
+        setImageStats({
+          originalSize: result.originalSizeBytes,
+          optimizedSize: result.fileSizeBytes,
+          savings: result.savingsPercentage,
+          width: result.width,
+          height: result.height
         });
-        setActiveSlotPreview('16:9');
-      } else if (result.slots) {
-        // Legacy fallback
-        setSlotPreviews({
-          '16:9': result.slots.card?.dataUrl || result.slots.card?.publicUrl || '',
-          '7:5': result.slots.banner?.dataUrl || result.slots.banner?.publicUrl || ''
-        });
-      } else {
+        setError('');
+        return result;
+      } catch (err: any) {
+        if (uploadGenerationRef.current !== currentGeneration) return null;
+        console.error('Image optimization upload error:', err);
+        setError('Image upload failed: ' + (err.message || 'Validation or network failed.'));
+        setBannerUrl('');
+        setBannerMediaId(null);
+        setBannerFileName('');
         setSlotPreviews(null);
+        throw err;
+      } finally {
+        if (uploadGenerationRef.current === currentGeneration) {
+          setOptimizingImage(false);
+          setUploadProgressStep('');
+          setUploadProgressPercent(0);
+          activeUploadPromiseRef.current = null;
+        }
       }
-      setImageStats({
-        originalSize: result.originalSizeBytes,
-        optimizedSize: result.fileSizeBytes,
-        savings: result.savingsPercentage,
-        width: result.width,
-        height: result.height
-      });
-      setError('');
-    } catch (err: any) {
-      if (uploadGenerationRef.current !== currentGeneration) return;
-      console.error('Image optimization upload error:', err);
-      setError('Image upload failed: ' + (err.message || 'Validation or network failed.'));
-      setBannerUrl('');
-      setBannerMediaId(null);
-      setBannerFileName('');
-      setSlotPreviews(null);
-    } finally {
-      if (uploadGenerationRef.current === currentGeneration) {
-        setOptimizingImage(false);
-        setUploadProgressStep('');
-        setUploadProgressPercent(0);
-      }
-    }
+    })();
+
+    activeUploadPromiseRef.current = uploadPromise;
   };
 
   // Load existing event data in edit mode
@@ -616,6 +647,43 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     setSaving(true);
     setError('');
     setSuccess('');
+    setPublishProgressStep('Preparing publication...');
+
+    // Edge Case: Background upload is still running when Publish is clicked
+    if (activeUploadPromiseRef.current) {
+      setPublishProgressStep('Finalizing background image upload to Cloudflare R2...');
+      try {
+        await activeUploadPromiseRef.current;
+      } catch (uploadErr: any) {
+        console.error('Image upload failed prior to publish:', uploadErr);
+        setError('Image upload failed: ' + (uploadErr?.message || 'Could not complete image upload.'));
+        setSaving(false);
+        setPublishProgressStep('');
+        return;
+      }
+    }
+
+    // Edge Case: Pre-publish variant verification & Cloudflare self-healing fallback
+    // Only run if the asset was not already verified complete during this upload session (e.g. restoring draft)
+    if (bannerMediaId && !uploadVerifiedCompleteRef.current) {
+      setPublishProgressStep('Verifying image variants in Cloudflare R2...');
+      try {
+        const audit = await reconcileMediaVariants({
+          supabase,
+          mediaId: bannerMediaId,
+          originalFile: rawImageFileRef.current,
+          onProgress: (status) => setPublishProgressStep(status)
+        });
+
+        if (!audit.isComplete && audit.missingVariants.length > 0) {
+          console.warn('[Pre-Publish] Some variants could not be generated before publish:', audit.missingVariants);
+        }
+      } catch (auditErr) {
+        console.warn('[Pre-Publish] Variant verification notice:', auditErr);
+      }
+    }
+
+    setPublishProgressStep('Publishing event live...');
 
     let effectiveOrgId = orgId || profile?.org_id;
 
@@ -790,6 +858,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       setError('Publication failed: ' + (err.message || 'Please verify form fields and try again.'));
     } finally {
       setSaving(false);
+      setPublishProgressStep('');
     }
   };
 
@@ -1149,27 +1218,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                   <span className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">HD 16:9 (Auto-Enhanced WebP)</span>
                 </label>
 
-                {optimizingImage ? (
-                  <div className="w-full rounded-2xl border-2 border-dashed border-[#ff6b00]/40 bg-[#fff8f6] dark:bg-[#1a120e] p-6 flex flex-col items-center justify-center gap-3">
-                    <div className="w-8 h-8 border-3 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
-                    <div className="text-center w-full max-w-xs space-y-2">
-                      <p className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">
-                        {uploadProgressStep || 'Processing Image...'}
-                      </p>
-                      {/* Animated Progress Bar */}
-                      <div className="w-full bg-[#fee3d8] dark:bg-[#3d2d26] h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-[#ff6b00] h-full rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${uploadProgressPercent || 30}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-[#5a4136] dark:text-[#ffb693]">
-                        Cloudflare R2 Object Pipeline • Auto-Enhanced WebP
-                      </p>
-                    </div>
-                  </div>
-                ) : bannerUrl ? (
+                {bannerUrl ? (
                   <div className="w-full rounded-2xl overflow-hidden border border-[#e2bfb0] dark:border-[#5a4136] bg-[#fff8f6] dark:bg-[#1a120e] relative group">
+                    {/* Live Non-Blocking Background Ingestion Badge */}
+                    {optimizingImage && (
+                      <div className="absolute top-3 right-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/85 backdrop-blur-md border border-[#ff6b00]/60 text-white text-[11px] font-bold shadow-xl animate-fadeIn">
+                        <span className="w-3.5 h-3.5 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
+                        <span>R2 Ingesting... {uploadProgressPercent || 50}%</span>
+                      </div>
+                    )}
                     {/* Multi-Slot Preview Selector */}
                     {slotPreviews && (
                       <div className="p-2.5 bg-[#fee3d8]/80 dark:bg-[#2d1e17] border-b border-[#e2bfb0]/80 dark:border-[#5a4136] flex items-center justify-between gap-2 flex-wrap">
@@ -1208,6 +1265,12 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                         src={(slotPreviews && slotPreviews[activeSlotPreview]) || bannerUrl}
                         alt="Event Banner Preview"
                         className="w-full h-full object-contain"
+                        onError={(e) => {
+                          const fallback = resolveDefaultEventImage({ category_id: categoryId, subcategory_id: subcategoryId });
+                          if (fallback && e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                          }
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                       {imageStats && (
@@ -1250,12 +1313,31 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                             setBannerMediaId(null);
                             setSlotPreviews(null);
                             setImageStats(null);
+                            rawImageFileRef.current = null;
+                            activeUploadPromiseRef.current = null;
+                            uploadVerifiedCompleteRef.current = false;
+                            uploadGenerationRef.current++;
                           }}
                           className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 transition-colors cursor-pointer flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[15px]">delete</span>
                           <span>Remove</span>
                         </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : optimizingImage ? (
+                  <div className="w-full rounded-2xl border-2 border-dashed border-[#ff6b00]/40 bg-[#fff8f6] dark:bg-[#1a120e] p-6 flex flex-col items-center justify-center gap-3">
+                    <div className="w-8 h-8 border-3 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
+                    <div className="text-center w-full max-w-xs space-y-2">
+                      <p className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">
+                        {uploadProgressStep || 'Processing Image...'}
+                      </p>
+                      <div className="w-full bg-[#fee3d8] dark:bg-[#3d2d26] h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-[#ff6b00] h-full rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${uploadProgressPercent || 30}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -2078,7 +2160,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
               {saving ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Publishing...</span>
+                  <span>{publishProgressStep || 'Publishing...'}</span>
                 </>
               ) : (
                 <>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../supabase';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 import {
   Layers,
   Plus,
@@ -26,6 +27,7 @@ import {
   Settings2,
   Sparkles,
   Monitor,
+  Smartphone,
   Type,
   Link2,
   Tag,
@@ -108,6 +110,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
   // Live preview
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const previewTimer = useRef<any>(null);
 
   const showToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -425,52 +428,100 @@ export const HeroCarouselManagerPanel: React.FC = () => {
       {/* ──────── LIVE PREVIEW ──────── */}
       {previewMode && activeSlides.length > 0 && (
         <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl overflow-hidden shadow-lg">
-          <div className="px-5 py-3 border-b border-[#e2bfb0] dark:border-[#5a4136] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Play size={14} className="text-emerald-500" />
-              <span className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">Carousel Preview — Student Homepage Display</span>
+          <div className="px-5 py-3 border-b border-[#e2bfb0] dark:border-[#5a4136] flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Play size={14} className="text-emerald-500" />
+                <span className="text-xs font-bold text-[#261812] dark:text-[#ffede6]">Student Carousel Preview</span>
+              </div>
+              <div className="flex items-center bg-[#fee3d8] dark:bg-[#3d2d26] p-0.5 rounded-lg border border-[#e2bfb0]/60 dark:border-[#5a4136]/60">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all ${
+                    previewDevice === 'desktop'
+                      ? 'bg-white dark:bg-[#261812] text-[#ff6b00] shadow-xs'
+                      : 'text-[#5a4136] dark:text-[#ffb693] hover:text-[#ff6b00]'
+                  }`}
+                >
+                  <Monitor size={12} />
+                  <span>Desktop</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all ${
+                    previewDevice === 'mobile'
+                      ? 'bg-white dark:bg-[#261812] text-[#ff6b00] shadow-xs'
+                      : 'text-[#5a4136] dark:text-[#ffb693] hover:text-[#ff6b00]'
+                  }`}
+                >
+                  <Smartphone size={12} />
+                  <span>Mobile</span>
+                </button>
+              </div>
             </div>
             <span className="text-[10px] font-semibold text-[#5a4136] dark:text-[#ffb693]">
               Slide {previewIndex + 1} of {activeSlides.length} · {(activeSlides[previewIndex]?.display_duration_ms / 1000).toFixed(1)}s
             </span>
           </div>
 
-          <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden bg-black/5 dark:bg-black/20">
+          <div className="relative overflow-hidden bg-black/5 dark:bg-black/20 p-4 sm:p-6 flex items-center justify-center">
             {(() => {
               const slide = activeSlides[previewIndex];
               if (!slide) return null;
-              const img = getSlideImage(slide) || '/defaults/hero_default.webp';
+              const fallback = slide.events ? resolveDefaultEventImage(slide.events) : '/defaults/hero_default.webp';
+              const img = getSlideImage(slide) || fallback;
               const title = getSlideTitle(slide);
               const typeCfg = SLIDE_TYPE_CONFIG[slide.item_type];
 
-              return (
-                <div className="absolute inset-0 flex">
-                  {/* Image */}
-                  <div className="absolute inset-0">
-                    <img 
+              if (previewDevice === 'mobile') {
+                return (
+                  <div className="w-full max-w-[360px] aspect-[3/2] rounded-2xl overflow-hidden shadow-xl border border-black/10 dark:border-white/10 relative bg-black/40">
+                    <ProgressiveImage 
                       src={img} 
+                      fallbackSrc={fallback}
                       alt={title} 
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/defaults/hero_default.webp';
-                      }}
-                      className="w-full h-full object-cover" 
+                      ambientBackdrop={true}
+                      containerClassName="w-full h-full flex items-center justify-center overflow-hidden"
+                      className="w-full h-full object-contain object-center relative z-10" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
                   </div>
-                  {/* Overlay content */}
-                  <div className="relative z-10 flex flex-col justify-center p-8 md:p-12 max-w-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: typeCfg.color + '33', color: '#fff' }}>
+                );
+              }
+
+              return (
+                <div className="w-full max-w-4xl rounded-2xl sm:rounded-3xl border border-black/10 dark:border-white/10 overflow-hidden bg-[#fff8f6] dark:bg-[#1f1510] shadow-xl flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-6">
+                  {/* Left Content Zone */}
+                  <div className="w-full sm:w-[46%] flex flex-col justify-center space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider" style={{ backgroundColor: typeCfg.color + '22', color: typeCfg.color }}>
                         {slide.badge_text || typeCfg.label}
                       </span>
                     </div>
-                    <h3 className="text-2xl md:text-3xl font-extrabold font-['Outfit'] text-white mb-2 leading-tight">{title}</h3>
+                    <h3 className="text-xl sm:text-2xl font-black font-['Outfit'] text-[#261812] dark:text-[#ffede6] leading-tight">
+                      {title}
+                    </h3>
                     {slide.custom_subtitle && (
-                      <p className="text-sm text-white/80 mb-4">{slide.custom_subtitle}</p>
+                      <p className="text-xs text-[#5a4136] dark:text-[#ffb693] line-clamp-2">
+                        {slide.custom_subtitle}
+                      </p>
                     )}
-                    <button className="self-start px-5 py-2.5 rounded-xl bg-[#ff6b00] text-white text-sm font-bold shadow-lg">
+                    <button className="self-start px-5 py-2 rounded-xl bg-[#ff6b00] hover:bg-[#e05d00] text-white text-xs font-bold shadow-md transition-all">
                       {slide.custom_cta_text || 'View Details'}
                     </button>
+                  </div>
+
+                  {/* Right Image Showcase Zone (16:9, Zero Zoom, Full Visibility) */}
+                  <div className="w-full sm:w-[54%] aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shadow-lg relative bg-black/20">
+                    <ProgressiveImage 
+                      src={img} 
+                      fallbackSrc={fallback}
+                      alt={title} 
+                      ambientBackdrop={true}
+                      containerClassName="w-full h-full flex items-center justify-center overflow-hidden"
+                      className="w-full h-full object-contain object-center relative z-10" 
+                    />
                   </div>
                 </div>
               );
@@ -588,12 +639,10 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                     {/* Thumbnail */}
                     <div className="w-16 h-10 rounded-lg overflow-hidden bg-[#fef5f0] dark:bg-[#1f1510] border border-[#e2bfb0] dark:border-[#5a4136] flex-shrink-0">
                       {slideImg ? (
-                        <img 
+                        <ProgressiveImage 
                           src={slideImg} 
                           alt={slideTitle} 
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = '/defaults/hero_default.webp';
-                          }}
+                          fallbackSrc={slide.item_type === 'EVENT' ? resolveDefaultEventImage(slide.events) : '/defaults/hero_default.webp'}
                           className="w-full h-full object-cover" 
                         />
                       ) : (
@@ -891,11 +940,12 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                         className="w-full text-left p-4 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#261812] hover:border-[#ff6b00] hover:shadow-md transition-all cursor-pointer group flex items-center gap-4"
                       >
                         <div className="w-14 h-10 rounded-lg overflow-hidden bg-[#fef5f0] dark:bg-[#1f1510] flex-shrink-0">
-                          {getEventImage(evt) ? (
-                            <img src={getEventImage(evt)} alt={evt.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center"><Star size={14} className="text-[#ff6b00]/30" /></div>
-                          )}
+                          <ProgressiveImage
+                            src={getEventImage(evt)}
+                            fallbackSrc={resolveDefaultEventImage(evt)}
+                            alt={evt.name}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-[#261812] dark:text-[#ffede6] truncate group-hover:text-[#ff6b00] transition-colors">{evt.name}</p>

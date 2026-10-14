@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, lpuClient } from '../../supabase';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 
 export const TrendingEventsPanel: React.FC = () => {
   const [trendingEvents, setTrendingEvents] = useState<any[]>([]);
@@ -311,8 +312,14 @@ export const TrendingEventsPanel: React.FC = () => {
 
                   {/* Thumbnail with Trending Tag */}
                   <div className="w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 relative border border-[#e2bfb0]/60">
-                    <img src={bannerUrl} alt={evt.name} className="w-full h-full object-cover" />
-                    <span className="absolute top-1 left-1 text-[8px] font-black text-white bg-gradient-to-r from-orange-600 to-amber-500 px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5">
+                    <ProgressiveImage
+                      src={bannerUrl}
+                      fallbackSrc={resolveDefaultEventImage(evt)}
+                      alt={evt.name}
+                      containerClassName="w-full h-full"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-1 left-1 text-[8px] font-black text-white bg-gradient-to-r from-orange-600 to-amber-500 px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5 z-10">
                       🔥 #{idx + 1}
                     </span>
                     {isOverLimit && (
@@ -561,11 +568,15 @@ export const TrendingEventsPanel: React.FC = () => {
                       className="flex justify-between items-center p-3 border border-[#e2bfb0] dark:border-[#5a4136] rounded-xl hover:border-[#ff6b00] transition-colors bg-[#fff8f6] dark:bg-[#1a120e]"
                     >
                       <div className="flex items-center gap-3">
-                        <img
-                          src={getEventImage(evt, 'thumbnail')}
-                          alt={evt.name}
-                          className="w-12 h-9 rounded-lg object-cover flex-shrink-0"
-                        />
+                        <div className="w-12 h-9 rounded-lg overflow-hidden flex-shrink-0">
+                          <ProgressiveImage
+                            src={getEventImage(evt, 'thumbnail')}
+                            fallbackSrc={resolveDefaultEventImage(evt)}
+                            alt={evt.name}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                         <div>
                           <h4 className="text-xs font-bold text-[#261812] dark:text-[#ffede6] line-clamp-1">
                             {evt.name}

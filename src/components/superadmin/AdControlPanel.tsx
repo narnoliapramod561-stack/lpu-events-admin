@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { lpuClient, supabase } from '../../supabase';
 import { getEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 import {
   AdSystemConfig,
   DEFAULT_AD_SYSTEM_CONFIG,
@@ -227,7 +228,16 @@ const PlacementAdSelector: React.FC<PlacementAdSelectorProps> = ({
 
                   <div className="w-7 h-7 rounded-lg bg-slate-800 shrink-0 overflow-hidden border border-black/10 flex items-center justify-center">
                     {imgUrl ? (
-                      <img src={imgUrl} alt={ad.name} className="w-full h-full object-cover" />
+                      <ProgressiveImage
+                        src={imgUrl}
+                        alt={ad.name}
+                        className="w-full h-full object-cover"
+                        customFallback={
+                          <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                            <Megaphone className="w-3.5 h-3.5 text-indigo-400" />
+                          </div>
+                        }
+                      />
                     ) : (
                       <Megaphone className="w-3.5 h-3.5 text-indigo-400" />
                     )}

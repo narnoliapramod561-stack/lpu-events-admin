@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, lpuClient } from '../../supabase';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 
 export const FeaturedEventsPanel: React.FC = () => {
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
@@ -310,9 +311,15 @@ export const FeaturedEventsPanel: React.FC = () => {
 
                   {/* Thumbnail */}
                   <div className="w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 relative border border-[#e2bfb0]/60">
-                    <img src={bannerUrl} alt={evt.name} className="w-full h-full object-cover" />
+                    <ProgressiveImage
+                      src={bannerUrl}
+                      fallbackSrc={resolveDefaultEventImage(evt)}
+                      alt={evt.name}
+                      containerClassName="w-full h-full"
+                      className="w-full h-full object-cover"
+                    />
                     {idx === 0 && (
-                      <span className="absolute top-1 left-1 text-[9px] font-black text-white bg-[#ff6b00] px-1.5 py-0.5 rounded backdrop-blur-sm shadow-xs">
+                      <span className="absolute top-1 left-1 text-[9px] font-black text-white bg-[#ff6b00] px-1.5 py-0.5 rounded backdrop-blur-sm shadow-xs z-10">
                         HERO
                       </span>
                     )}
@@ -554,11 +561,15 @@ export const FeaturedEventsPanel: React.FC = () => {
                       className="flex justify-between items-center p-3 border border-[#e2bfb0] dark:border-[#5a4136] rounded-xl hover:border-[#ff6b00] transition-colors bg-[#fff8f6] dark:bg-[#1a120e]"
                     >
                       <div className="flex items-center gap-3">
-                        <img
-                          src={getEventImage(evt, 'thumbnail')}
-                          alt={evt.name}
-                          className="w-12 h-9 rounded-lg object-cover flex-shrink-0"
-                        />
+                        <div className="w-12 h-9 rounded-lg overflow-hidden flex-shrink-0">
+                          <ProgressiveImage
+                            src={getEventImage(evt, 'thumbnail')}
+                            fallbackSrc={resolveDefaultEventImage(evt)}
+                            alt={evt.name}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                         <div>
                           <h4 className="text-xs font-bold text-[#261812] dark:text-[#ffede6] line-clamp-1">
                             {evt.name}

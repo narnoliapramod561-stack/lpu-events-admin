@@ -12,16 +12,9 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
   const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 2, 3) : 2;
   const effectiveWidth = Math.round(targetWidth * (dpr >= 1.5 ? 1.5 : 1.0));
 
-  // 1. Local default category WebP assets have full responsive sets
-  if (url.startsWith('/defaults/events/') || url.startsWith('/defaults/hero_default')) {
-    const base = url.replace(/(_desktop|_tablet|_mobile)\.webp$/, '.webp');
-    if (effectiveWidth <= 640) {
-      return base.replace('.webp', '_mobile.webp');
-    }
-    if (effectiveWidth <= 1200) {
-      return base.replace('.webp', '_tablet.webp');
-    }
-    return base.replace('.webp', '_desktop.webp');
+  // 1. Local canonical default images are standalone, deterministic WebP assets — never append phantom suffixes
+  if (url.startsWith('/defaults/')) {
+    return url;
   }
 
   // Phase 2: Original image objects must NEVER be rewritten to derivative variants
@@ -29,7 +22,23 @@ export function getResponsiveImageUrl(url: string, targetWidth: number = 1080): 
     return url;
   }
 
-  // 2. V2 placement responsive derivatives for Cloudflare R2
+  // 2. Responsive variants resolution for Cloudflare R2
+  if (url.includes('/variants/')) {
+    if (url.endsWith('hero_desktop.webp') && effectiveWidth <= 640) {
+      return url.replace('hero_desktop.webp', 'hero_mobile.webp');
+    }
+    if (url.endsWith('hero_mobile.webp') && effectiveWidth > 640) {
+      return url.replace('hero_mobile.webp', 'hero_desktop.webp');
+    }
+    if (url.endsWith('card_desktop.webp') && effectiveWidth <= 480) {
+      return url.replace('card_desktop.webp', 'card_mobile.webp');
+    }
+    if (url.endsWith('card_mobile.webp') && effectiveWidth > 480) {
+      return url.replace('card_mobile.webp', 'card_desktop.webp');
+    }
+  }
+
+  // 2b. V2 placement responsive derivatives for Cloudflare R2
   if (url.includes('/events/v2/')) {
     if (url.endsWith('/card.webp') && effectiveWidth <= 480) {
       return url.replace('/card.webp', '/card_480w.webp');
@@ -81,4 +90,17 @@ export function getEventImage(
   return getResponsiveImageUrl(raw, targetWidth);
 }
 
-export { getOptimizedImage, getOptimizedImageSrcSet, uploadAndOptimizeImage } from '@lpu-events/shared';
+/**
+ * Instant Low-Quality Image Placeholder (LQIP) Generator
+ */
+export function getLowResPlaceholderUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  if (url.startsWith('/defaults/')) return url;
+  if (url.includes('images.unsplash.com')) {
+    const cleanUrl = url.split('?')[0];
+    return `${cleanUrl}?auto=format&fit=crop&w=160&q=35&blur=15`;
+  }
+  return url;
+}
+
+export { getOptimizedImage, getOptimizedImageSrcSet, uploadAndOptimizeImage, resolveDefaultEventImage } from '@lpu-events/shared';

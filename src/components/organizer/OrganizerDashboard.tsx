@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 import { getStudentEventUrl } from '@lpu-events/shared';
 
 interface OrganizerDashboardProps {
@@ -279,10 +280,12 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   >
                     {/* Event Banner Image with Overlays */}
                     <div style={{ position: 'relative', height: '180px', width: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
-                      <img
+                      <ProgressiveImage
                         src={bannerUrl}
+                        fallbackSrc={resolveDefaultEventImage(evt)}
                         alt={evt.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        containerClassName="w-full h-full"
+                        className="w-full h-full object-cover"
                       />
                       <div
                         style={{
@@ -480,11 +483,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       <tr key={evt.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <img
-                              src={bannerUrl}
-                              alt={evt.name}
-                              style={{ width: '48px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
-                            />
+                            <div style={{ width: '48px', height: '36px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+                              <ProgressiveImage
+                                src={bannerUrl}
+                                fallbackSrc={resolveDefaultEventImage(evt)}
+                                alt={evt.name}
+                                containerClassName="w-full h-full"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{evt.name}</span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-dim)', fontSize: '12px' }}>
@@ -546,16 +553,19 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {previewEvent && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto shadow-2xl overflow-hidden">
-            <div style={{ position: 'relative', height: '180px', width: '100%' }}>
-              <img
+            <div style={{ position: 'relative', height: '180px', width: '100%', overflow: 'hidden' }}>
+              <ProgressiveImage
                 src={getEventImage(previewEvent, 'admin-preview')}
+                fallbackSrc={resolveDefaultEventImage(previewEvent)}
                 alt={previewEvent.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                ambientBackdrop
+                containerClassName="w-full h-full"
+                className="w-full h-full object-cover"
               />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', pointerEvents: 'none', zIndex: 10 }} />
               <button
                 onClick={() => setPreviewEvent(null)}
-                style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', zIndex: 20 }}
               >
                 <X size={18} />
               </button>

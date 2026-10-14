@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../supabase';
-import { getEventImage } from '../../utils/images';
+import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
+import { ProgressiveImage } from '../ProgressiveImage';
 import {
   CalendarDays,
   Clock,
@@ -55,6 +56,7 @@ interface PreviewSlide {
   description?: string;
   badge: string;
   image: string;
+  fallbackImage?: string;
   date?: string;
   time?: string;
   venue?: string;
@@ -158,6 +160,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
       description: evt.description,
       badge: 'LIVE TODAY',
       image: getEventImage(evt, 'hero'),
+      fallbackImage: resolveDefaultEventImage(evt),
       date: new Date(evt.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
       time: `${new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} – ${new Date(evt.end_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}`,
       venue: evt.venue_name,
@@ -560,22 +563,22 @@ export const HappeningTodayManagerPanel: React.FC = () => {
               <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-xl bg-black/90 min-h-[380px] flex flex-col md:flex-row">
                 {/* Left Side: Cover Image */}
                 <div className="w-full md:w-1/2 relative h-48 md:h-auto overflow-hidden">
-                  <img
+                  <ProgressiveImage
                     src={currentPreviewSlide?.image}
+                    fallbackSrc={currentPreviewSlide?.fallbackImage || (currentPreviewSlide?.type === 'ad' ? '' : '/defaults/hero_default.webp')}
                     alt={currentPreviewSlide?.title}
+                    containerClassName="w-full h-full"
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   />
-                  {/* Beacon Badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md flex items-center gap-1.5 ${
-                      currentPreviewSlide?.type === 'ad'
-                        ? 'bg-amber-500/90 text-black border-amber-300'
-                        : 'bg-red-600/90 text-white border-white/20'
-                    }`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      {currentPreviewSlide?.badge}
-                    </span>
-                  </div>
+                  {/* Beacon Badge (Sponsored Only) */}
+                  {currentPreviewSlide?.type === 'ad' && (
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md flex items-center gap-1.5 bg-amber-500/90 text-black border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        {currentPreviewSlide?.badge}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side: Details */}

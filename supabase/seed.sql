@@ -175,7 +175,7 @@ values
   ('bad0000d-0000-0000-0000-000000000001', 'cd000000-0000-0000-0000-000000000001', 'miscellaneous', 'Miscellaneous Events', 1, true)
 on conflict (id) do update set category_id = excluded.category_id, name = excluded.name, sort_order = excluded.sort_order, is_active = true;
 
--- 7. Seed Media Assets for Event and Advertisement Fixtures
+-- 7. Seed Media Assets for Events, Sponsors, and Memories
 insert into public.media_assets (
   id, bucket, object_key, media_type, mime_type, file_size_bytes, checksum, status, created_by
 )

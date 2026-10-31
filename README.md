@@ -1,12 +1,12 @@
 # LPU Events — Super Admin & Event Organizer Portal
 
-The administrative control center for **LPU Events** — manage events, review submissions, publish notices, oversee sponsorships & advertisements, configure Happening Today marquees, and dispatch outbox notifications.
+The administrative control center for **LPU Events** — manage events, review submissions, publish notices, oversee sponsorships, configure Happening Today marquees, and dispatch outbox notifications.
 
 ## 🚀 Features
 
 - **Event Lifecycle Management**: Draft, review, approve, publish, edit, and cancel campus events.
 - **Role-Based Access**: Multi-tier admin roles (Department Organizers, Club Admins, Super Admins).
-- **Advertisements & Sponsor Control**: Upload and manage active banners and sponsor tiers.
+- **Sponsor Control**: Manage sponsor profiles, logo assets, and sponsor tiers.
 - **Happening Today Configurator**: Configure daily highlighted events and alerts.
 - **Outbox Worker**: Built-in background worker for asynchronous email notifications and system outbox processing.
 - **Auditing & Telemetry**: Integrated action logging, PostHog, Sentry, and Microsoft Clarity masking.

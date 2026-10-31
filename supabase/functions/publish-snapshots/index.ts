@@ -213,11 +213,9 @@ const STUDENT_SAFE_SETTING_KEYS = new Set([
   'maintenance_mode',
   'platform_maintenance_mode',
   'site_notice_banner',
-  'ad_system_config',
   'happening_today_config',
   'initial_event_limit',
   'show_more_increment',
-  'ad_placement_interval',
 ]);
 
 serve(async (req: Request) => {
@@ -372,7 +370,6 @@ serve(async (req: Request) => {
   let carouselData: any[] = [];
   let featuredData: any[] = [];
   let trendingData: any[] = [];
-    let adsData: any[] = [];
     let safeSettings: any[] = [];
     let rawEvents: any[] = [];
     let vStart: Record<string, number> = {};
@@ -389,7 +386,7 @@ serve(async (req: Request) => {
         }
       } catch {}
 
-      const [catRes, carRes, featRes, trendRes, adsRes, settRes, evtRes] = await Promise.all([
+      const [catRes, carRes, featRes, trendRes, settRes, evtRes] = await Promise.all([
         supabaseAdmin
           .from("categories")
           .select("id,key,name,sort_order,subcategories(id,key,name,sort_order)")
@@ -397,7 +394,7 @@ serve(async (req: Request) => {
           .order("sort_order", { ascending: true }),
         supabaseAdmin
           .from("carousel_items")
-          .select("id,item_type,event_id,advertisement_id,media_id,sort_order,is_active,start_at,end_at,display_duration_ms,custom_title,custom_subtitle,custom_cta_text,custom_cta_url,badge_text,events:event_id(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(name),categories(name,key),subcategories(name,key)),advertisements:advertisement_id(id,name,redirect_url,media_id,status),media_assets:media_id(id,object_key)")
+          .select("id,item_type,event_id,media_id,sort_order,is_active,start_at,end_at,display_duration_ms,custom_title,custom_subtitle,custom_cta_text,custom_cta_url,badge_text,events:event_id(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(name),categories(name,key),subcategories(name,key)),media_assets:media_id(id,object_key)")
           .eq("is_active", true)
           .order("sort_order", { ascending: true }),
         supabaseAdmin
@@ -409,10 +406,6 @@ serve(async (req: Request) => {
           .select("event_id,sort_order,events(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,price_amount,external_registration_url,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(id,name),categories(name,key),subcategories(name,key))")
           .order("sort_order", { ascending: true }),
         supabaseAdmin
-          .from("advertisements")
-          .select("id,name,media_id,redirect_url,start_at,end_at,status,media_assets:media_id(id,object_key)")
-          .eq("status", "active"),
-        supabaseAdmin
           .from("global_settings")
           .select("key,value"),
         supabaseAdmin
@@ -423,16 +416,23 @@ serve(async (req: Request) => {
       ]);
 
       if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
+      if (carRes.error) throw new Error(`Failed to read carousel items: ${carRes.error.message}`);
       if (evtRes.error) throw new Error(`Failed to read published events: ${evtRes.error.message}`);
 
       categoriesData = catRes.data || [];
       carouselData = carRes.data || [];
       featuredData = featRes.data || [];
       trendingData = trendRes.data || [];
-      adsData = adsRes.data || [];
       safeSettings = (settRes.data || [])
         .filter((s: any) => STUDENT_SAFE_SETTING_KEYS.has(s.key))
-        .map((s: any) => ({ key: s.key, value: s.value }));
+        .map((s: any) => {
+          if (s.key !== "happening_today_config" || !s.value || typeof s.value !== "object" || Array.isArray(s.value)) {
+            return { key: s.key, value: s.value };
+          }
+          const value = { ...s.value };
+          delete value.ad_injection;
+          return { key: s.key, value };
+        });
       rawEvents = evtRes.data || [];
 
       // Verify resource consistency post-read
@@ -519,7 +519,6 @@ serve(async (req: Request) => {
       carousel: (carouselData || []).filter((c: any) => c.is_active),
       featured: (featuredData || []).map((f: any) => f.events).filter(Boolean),
       trending: (trendingData || []).map((t: any) => t.events).filter(Boolean),
-      advertisements: adsData || [],
       settings: safeSettings,
       events: (rawEvents || []).slice(0, 20),
     };
@@ -556,7 +555,6 @@ serve(async (req: Request) => {
         past_event_count: 0,
         category_count: (categoriesData || []).length,
         carousel_count: homepagePayload.carousel.length,
-        ad_count: (adsData || []).length,
         db_resource_versions: vStart,
       },
     };

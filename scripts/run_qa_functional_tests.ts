@@ -837,18 +837,18 @@ async function runAllTests() {
     severity: 'Medium',
   });
 
-  // 2.12 SuperAdmin Ad Control Configuration Readability
+  // 2.12 SuperAdmin Site Controls Configuration Readability
   try {
     const res = await fetch(`${STUDENT_URL}/api/public/settings`);
     const data = await res.json();
     const isArray = Array.isArray(data);
-    const hasAdConfig = isArray && data.some((s: any) => s.key === 'ad_system_config' || s.key === 'adsense_config' || s.key === 'ad_frequency_limits');
+    const hasSiteControls = isArray && data.some((s: any) => s.key === 'platform_maintenance_mode' || s.key === 'site_notice_banner' || s.key === 'happening_today_config');
     recordTest({
       id: 'ADM-12',
       category: 'Admin',
-      name: 'Ad Control Engine: Global Settings API returns valid configuration',
-      expected: 'HTTP 200 with settings containing ad system / adsense configs',
-      actual: `Status: ${res.status}, Array length: ${isArray ? data.length : 0}, hasAdConfig: ${hasAdConfig}`,
+      name: 'Site Controls Engine: Global Settings API returns valid configuration',
+      expected: 'HTTP 200 with settings containing site controls configs',
+      actual: `Status: ${res.status}, Array length: ${isArray ? data.length : 0}, hasSiteControls: ${hasSiteControls}`,
       status: res.status === 200 && isArray ? 'PASS' : 'FAIL',
       severity: 'Medium',
     });
@@ -856,7 +856,7 @@ async function runAllTests() {
     recordTest({
       id: 'ADM-12',
       category: 'Admin',
-      name: 'Ad Control Engine: Global Settings API',
+      name: 'Site Controls Engine: Global Settings API',
       expected: 'HTTP 200',
       actual: err.message,
       status: 'FAIL',

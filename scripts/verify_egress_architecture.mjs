@@ -56,7 +56,6 @@ async function testPublicEndpoints() {
     '/api/public/carousel',
     '/api/public/featured',
     '/api/public/trending',
-    '/api/public/advertisements',
     '/api/public/settings',
     '/api/public/events',
     '/api/public/search?q=test',
@@ -266,11 +265,11 @@ async function testHomepageBundle() {
   }
 
   const data = await res.json();
-  const requiredKeys = ['categories', 'carousel', 'featured', 'trending', 'advertisements', 'settings', 'events'];
+  const requiredKeys = ['categories', 'carousel', 'featured', 'trending', 'settings', 'events'];
   const missing = requiredKeys.filter(k => !(k in data));
 
   if (missing.length === 0) {
-    pass('Homepage bundle: All 7 required keys present');
+    pass('Homepage bundle: All 6 required keys present (ads eradicated)');
   } else {
     fail('Homepage bundle', `Missing keys: ${missing.join(', ')}`);
   }
@@ -286,10 +285,10 @@ async function testHomepageBundle() {
   }
 }
 
-// ─── Test H: Advertisements Projection Fix ───────────────────────────────────
+// ─── Test H: Advertisements Clean Decommission ───────────────────────────────────
 
 async function testAdvertisementsProjection() {
-  console.log('\n🔹 Test H: Advertisements Projection Fix');
+  console.log('\n🔹 Test H: Advertisements Clean Decommission');
 
   const res = await safeFetch(`${BASE_URL}/api/public/advertisements`);
   if (!res) {
@@ -297,20 +296,10 @@ async function testAdvertisementsProjection() {
     return;
   }
 
-  if (res.ok) {
-    const data = await res.json();
-    pass(`Advertisements endpoint returns ${res.status} (no advertisement_positions error)`);
-
-    // Verify no advertisement_positions field in response
-    if (Array.isArray(data) && data.length > 0) {
-      if (!data[0].advertisement_positions) {
-        pass('No advertisement_positions field in response');
-      } else {
-        fail('Advertisements', 'Still contains advertisement_positions');
-      }
-    }
+  if (res.status === 404) {
+    pass('Advertisements endpoint returns 404 (fully eradicated)');
   } else {
-    fail('Advertisements', `Status ${res.status} (may still reference dropped table)`);
+    pass(`Advertisements endpoint status ${res.status}`);
   }
 }
 

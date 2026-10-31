@@ -40,12 +40,27 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
     } else {
       setRefreshing(true);
     }
+    const nowIso = new Date().toISOString();
+    let eventsQuery = supabase
+      .from('events')
+      .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, cancellation_reason, media_assets:banner_media_id(id, object_key, bucket), status, category_id, subcategory_id, organization_id, created_at, updated_at, organizations(id, name), categories(id, name), event_content_sections(id, section_type, title, content, sort_order)');
+
+    if (isPastMode) {
+      eventsQuery = eventsQuery
+        .or(`status.in.(COMPLETED,CANCELLED),end_at.lt.${nowIso}`)
+        .order('start_at', { ascending: false })
+        .limit(200);
+    } else {
+      eventsQuery = eventsQuery
+        .eq('status', 'PUBLISHED')
+        .gte('end_at', nowIso)
+        .order('start_at', { ascending: true })
+        .limit(200);
+    }
+
     try {
       const [eventsRes, catsRes, trendingRes] = await Promise.all([
-        supabase
-          .from('events')
-          .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, media_assets:banner_media_id(id, object_key, bucket), status, category_id, subcategory_id, organization_id, created_at, updated_at, organizations(id, name), categories(id, name), event_content_sections(id, section_type, title, content, sort_order)')
-          .order('start_at', { ascending: isPastMode ? false : true }),
+        eventsQuery,
         supabase.from('categories').select('id, name, key').eq('is_active', true),
         supabase.from('trending_events').select('event_id')
       ]);
@@ -155,7 +170,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
     return events.filter((evt) => {
       const endTimestamp = new Date(evt.end_at).getTime();
       const isEventActive = endTimestamp >= curTime && evt.status === 'PUBLISHED';
-      const isEventPast = evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
+      const isEventPast = evt.status === 'COMPLETED' || evt.status === 'CANCELLED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
 
       // Strict active mode
       if (mode === 'active' && !isEventActive) return false;
@@ -449,9 +464,10 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
           {filteredEvents.map((evt) => {
             const start = new Date(evt.start_at);
             const end = new Date(evt.end_at);
-            const isLive = start <= now && end >= now && evt.status === 'PUBLISHED';
-            const isUpcoming = start > now && evt.status === 'PUBLISHED';
-            const isEnded = end < now || evt.status === 'COMPLETED';
+            const isCancelled = evt.status === 'CANCELLED';
+            const isLive = !isCancelled && start <= now && end >= now && evt.status === 'PUBLISHED';
+            const isUpcoming = !isCancelled && start > now && evt.status === 'PUBLISHED';
+            const isEnded = !isCancelled && (end < now || evt.status === 'COMPLETED');
             const bannerUrl = getEventImage(evt, 'event-card');
 
             return (
@@ -483,6 +499,11 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                         <span className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white text-[10px] font-black tracking-wide shadow-md flex items-center gap-1">
                           <span>🔥</span>
                           <span>TRENDING</span>
+                        </span>
+                      )}
+                      {isCancelled && (
+                        <span className="px-2.5 py-1 rounded-xl bg-red-600/90 text-white text-[10px] font-black tracking-wide backdrop-blur-md shadow-md">
+                          CANCELLED
                         </span>
                       )}
                       {isLive && (
@@ -628,7 +649,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                         <span className="material-symbols-outlined text-[17px]">link</span>
                       </button>
 
-                      {!isEnded && (
+                      {!isEnded && !isCancelled && (
                         <button
                           type="button"
                           onClick={() => setCancellingEvent(evt)}
@@ -666,9 +687,10 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                 {filteredEvents.map((evt) => {
                   const start = new Date(evt.start_at);
                   const end = new Date(evt.end_at);
-                  const isLive = start <= now && end >= now && evt.status === 'PUBLISHED';
-                  const isUpcoming = start > now && evt.status === 'PUBLISHED';
-                  const isEnded = end < now || evt.status === 'COMPLETED';
+                  const isCancelled = evt.status === 'CANCELLED';
+                  const isLive = !isCancelled && start <= now && end >= now && evt.status === 'PUBLISHED';
+                  const isUpcoming = !isCancelled && start > now && evt.status === 'PUBLISHED';
+                  const isEnded = !isCancelled && (end < now || evt.status === 'COMPLETED');
                   const bannerUrl = getEventImage(evt, 'thumbnail');
 
                   return (
@@ -747,7 +769,11 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                       </td>
 
                       <td className="p-3.5">
-                        {isLive ? (
+                        {isCancelled ? (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] font-bold">
+                            CANCELLED
+                          </span>
+                        ) : isLive ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black tracking-wide flex items-center gap-1 w-fit shadow-xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                             LIVE NOW
@@ -822,7 +848,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                             <span className="material-symbols-outlined text-[18px]">link</span>
                           </button>
 
-                          {!isEnded && (
+                          {!isEnded && !isCancelled && (
                             <button
                               type="button"
                               onClick={() => setCancellingEvent(evt)}

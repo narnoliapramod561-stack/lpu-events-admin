@@ -57,11 +57,21 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     if (!profile?.org_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const nowIso = new Date().toISOString();
+      let query = supabase
         .from('events')
-        .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, media_assets:banner_media_id(id, object_key, bucket), status, view_count, category_id, subcategory_id, created_at, updated_at, categories(name), event_content_sections(id, section_type, title, content, sort_order)')
-        .eq('organization_id', profile.org_id)
-        .order('start_at', { ascending: mode === 'past' ? false : true });
+        .select('id, name, description, start_at, end_at, venue_name, registration_mode, pricing_type, price_amount, external_registration_url, registration_format, banner_media_id, cancellation_reason, media_assets:banner_media_id(id, object_key, bucket), status, view_count, category_id, subcategory_id, created_at, updated_at, categories(name), event_content_sections(id, section_type, title, content, sort_order)')
+        .eq('organization_id', profile.org_id);
+
+      if (mode === 'past') {
+        query = query.or(`status.in.(COMPLETED,CANCELLED),end_at.lt.${nowIso}`).order('start_at', { ascending: false });
+      } else if (mode === 'active') {
+        query = query.eq('status', 'PUBLISHED').gte('end_at', nowIso).order('start_at', { ascending: true });
+      } else {
+        query = query.order('start_at', { ascending: false });
+      }
+
+      const { data, error } = await query.limit(200);
       if (error) throw error;
       setEvents(data || []);
     } catch (err) {
@@ -104,7 +114,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     return events.filter(evt => {
       const endTimestamp = new Date(evt.end_at).getTime();
       const isEvtActive = endTimestamp >= curTime && evt.status === 'PUBLISHED';
-      const isEvtPast = evt.status === 'COMPLETED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
+      const isEvtPast = evt.status === 'COMPLETED' || evt.status === 'CANCELLED' || (evt.status === 'PUBLISHED' && endTimestamp < curTime);
 
       // Strict mode checks
       if (mode === 'active' && !isEvtActive) return false;
@@ -259,9 +269,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               {filteredEvents.map((evt) => {
                 const start = new Date(evt.start_at);
                 const end = new Date(evt.end_at);
-                const isLive = start <= now && end >= now && evt.status === 'PUBLISHED';
-                const isUpcoming = start > now && evt.status === 'PUBLISHED';
-                const isEnded = end < now || evt.status === 'COMPLETED';
+                const isCancelled = evt.status === 'CANCELLED';
+                const isLive = !isCancelled && start <= now && end >= now && evt.status === 'PUBLISHED';
+                const isUpcoming = !isCancelled && start > now && evt.status === 'PUBLISHED';
+                const isEnded = !isCancelled && (end < now || evt.status === 'COMPLETED');
                 const bannerUrl = getEventImage(evt, 'event-card');
 
                 return (
@@ -300,6 +311,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <span className="badge badge-accent" style={{ padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
                           {evt.categories?.name || 'CAMPUS EVENT'}
                         </span>
+                        {isCancelled && (
+                          <span className="badge badge-danger" style={{ padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
+                            CANCELLED
+                          </span>
+                        )}
                         {isLive && (
                           <span className="badge badge-success" style={{ padding: '2px 8px', fontSize: '10px', fontWeight: 800 }}>
                             LIVE NOW
@@ -475,8 +491,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 </thead>
                 <tbody>
                   {filteredEvents.map((evt) => {
-                    const isLive = new Date(evt.end_at) >= now && evt.status === 'PUBLISHED';
-                    const isPast = new Date(evt.end_at) < now || evt.status === 'COMPLETED';
+                    const isCancelled = evt.status === 'CANCELLED';
+                    const isLive = !isCancelled && new Date(evt.end_at) >= now && evt.status === 'PUBLISHED';
+                    const isPast = !isCancelled && (new Date(evt.end_at) < now || evt.status === 'COMPLETED');
                     const bannerUrl = getEventImage(evt, 'thumbnail');
 
                     return (
@@ -515,7 +532,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           </span>
                         </td>
                         <td>
-                          {isLive ? (
+                          {isCancelled ? (
+                            <span className="badge badge-danger">CANCELLED</span>
+                          ) : isLive ? (
                             <span className="badge badge-success">LIVE</span>
                           ) : isPast ? (
                             <span className="badge">COMPLETED</span>

@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(__dirname, '../..');
 
 let totalTests = 0;
 let passedTests = 0;
@@ -72,18 +72,18 @@ runTest('1.2: Media assets row count is explicitly designated as metadata rows, 
 });
 
 // -------------------------------------------------------------------------
-// TEST 2: Empty advertisement analytics are not interpreted as zero real-world impressions
+// TEST 2: Advertisement Features Completely Eradicated
 // -------------------------------------------------------------------------
-console.log('\n📌 Test Suite 2: Advertisement Analytics Truthfulness');
+console.log('\n📌 Test Suite 2: Advertisement Eradication');
 
-runTest('2.1: AnalyticsPanel contains no fake adMetrics empty array or derived zero-valued CTR calculations', () => {
+runTest('2.1: AnalyticsPanel contains no advertisement analytics or derived CTR calculations', () => {
   const panelPath = path.join(rootDir, 'lpu-events-admin/src/components/superadmin/AnalyticsPanel.tsx');
   const content = fs.readFileSync(panelPath, 'utf8');
 
-  assert(!content.includes('const adMetrics: any[] = [];'), 'Found forbidden empty adMetrics array');
-  assert(!content.includes('averageCtr'), 'Found misleading averageCtr computed from empty array');
-  assert(!content.includes('Daily Advertisement Telemetry Trend'), 'Found misleading daily trend chart');
-  assert(content.includes('Ad Impression, Click, and CTR Telemetry Not Currently Monitored'), 'Missing explicit unmonitored ad telemetry notice');
+  assert(!content.includes('adMetrics'), 'Found forbidden adMetrics');
+  assert(!content.includes('averageCtr'), 'Found forbidden averageCtr');
+  assert(!content.includes('Daily Advertisement Telemetry Trend'), 'Found forbidden daily trend chart');
+  assert(!content.includes('Advertisement Analytics'), 'Found forbidden advertisement analytics panel');
 });
 
 runTest('2.2: Header in AnalyticsPanel is truthfully labeled as PLATFORM METRICS without "Live Telemetry" claims', () => {
@@ -160,12 +160,12 @@ runTest('5.1: SystemHealthPanel renders 4 explicit Not Monitored infrastructure 
   assert(content.includes('Not Monitored'), 'Missing explicit "Not Monitored" badge');
 });
 
-runTest('5.2: AnalyticsPanel KPI bento grid displays explicit Not Monitored card for ad engagement', () => {
+runTest('5.2: AnalyticsPanel KPI bento grid contains no deprecated ad engagement cards', () => {
   const panelPath = path.join(rootDir, 'lpu-events-admin/src/components/superadmin/AnalyticsPanel.tsx');
   const content = fs.readFileSync(panelPath, 'utf8');
 
-  assert(content.includes('Ad Impressions & Clicks'), 'Missing Ad Impressions & Clicks card');
-  assert(content.includes('Ad telemetry is not instrumented in this phase'), 'Missing unmonitored explanation');
+  assert(!content.includes('Ad Impressions & Clicks'), 'Found deprecated Ad Impressions & Clicks card');
+  assert(!content.includes('Ad telemetry'), 'Found deprecated ad telemetry reference');
 });
 
 // -------------------------------------------------------------------------

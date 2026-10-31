@@ -69,7 +69,7 @@ async function runLiveRegression() {
     { name: 'Events Feed (Page 1) API', path: '/api/public/events?page=1' },
     { name: 'Featured Events API', path: '/api/public/featured' },
     { name: 'Trending Events API', path: '/api/public/trending' },
-    { name: 'Advertisements API', path: '/api/public/advertisements' },
+    { name: 'Hero Carousel API', path: '/api/public/carousel' },
     { name: 'Search Query API', path: '/api/public/search?q=tech' }
   ];
 

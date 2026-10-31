@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../../supabase';
+import { supabase, lpuClient } from '../../supabase';
+import { isSafeHttpUrl } from '../../utils/security';
 import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
 import { ProgressiveImage } from '../ProgressiveImage';
 import {
@@ -10,7 +11,6 @@ import {
   ArrowDown,
   Trash2,
   Star,
-  Megaphone,
   Image as ImageIcon,
   Clock,
   Eye,
@@ -38,13 +38,12 @@ import {
 /* ================================================================
    Types
    ================================================================ */
-type SlideType = 'EVENT' | 'ADVERTISEMENT' | 'MEDIA';
+type SlideType = 'EVENT' | 'MEDIA';
 
 interface CarouselSlide {
   id: string;
   item_type: SlideType;
   event_id: string | null;
-  advertisement_id: string | null;
   media_id: string | null;
   sort_order: number;
   is_active: boolean;
@@ -59,7 +58,6 @@ interface CarouselSlide {
   created_at: string;
   // Joined data
   events?: { id: string; name: string; description?: string; start_at: string; venue_name: string; banner_media_id?: string | null; banner_url?: string | null } | null;
-  advertisements?: { id: string; name: string; redirect_url: string | null; media_id: string | null } | null;
 }
 
 interface FeaturedEvent {
@@ -73,18 +71,9 @@ interface FeaturedEvent {
   status: string;
 }
 
-interface ActiveAd {
-  id: string;
-  name: string;
-  redirect_url: string | null;
-  media_id: string | null;
-  status: string;
-}
-
 const SLIDE_TYPE_CONFIG: Record<SlideType, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  EVENT:         { label: 'Featured Event',  icon: <Star size={14} />,     color: '#ff6b00', bg: 'rgba(255,107,0,0.12)' },
-  ADVERTISEMENT: { label: 'Advertisement',   icon: <Megaphone size={14} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  MEDIA:         { label: 'Custom Media',    icon: <ImageIcon size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+  EVENT: { label: 'Featured Event', icon: <Star size={14} />, color: '#ff6b00', bg: 'rgba(255,107,0,0.12)' },
+  MEDIA: { label: 'Custom Media', icon: <ImageIcon size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
 /* ================================================================
@@ -98,11 +87,10 @@ export const HeroCarouselManagerPanel: React.FC = () => {
 
   // Available content for the "Add Slide" drawer
   const [showAddDrawer, setShowAddDrawer] = useState(false);
-  const [addSlideType, setAddSlideType] = useState<SlideType>('EVENT');
+  const addSlideType: SlideType = 'EVENT';
   const [eventSourceFilter, setEventSourceFilter] = useState<'featured' | 'all'>('featured');
   const [featuredEvents, setFeaturedEvents] = useState<FeaturedEvent[]>([]);
   const [allPublishedEvents, setAllPublishedEvents] = useState<FeaturedEvent[]>([]);
-  const [activeAds, setActiveAds] = useState<ActiveAd[]>([]);
 
   // Expanded slide settings
   const [expandedSlideId, setExpandedSlideId] = useState<string | null>(null);
@@ -126,8 +114,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         .from('carousel_items')
         .select(`
           *,
-          events ( id, name, description, start_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket) ),
-          advertisements ( id, name, redirect_url, media_id, media_assets:media_id(id, object_key, bucket) )
+          events ( id, name, description, start_at, venue_name, banner_media_id, media_assets:banner_media_id(id, object_key, bucket) )
         `)
         .order('sort_order', { ascending: true });
       if (error) throw error;
@@ -168,19 +155,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     } catch (err) {
       console.error('Failed to load all published events:', err);
     }
-
-    // 3. Fetch active ads for ADVERTISEMENT slides
-    try {
-      const { data: ads } = await supabase
-        .from('advertisements')
-        .select('id, name, redirect_url, media_id, status, media_assets:media_id(id, object_key, bucket)')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      setActiveAds(ads || []);
-    } catch (err) {
-      console.error('Failed to load ads:', err);
-    }
   }, []);
 
   useEffect(() => {
@@ -214,6 +188,9 @@ export const HeroCarouselManagerPanel: React.FC = () => {
       const { error } = await supabase.from('carousel_items').delete().eq('id', id);
       if (error) throw error;
       setSlides(prev => prev.filter(s => s.id !== id));
+      lpuClient.invalidateClientCache('carousel');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['carousel', 'homepage']).catch(() => {});
       showToast('success', 'Slide removed from carousel.');
     } catch (err: any) {
       showToast('error', 'Failed to delete slide: ' + (err.message || ''));
@@ -224,15 +201,16 @@ export const HeroCarouselManagerPanel: React.FC = () => {
   const addSlide = async (type: SlideType, contentId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let adminId = '05680f86-a752-4792-9051-d091414d8e9f';
-      if (user) {
-        const { data: adminRow } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-        if (adminRow?.id) adminId = adminRow.id;
-      }
+      if (!user) throw new Error('Authenticated administrative session required.');
+
+      const { data: adminRow } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      const adminId = adminRow?.id;
+      if (!adminId) throw new Error('Super Administrator profile not resolved. Please refresh your session.');
 
       const newOrder = slides.length;
       let insertPayload: any = {
@@ -246,8 +224,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
 
       if (type === 'EVENT') {
         insertPayload.event_id = contentId;
-      } else if (type === 'ADVERTISEMENT') {
-        insertPayload.advertisement_id = contentId;
       }
 
       const { data, error } = await supabase
@@ -255,14 +231,16 @@ export const HeroCarouselManagerPanel: React.FC = () => {
         .insert(insertPayload)
         .select(`
           *,
-          events ( id, name, description, start_at, venue_name, banner_media_id ),
-          advertisements ( id, name, redirect_url, media_id )
+          events ( id, name, description, start_at, venue_name, banner_media_id )
         `)
         .single();
 
       if (error) throw error;
       setSlides(prev => [...prev, data]);
       setShowAddDrawer(false);
+      lpuClient.invalidateClientCache('carousel');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['carousel', 'homepage']).catch(() => {});
       showToast('success', `${SLIDE_TYPE_CONFIG[type].label} slide added to carousel!`);
     } catch (err: any) {
       console.error('Failed to add slide:', err);
@@ -275,14 +253,25 @@ export const HeroCarouselManagerPanel: React.FC = () => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let adminId = '05680f86-a752-4792-9051-d091414d8e9f';
-      if (user) {
-        const { data: adminRow } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-        if (adminRow?.id) adminId = adminRow.id;
+      if (!user) throw new Error('Authenticated administrative session required.');
+
+      const { data: adminRow } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      const adminId = adminRow?.id;
+      if (!adminId) throw new Error('Super Administrator profile not resolved. Please refresh your session.');
+
+      for (const slide of slides) {
+        if (slide.custom_cta_url && slide.custom_cta_url.trim()) {
+          const url = slide.custom_cta_url.trim();
+          const isRelative = url.startsWith('/') && !url.startsWith('//');
+          if (!isRelative && !isSafeHttpUrl(url)) {
+            throw new Error(`Slide "${slide.custom_title || slide.id}" has an invalid CTA Link URL. It must begin with http://, https://, or /`);
+          }
+        }
       }
 
       for (const slide of slides) {
@@ -303,7 +292,12 @@ export const HeroCarouselManagerPanel: React.FC = () => {
           .eq('id', slide.id);
         if (error) throw error;
       }
-      showToast('success', 'All carousel changes saved successfully!');
+
+      lpuClient.invalidateClientCache('carousel');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['carousel', 'homepage']).catch(() => {});
+
+      showToast('success', 'All carousel changes saved and Edge Cache invalidated!');
     } catch (err: any) {
       showToast('error', 'Failed to save changes: ' + (err.message || ''));
     } finally {
@@ -330,7 +324,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
   const getSlideTitle = (slide: CarouselSlide): string => {
     if (slide.custom_title) return slide.custom_title;
     if (slide.item_type === 'EVENT' && slide.events) return slide.events.name;
-    if (slide.item_type === 'ADVERTISEMENT' && slide.advertisements) return slide.advertisements.name;
     return slide.custom_title || 'Untitled Slide';
   };
 
@@ -359,7 +352,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
             <span>Hero Carousel Builder</span>
           </h2>
           <p className="text-sm text-[#5a4136] dark:text-[#ffb693] mt-1">
-            Build the student homepage hero — mix featured events, ads, and memories in any order with custom timings.
+            Build the student homepage hero — curate featured events and custom highlights in any order with custom timings.
           </p>
         </div>
 
@@ -605,7 +598,7 @@ export const HeroCarouselManagerPanel: React.FC = () => {
             </div>
             <h4 className="text-lg font-bold text-[#261812] dark:text-[#ffede6]">No Slides Yet</h4>
             <p className="text-sm text-[#5a4136] dark:text-[#ffb693] max-w-sm mx-auto">
-              Start building your hero carousel by adding featured events, advertisements, or past event memories.
+              Start building your hero carousel by adding featured events or custom media highlights.
             </p>
             <button
               type="button"
@@ -859,26 +852,11 @@ export const HeroCarouselManagerPanel: React.FC = () => {
               </button>
             </div>
 
-            {/* Type Tabs */}
+            {/* Type Header */}
             <div className="px-6 py-4">
-              <div className="flex items-center bg-[#fef5f0] dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-xl p-1 text-xs font-bold">
-                {(['EVENT', 'ADVERTISEMENT'] as SlideType[]).map(type => {
-                  const cfg = SLIDE_TYPE_CONFIG[type];
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => setAddSlideType(type)}
-                      className={`flex-1 px-3 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        addSlideType === type
-                          ? 'bg-[#ff6b00] text-white shadow-xs'
-                          : 'text-[#5a4136] dark:text-[#ffb693] hover:bg-[#fee3d8] dark:hover:bg-[#3d2d26]'
-                      }`}
-                    >
-                      {cfg.icon}
-                      <span className="hidden sm:inline">{cfg.label}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-2 text-xs font-bold text-[#ff6b00]">
+                <Star size={16} />
+                <span>Select Event Slide</span>
               </div>
             </div>
 
@@ -957,33 +935,6 @@ export const HeroCarouselManagerPanel: React.FC = () => {
                       </button>
                     ));
                   })()}
-                </>
-              )}
-
-              {addSlideType === 'ADVERTISEMENT' && (
-                <>
-                  <p className="text-xs font-semibold text-[#5a4136] dark:text-[#ffb693] mb-3">Select an active advertisement:</p>
-                  {activeAds.length === 0 ? (
-                    <p className="text-sm text-[#5a4136]/60 dark:text-[#ffb693]/60 text-center py-8">No active advertisements available.</p>
-                  ) : activeAds.map(ad => (
-                    <button
-                      key={ad.id}
-                      type="button"
-                      onClick={() => addSlide('ADVERTISEMENT', ad.id)}
-                      className="w-full text-left p-4 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#261812] hover:border-[#8b5cf6] hover:shadow-md transition-all cursor-pointer group flex items-center gap-4"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-950/50 flex items-center justify-center flex-shrink-0">
-                        <Megaphone size={16} className="text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-[#261812] dark:text-[#ffede6] truncate group-hover:text-purple-600 transition-colors">{ad.name}</p>
-                        <p className="text-[11px] text-[#5a4136] dark:text-[#ffb693]">
-                          {ad.redirect_url ? 'Has redirect URL' : 'No redirect'}
-                        </p>
-                      </div>
-                      <Plus size={16} className="text-[#5a4136]/40 group-hover:text-purple-600 transition-colors flex-shrink-0" />
-                    </button>
-                  ))}
                 </>
               )}
             </div>

@@ -4,10 +4,8 @@ import { AdminHeader } from './components/shell/AdminHeader';
 import { DashboardOverview } from './components/superadmin/DashboardOverview';
 import { AccessRequestsPanel } from './components/superadmin/AccessRequestsPanel';
 import { ApprovedOrganizersPanel } from './components/superadmin/ApprovedOrganizersPanel';
-import { AdControlPanel } from './components/superadmin/AdControlPanel';
 import { ManageEventsPanel } from './components/superadmin/ManageEventsPanel';
 import { CreateEventWizard } from './components/superadmin/CreateEventWizard';
-import { AdvertisementsPanel } from './components/superadmin/AdvertisementsPanel';
 import { FeaturedEventsPanel } from './components/superadmin/FeaturedEventsPanel';
 import { AnalyticsPanel } from './components/superadmin/AnalyticsPanel';
 import { CategoriesPanel } from './components/superadmin/CategoriesPanel';
@@ -17,8 +15,6 @@ import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselManagerPanel';
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
 import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
-import { OperationsControlCenter } from './components/superadmin/operations';
-import { SiteControlsPanel } from './components/superadmin/SiteControlsPanel';
 import { StudentInquiriesPanel } from './components/superadmin/StudentInquiriesPanel';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { useAuth } from './auth';
@@ -91,6 +87,7 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
   }, []);
 
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('lpu_admin_theme');
@@ -134,15 +131,12 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
       <SuperAdminSidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        userEmail={userEmail}
-        displayName={displayName}
-        darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode(!darkMode)}
-        onLogout={onLogout} 
+        isOpenMobile={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 ml-0 md:ml-[280px] w-full md:w-[calc(100%-280px)] flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         <AdminHeader 
           activeTab={activeTab}
           darkMode={darkMode}
@@ -151,6 +145,7 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
           userEmail={userEmail}
           displayName={displayName}
           onLogout={onLogout}
+          onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
@@ -200,14 +195,6 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
             {visitedTabs.has('dashboard') && (
               <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
                 <DashboardOverview onNavigate={setActiveTab} />
-              </div>
-            )}
-
-            {visitedTabs.has('operations') && (
-              <div style={{ display: activeTab === 'operations' ? 'block' : 'none' }}>
-                <ErrorBoundary>
-                  <OperationsControlCenter />
-                </ErrorBoundary>
               </div>
             )}
 
@@ -269,11 +256,6 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
               </div>
             )}
 
-            {visitedTabs.has('advertisements') && (
-              <div style={{ display: activeTab === 'advertisements' ? 'block' : 'none' }}>
-                <AdvertisementsPanel />
-              </div>
-            )}
 
             {visitedTabs.has('categories') && (
               <div style={{ display: activeTab === 'categories' ? 'block' : 'none' }}>
@@ -281,20 +263,8 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
               </div>
             )}
 
-            {visitedTabs.has('ad-control') && (
-              <div style={{ display: activeTab === 'ad-control' ? 'block' : 'none' }}>
-                <AdControlPanel />
-              </div>
-            )}
-
-            {visitedTabs.has('site-controls') && (
-              <div style={{ display: activeTab === 'site-controls' ? 'block' : 'none' }}>
-                <SiteControlsPanel />
-              </div>
-            )}
-
-            {visitedTabs.has('student-inquiries') && (
-              <div style={{ display: activeTab === 'student-inquiries' ? 'block' : 'none' }}>
+            {(visitedTabs.has('student-inquiries') || visitedTabs.has('messages')) && (
+              <div style={{ display: (activeTab === 'student-inquiries' || activeTab === 'messages') ? 'block' : 'none' }}>
                 <StudentInquiriesPanel />
               </div>
             )}

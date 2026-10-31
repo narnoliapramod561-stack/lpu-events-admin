@@ -1,22 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HXC7S26FSN"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-HXC7S26FSN');
-    </script>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-5XHHNRKM');</script>
-    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260927" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=20260927" />
@@ -53,46 +37,7 @@
       })();
     </script>
 
-    <!-- Tailwind CSS with custom styling -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#ff6b00",
-              "primary-hover": "#a04100",
-              "primary-container": "#ff6b00",
-              "on-primary-container": "#ffffff",
-              secondary: "#a04100",
-              "secondary-container": "#fc721e",
-              background: "#fff8f6",
-              surface: "#ffffff",
-              "surface-bright": "#fff8f6",
-              "surface-container": "#ffeae1",
-              "surface-container-high": "#fee3d8",
-              "surface-container-highest": "#f8ddd2",
-              "surface-container-low": "#fff1eb",
-              "surface-container-lowest": "#ffffff",
-              "on-surface": "#261812",
-              "on-surface-variant": "#5a4136",
-              "outline-variant": "#e2bfb0",
-              outline: "#8e7164",
-              tertiary: "#0062a1",
-              "tertiary-container": "#059eff",
-              error: "#ba1a1a",
-              "error-container": "#ffdad6"
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Outfit', 'sans-serif'],
-              heading: ['Outfit', 'sans-serif']
-            }
-          }
-        }
-      }
-    </script>
+    <!-- Tailwind CSS is built at compile time via @tailwindcss/vite and /src/index.css -->
     <style>
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -103,10 +48,6 @@
     </style>
   </head>
   <body data-clarity-mask="True">
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5XHHNRKM"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

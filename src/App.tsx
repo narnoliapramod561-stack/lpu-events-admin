@@ -6,14 +6,6 @@ import { OrganizerDashboard } from './components/organizer/OrganizerDashboard';
 import { EventForm } from './components/organizer/EventForm';
 import { EventWorkspace } from './components/organizer/EventWorkspace';
 import { ClubProfilePanel } from './components/organizer/ClubProfilePanel';
-import { AccessRequestsPanel } from './components/superadmin/AccessRequestsPanel';
-import { PlatformEventsPanel } from './components/superadmin/PlatformEventsPanel';
-import { CategoriesPanel } from './components/superadmin/CategoriesPanel';
-import { SettingsPanel } from './components/superadmin/SettingsPanel';
-import { AuditLogsPanel } from './components/superadmin/AuditLogsPanel';
-import { AdvertisementsPanel } from './components/superadmin/AdvertisementsPanel';
-import { CarouselPanel } from './components/superadmin/CarouselPanel';
-import { SystemHealthPanel } from './components/superadmin/SystemHealthPanel';
 import { LoginView } from './components/auth/LoginView';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { ToastProvider } from './components/shell/NotificationContext';
@@ -23,7 +15,6 @@ import { LoadingSpinner } from './components/shell/LoadingState';
 import { LpuLogo } from './components/common/LpuLogo';
 
 import { SuperAdminApp } from './SuperAdminApp';
-import { OperationsControlCenter } from './components/superadmin/operations';
 
 function AdminDashboard() {
   const { user, profile, signOut, refreshProfile } = useAuth();
@@ -158,26 +149,6 @@ function AdminDashboard() {
           return <ClubProfilePanel />;
         default:
           return <OrganizerDashboard onSelectEvent={setSelectedEventId} onCreateEventTrigger={() => setActiveTab('org-create-event')} />;
-      }
-    }
-
-    // Super Admin tabs
-    if (role === 'super-admin') {
-      switch (activeTab) {
-        case 'access-requests': return <AccessRequestsPanel />;
-        case 'platform-events': return <PlatformEventsPanel />;
-        case 'ads-management': return <AdvertisementsPanel />;
-        case 'carousel-management': return <CarouselPanel />;
-        case 'categories-management': return <CategoriesPanel />;
-        case 'settings-management': return <SettingsPanel />;
-        case 'audit-logs': return <AuditLogsPanel />;
-        case 'system-health': return <SystemHealthPanel />;
-        case 'operations': return (
-          <ErrorBoundary>
-            <OperationsControlCenter />
-          </ErrorBoundary>
-        );
-        default: return <AccessRequestsPanel />;
       }
     }
 

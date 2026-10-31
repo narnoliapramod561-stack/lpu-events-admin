@@ -79,7 +79,6 @@ export function getEventImage(
     hero: 1920,
     'event-banner': 1440,
     'event-card': 960,
-    advertisement: 1280,
     memory: 1440,
     thumbnail: 400,
     'sponsor-logo': 600,

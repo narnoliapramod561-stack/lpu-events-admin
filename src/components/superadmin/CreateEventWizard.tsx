@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
 import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage, resolveDefaultEventImage, reconcileMediaVariants } from '@lpu-events/shared';
+import { isSafeHttpUrl } from '../../utils/security';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -485,25 +486,13 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     const loadEvent = async () => {
       setLoading(true);
       try {
-        let data: any = null;
-        try {
-          const edgeRes = await lpuClient.fetchEventDetails(editEventId);
-          if (edgeRes?.data) {
-            data = edgeRes.data;
-          }
-        } catch {
-          // Fall through to direct Supabase query
-        }
-
-        if (!data) {
-          const { data: sbData, error: sbErr } = await supabase
-            .from('events')
-            .select('*, organizations(*), categories(*), event_content_sections(*), media_assets:banner_media_id(id, object_key, bucket)')
-            .eq('id', editEventId)
-            .maybeSingle();
-          if (sbErr || !sbData) throw sbErr || new Error('Event not found');
-          data = sbData;
-        }
+        const { data: sbData, error: sbErr } = await supabase
+          .from('events')
+          .select('*, organizations(*), categories(*), event_content_sections(*), media_assets:banner_media_id(id, object_key, bucket)')
+          .eq('id', editEventId)
+          .maybeSingle();
+        if (sbErr || !sbData) throw sbErr || new Error('Event not found');
+        const data = sbData;
 
         setName(data.name || '');
         setDescription(data.description || '');
@@ -621,6 +610,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     if (step === 5) {
       if (pricingType === 'PAID' && !externalUrl.trim()) {
         setError('Please enter the ticket booking / registration redirect link.');
+        return false;
+      }
+      if (externalUrl.trim() && !isSafeHttpUrl(externalUrl.trim())) {
+        setError('External registration link must start with http:// or https://');
         return false;
       }
     }
@@ -818,6 +811,11 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
     const endIso = new Date(`${effectiveEndDate}T${effectiveEndTime}`).toISOString();
 
     const isExternal = pricingType === 'PAID' || !!externalUrl.trim();
+    if (isExternal && externalUrl.trim() && !isSafeHttpUrl(externalUrl.trim())) {
+      setError('External registration link must start with http:// or https://');
+      setSaving(false);
+      return;
+    }
 
     const payload: PublishEventPayload = {
       organization_id: String(effectiveOrgId || organizations[0]?.id || ''),

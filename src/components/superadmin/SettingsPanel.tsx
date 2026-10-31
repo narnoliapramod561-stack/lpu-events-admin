@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
+import { MaintenanceControlModal } from './MaintenanceControlModal';
 
 interface GlobalSettingRecord {
   key: string;
@@ -37,6 +38,7 @@ export const SettingsPanel: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SettingCategory>('ALL');
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   
   // Modal State for Edit
   const [editingSetting, setEditingSetting] = useState<GlobalSettingRecord | null>(null);
@@ -97,6 +99,11 @@ export const SettingsPanel: React.FC = () => {
 
   // Instant Toggle for Booleans
   const handleToggleBoolean = async (setting: GlobalSettingRecord) => {
+    if (setting.key === 'platform_maintenance_mode') {
+      setShowMaintenanceModal(true);
+      return;
+    }
+
     const currentValue = Boolean(setting.value);
     const nextValue = !currentValue;
     setSubmitting(true);
@@ -124,6 +131,10 @@ export const SettingsPanel: React.FC = () => {
 
   // Open Edit Modal
   const openEditModal = (s: GlobalSettingRecord) => {
+    if (s.key === 'platform_maintenance_mode') {
+      setShowMaintenanceModal(true);
+      return;
+    }
     setEditingSetting(s);
     setEditValueString(typeof s.value === 'object' ? JSON.stringify(s.value, null, 2) : String(s.value));
     setEditDesc(s.description || '');
@@ -288,6 +299,14 @@ export const SettingsPanel: React.FC = () => {
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMaintenanceModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <Shield size={14} className="text-amber-500" />
+            <span>Maintenance Mode</span>
           </button>
           <button
             type="button"
@@ -674,6 +693,15 @@ export const SettingsPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Maintenance Control Modal */}
+      <MaintenanceControlModal
+        isOpen={showMaintenanceModal}
+        onClose={() => setShowMaintenanceModal(false)}
+        onUpdated={() => {
+          fetchSettings();
+        }}
+      />
     </div>
   );
 };

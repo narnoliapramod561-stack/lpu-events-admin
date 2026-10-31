@@ -39,13 +39,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       case 'org-info': return 'Club Profile & Settings';
       case 'access-requests': return 'Organizer Access Approvals';
       case 'platform-events': return 'Platform Events Directory';
-      case 'ads-management': return 'Advertisement Campaigns';
       case 'carousel-management': return 'Homepage Hero Carousel';
       case 'categories-management': return 'Taxonomy & Categories';
       case 'settings-management': return 'Global System Configurations';
       case 'audit-logs': return 'Security & Audit Trail';
       case 'system-health': return 'System & Data Overview';
-      case 'operations': return 'Operations Control Center';
       default: return 'LPU Events Console';
     }
   };

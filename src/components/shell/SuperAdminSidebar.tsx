@@ -4,7 +4,6 @@ import { LpuLogo } from '../common/LpuLogo';
 
 export type AdminNavTab =
   | 'dashboard'
-  | 'operations'
   | 'access-requests'
   | 'approved-organizers'
   | 'create-event'
@@ -14,13 +13,11 @@ export type AdminNavTab =
   | 'old-events'
   | 'featured-events'
   | 'trending-events'
-  | 'advertisements'
   | 'hero-carousel'
   | 'happening-today'
   | 'categories'
-  | 'ad-control'
-  | 'site-controls'
   | 'student-inquiries'
+  | 'messages'
   | 'analytics'
   | 'audit-logs'
   | 'system-health'
@@ -29,43 +26,48 @@ export type AdminNavTab =
 interface SidebarProps {
   activeTab: AdminNavTab;
   setActiveTab: (tab: AdminNavTab) => void;
-  userEmail?: string;
-  displayName?: string;
-  darkMode?: boolean;
-  onToggleDarkMode?: () => void;
-  onLogout?: () => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const SuperAdminSidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
-  userEmail,
-  displayName,
-  darkMode,
-  onToggleDarkMode,
-  onLogout,
+  isOpenMobile,
+  onCloseMobile,
 }) => {
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [openInquiriesCount, setOpenInquiriesCount] = useState<number>(0);
 
   useEffect(() => {
-    const fetchPendingCount = async () => {
+    const fetchCounts = async () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       try {
-        const { count, error } = await supabase
-          .from('organizer_access_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'PENDING');
-        if (!error && count !== null) {
-          setPendingCount(count);
+        const [accessRes, inqRes] = await Promise.all([
+          supabase
+            .from('organizer_access_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'PENDING'),
+          supabase
+            .from('student_inquiries')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'OPEN')
+        ]);
+
+        if (!accessRes.error && accessRes.count !== null) {
+          setPendingCount(accessRes.count);
+        }
+        if (!inqRes.error && inqRes.count !== null) {
+          setOpenInquiriesCount(inqRes.count);
         }
       } catch (e) {
-        console.error('Error fetching pending access requests count:', e);
+        console.error('Error fetching sidebar notification counts:', e);
       }
     };
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 60000);
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') fetchPendingCount();
+      if (document.visibilityState === 'visible') fetchCounts();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
@@ -80,9 +82,10 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
         { 
-          id: 'operations', 
-          label: 'Operations Center', 
-          icon: 'dvr' 
+          id: 'student-inquiries', 
+          label: 'Message Center', 
+          icon: 'mark_email_unread',
+          badge: openInquiriesCount > 0 ? `${openInquiriesCount}` : undefined
         },
         { 
           id: 'access-requests', 
@@ -112,119 +115,98 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
         { id: 'happening-today', label: 'Happening Today', icon: 'event_available' },
         { id: 'trending-events', label: 'Trending Events', icon: 'local_fire_department' },
         { id: 'featured-events', label: 'Featured Events', icon: 'star' },
-        { id: 'advertisements', label: 'Advertisements', icon: 'ads_click' },
         { id: 'categories', label: 'Categories & Tags', icon: 'category' }
-      ]
-    },
-    {
-      group: 'Control',
-      items: [
-        { id: 'site-controls', label: 'Broadcast & Maintenance', icon: 'campaign' },
-        { id: 'student-inquiries', label: 'Student Inquiries', icon: 'mark_email_unread' },
-        { id: 'ad-control', label: 'Ad Control', icon: 'settings_applications' }
-      ]
-    },
-    {
-      group: 'Insights & System',
-      items: [
-        { id: 'analytics', label: 'Analytics', icon: 'monitoring' }
       ]
     }
   ];
 
   return (
-    <aside className="hidden md:flex flex-col h-full py-4 fixed left-0 top-0 w-[280px] bg-[#ffeae1] dark:bg-[#1c1c1e] border-r border-[#e2bfb0] dark:border-white/10 shadow-sm z-50 overflow-y-auto">
-      {/* Brand Logo Header */}
-      <div className="px-4 pb-5 pt-3 flex items-center gap-3.5 border-b border-[#e2bfb0]/40 dark:border-white/10">
-        <LpuLogo className="w-16 h-16 sm:w-[72px] sm:h-[72px] shrink-0" size={72} />
-        <div className="min-w-0">
-          <h1 className="text-xl font-black font-['Outfit'] text-[#261812] dark:text-white tracking-tight leading-tight">LPU Events</h1>
-          <p className="text-[11px] font-bold text-[#a04100] dark:text-orange-400 uppercase tracking-wider mt-0.5 whitespace-nowrap">Super Admin Portal</p>
-        </div>
-      </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpenMobile && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden animate-fadeIn"
+          style={{ animationDuration: '200ms' }}
+        />
+      )}
 
-      {/* Navigation Sections */}
-      <nav className="flex-1 px-3 py-4 space-y-4">
-        {navSections.map((sec, idx) => (
-          <div key={idx}>
-            <span className="px-3 text-[11px] font-bold text-[#5a4136]/70 dark:text-[#8e8e93] uppercase tracking-wider">
-              {sec.group}
-            </span>
-            <div className="mt-1 space-y-1">
-              {sec.items.map((item) => {
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id as AdminNavTab)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus:outline-none ${
-                      isActive
-                        ? 'bg-[#fee3d8] dark:bg-orange-500/15 text-[#a04100] dark:text-orange-400 border-l-4 border-[#ff6b00] shadow-sm font-bold scale-[0.99]'
-                        : 'text-[#5a4136] dark:text-[#aeaeb2] hover:text-[#a04100] dark:hover:text-white hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="material-symbols-outlined text-[20px]"
-                        style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
-                      >
-                        {item.icon}
-                      </span>
-                      <span>{item.label}</span>
-                    </div>
-
-                    {item.badge && (
-                      <span className="bg-[#ff6b00] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      <aside
+        className={`
+          flex flex-col py-4 w-[280px] shrink-0 bg-[#ffeae1] dark:bg-[#1c1c1e] border-r border-[#e2bfb0] dark:border-white/10 shadow-sm overflow-y-auto
+          ${isOpenMobile 
+            ? 'fixed inset-y-0 left-0 z-50 h-full shadow-2xl' 
+            : 'hidden md:flex h-screen sticky top-0 z-30'
+          }
+        `}
+      >
+        {/* Brand Logo Header */}
+        <div className="px-4 pb-5 pt-3 flex items-center justify-between border-b border-[#e2bfb0]/40 dark:border-white/10">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <LpuLogo className="w-16 h-16 sm:w-[72px] sm:h-[72px] shrink-0" size={72} />
+            <div className="min-w-0">
+              <h1 className="text-xl font-black font-['Outfit'] text-[#261812] dark:text-white tracking-tight leading-tight">LPU Events</h1>
+              <p className="text-[11px] font-bold text-[#a04100] dark:text-orange-400 uppercase tracking-wider mt-0.5 whitespace-nowrap">Super Admin Portal</p>
             </div>
           </div>
-        ))}
-      </nav>
-
-      {/* User Info & Logout Footer */}
-      <div className="px-3 pt-3 border-t border-[#e2bfb0]/40 dark:border-white/10 mt-auto space-y-2">
-        {userEmail && (
-          <div className="px-3 py-2 rounded-lg bg-[#fee3d8]/60 dark:bg-white/[0.04] border border-[#e2bfb0]/50 dark:border-white/10 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#ff6b00] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-              {(displayName || userEmail).charAt(0).toUpperCase()}
-            </div>
-            <div className="overflow-hidden min-w-0 flex-1 text-left">
-              <p className="text-xs font-bold text-[#261812] dark:text-white truncate leading-tight">
-                {displayName || 'Super Admin'}
-              </p>
-              <p className="text-[11px] text-[#5a4136] dark:text-[#aeaeb2] truncate leading-tight mt-0.5" title={userEmail}>
-                {userEmail}
-              </p>
-            </div>
-          </div>
-        )}
-        <div className="flex items-center gap-2 pt-1">
-          {onToggleDarkMode && (
+          {onCloseMobile && (
             <button
               type="button"
-              onClick={onToggleDarkMode}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#5a4136] dark:text-[#aeaeb2] hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5 border border-[#e2bfb0]/50 dark:border-white/10 transition-colors cursor-pointer"
-              title="Toggle dark/light theme"
+              onClick={onCloseMobile}
+              className="md:hidden p-1.5 rounded-lg text-[#5a4136] dark:text-[#aeaeb2] hover:bg-[#fee3d8] dark:hover:bg-white/10"
+              title="Close Sidebar"
             >
-              <span className="material-symbols-outlined text-[18px]">{darkMode ? 'light_mode' : 'dark_mode'}</span>
-              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           )}
-          <button
-            onClick={onLogout}
-            className={`${onToggleDarkMode ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] dark:text-red-400 hover:bg-[#ffdad6]/40 dark:hover:bg-red-950/40 border border-red-200/50 dark:border-red-900/30 transition-colors cursor-pointer`}
-            title="Sign out of Super Admin"
-          >
-            <span className="material-symbols-outlined text-[18px]">logout</span>
-            <span>Logout</span>
-          </button>
         </div>
-      </div>
-    </aside>
+
+        {/* Navigation Sections */}
+        <nav className="flex-1 px-3 py-4 space-y-4">
+          {navSections.map((sec, idx) => (
+            <div key={idx}>
+              <span className="px-3 text-[11px] font-bold text-[#5a4136]/70 dark:text-[#8e8e93] uppercase tracking-wider">
+                {sec.group}
+              </span>
+              <div className="mt-1 space-y-1">
+                {sec.items.map((item) => {
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id as AdminNavTab);
+                        if (onCloseMobile) onCloseMobile();
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus:outline-none ${
+                        isActive
+                          ? 'bg-[#fee3d8] dark:bg-orange-500/15 text-[#a04100] dark:text-orange-400 border-l-4 border-[#ff6b00] shadow-sm font-bold scale-[0.99]'
+                          : 'text-[#5a4136] dark:text-[#aeaeb2] hover:text-[#a04100] dark:hover:text-white hover:bg-[#f8ddd2]/60 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="material-symbols-outlined text-[20px]"
+                          style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                        >
+                          {item.icon}
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
+
+                      {item.badge && (
+                        <span className="bg-[#ff6b00] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 };

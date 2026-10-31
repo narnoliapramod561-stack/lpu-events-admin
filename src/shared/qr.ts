@@ -1,4 +1,4 @@
-import QRCode from 'qrcode';
+import type QRCode from 'qrcode';
 import { createEventSlug } from './slug';
 
 /**
@@ -61,6 +61,7 @@ export async function generateQrDataUrl(
 ): Promise<string> {
   if (!text) return '';
 
+  const QRCode = (await import('qrcode')).default;
   const opts: QRCode.QRCodeToDataURLOptions = {
     errorCorrectionLevel: 'M',
     margin: options?.margin ?? 2,
@@ -87,6 +88,7 @@ export async function generateQrSvgString(
 ): Promise<string> {
   if (!text) return '';
 
+  const QRCode = (await import('qrcode')).default;
   const opts: QRCode.QRCodeToStringOptions = {
     type: 'svg',
     errorCorrectionLevel: 'M',

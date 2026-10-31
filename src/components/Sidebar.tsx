@@ -5,7 +5,6 @@ import {
   Building2,
   UserCheck,
   CalendarDays,
-  Megaphone,
   Image as ImageIcon,
   FolderTree,
   Sliders,
@@ -24,10 +23,8 @@ export type AdminTab =
   | 'org-workspace'
   | 'org-info'
   // Super Admin Tabs
-  | 'operations'
   | 'access-requests'
   | 'platform-events'
-  | 'ads-management'
   | 'carousel-management'
   | 'categories-management'
   | 'settings-management'
@@ -145,14 +142,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="admin-sidebar-group-label">Core Operations</span>
               
               <button
-                className={`admin-nav-item ${activeTab === 'operations' ? 'active-purple' : ''}`}
-                onClick={() => handleTabClick('operations')}
-              >
-                <Activity size={17} />
-                <span>Operations Center</span>
-              </button>
-
-              <button
                 className={`admin-nav-item ${activeTab === 'access-requests' ? 'active-purple' : ''}`}
                 onClick={() => handleTabClick('access-requests')}
               >
@@ -178,14 +167,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <ImageIcon size={17} />
                 <span>Hero Carousel</span>
-              </button>
-
-              <button
-                className={`admin-nav-item ${activeTab === 'ads-management' ? 'active-purple' : ''}`}
-                onClick={() => handleTabClick('ads-management')}
-              >
-                <Megaphone size={17} />
-                <span>Advertisements</span>
               </button>
 
               <button

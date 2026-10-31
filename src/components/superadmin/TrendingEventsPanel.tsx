@@ -128,6 +128,9 @@ export const TrendingEventsPanel: React.FC = () => {
         created_by: adminId
       });
       if (error) throw error;
+      lpuClient.invalidateClientCache('trending');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['trending', 'homepage']).catch(() => {});
       showToast(`Added "${evt.name}" to Trending!`);
       await fetchTrendingData();
     } catch (err: any) {
@@ -140,6 +143,9 @@ export const TrendingEventsPanel: React.FC = () => {
     try {
       const { error } = await supabase.from('trending_events').delete().eq('event_id', eventId);
       if (error) throw error;
+      lpuClient.invalidateClientCache('trending');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['trending', 'homepage']).catch(() => {});
       showToast('Event removed from Trending.');
       await fetchTrendingData();
     } catch (err: any) {
@@ -151,11 +157,23 @@ export const TrendingEventsPanel: React.FC = () => {
   const saveOrder = async () => {
     setSaving(true);
     try {
-      const updates = trendingEvents.map((t, i) =>
-        supabase.from('trending_events').update({ sort_order: i + 1 }).eq('event_id', t.event_id)
-      );
-      await Promise.all(updates);
-      showToast('Trending events order saved successfully!');
+      const items = trendingEvents.map((t, i) => ({
+        event_id: t.event_id,
+        sort_order: i + 1
+      }));
+      const { error } = await supabase.rpc('reorder_trending_events', {
+        p_items: items
+      });
+      if (error) {
+        const updates = items.map((item) =>
+          supabase.from('trending_events').update({ sort_order: item.sort_order }).eq('event_id', item.event_id)
+        );
+        await Promise.all(updates);
+      }
+      lpuClient.invalidateClientCache('trending');
+      lpuClient.invalidateClientCache('homepage');
+      lpuClient.dispatchEdgeInvalidation(['trending', 'homepage']).catch(() => {});
+      showToast('Trending events order saved and Edge Cache invalidated!');
       await fetchTrendingData();
     } catch (err: any) {
       console.error('Failed to save trending order:', err);

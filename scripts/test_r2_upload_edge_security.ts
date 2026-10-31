@@ -114,7 +114,6 @@ async function runEdgeSecurityTests() {
   // TEST 7: Role Authorization Matrix Verification
   const roleMatrix: Record<string, { superAdmin: boolean; organizer: boolean }> = {
     'hero': { superAdmin: true, organizer: false },
-    'advertisement': { superAdmin: true, organizer: false },
     'sponsor-logo': { superAdmin: true, organizer: false },
     'memory': { superAdmin: true, organizer: false },
     'event-banner': { superAdmin: true, organizer: true },
@@ -123,11 +122,11 @@ async function runEdgeSecurityTests() {
     'admin-preview': { superAdmin: true, organizer: true }
   };
 
-  const organizerPlatformCheck = !roleMatrix['advertisement'].organizer && !roleMatrix['hero'].organizer && roleMatrix['event-banner'].organizer;
+  const organizerPlatformCheck = !roleMatrix['hero'].organizer && roleMatrix['event-banner'].organizer;
   assertTest(
     'Role Matrix: Platform contexts require Super Admin; Organizers restricted to events',
     organizerPlatformCheck,
-    'Organizers cannot upload hero/ads/sponsors; Super Admin retains universal media access'
+    'Organizers cannot upload hero/sponsors; Super Admin retains universal media access'
   );
 
   // TEST 8: Server-Generated Object Key Sanitization

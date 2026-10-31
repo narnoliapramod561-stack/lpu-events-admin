@@ -1,4 +1,4 @@
-// lpu-events-admin/src/snapshotClient.ts
+// packages/shared/src/snapshotClient.ts
 // LPU Events — R2 Public-Content Snapshot Delivery Client
 // Highly responsive public read path consuming precomputed, versioned R2 snapshots.
 // Features:

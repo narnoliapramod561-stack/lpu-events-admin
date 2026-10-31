@@ -49,13 +49,13 @@ describe('Phase 1 Telemetry Truthfulness & Operational Integrity Suite', () => {
     });
   });
 
-  describe('Test 2: Empty advertisement analytics are not interpreted as zero real-world impressions', () => {
-    it('Unmonitored ad telemetry returns explicit unmonitored state instead of 0 impressions/clicks/CTR', () => {
+  describe('Test 2: Unmonitored service telemetry returns explicit unmonitored state instead of 0', () => {
+    it('Unmonitored service telemetry returns explicit unmonitored state instead of 0 impressions/clicks/CTR', () => {
       // Simulate state where telemetry is not instrumented
-      const adTelemetryInstrumented = false;
+      const serviceTelemetryInstrumented = false;
       const rawMetricsArray: unknown[] = [];
 
-      function resolveAdTelemetry(isInstrumented: boolean, metrics: unknown[]) {
+      function resolveServiceTelemetry(isInstrumented: boolean, metrics: unknown[]) {
         if (!isInstrumented || metrics.length === 0) {
           return {
             status: 'NOT_MONITORED',
@@ -74,7 +74,7 @@ describe('Phase 1 Telemetry Truthfulness & Operational Integrity Suite', () => {
         };
       }
 
-      const result = resolveAdTelemetry(adTelemetryInstrumented, rawMetricsArray);
+      const result = resolveServiceTelemetry(serviceTelemetryInstrumented, rawMetricsArray);
 
       expect(result.status).toBe('NOT_MONITORED');
       expect(result.impressions).toBeNull();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { lpuClient } from '../../supabase';
+import { supabase, lpuClient } from '../../supabase';
+import { sanitizeSafeUrl } from '../../utils/security';
 import { EventForm } from './EventForm';
 import { EventQrCard } from './EventQrCard';
 import { 
@@ -32,11 +33,17 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
   const fetchEvent = async () => {
     setLoading(true);
     try {
-      const { data, error: err } = await lpuClient.fetchEventDetails(eventId);
-      if (err) throw err;
+      const { data, error: err } = await supabase
+        .from('events')
+        .select('*, organizations(*), categories(*), event_content_sections(*), media_assets:banner_media_id(id, object_key, bucket)')
+        .eq('id', eventId)
+        .maybeSingle();
+
+      if (err || !data) throw err || new Error('Event not found');
       setEvent(data);
-    } catch (err) {
-      setError('Failed to load event details');
+    } catch (err: any) {
+      console.error('Failed to load event details:', err);
+      setError(err?.message || 'Failed to load event details');
     } finally {
       setLoading(false);
     }
@@ -271,25 +278,44 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({ eventId, onBack 
           </div>
 
           {/* Card: External Link */}
-          {event.external_registration_url && (
-            <div className="card-box">
-              <div className="card-box-header">
-                <h3 className="card-box-title">Registration Link</h3>
+          {(() => {
+            if (!event.external_registration_url) return null;
+            const safeRegistrationUrl = sanitizeSafeUrl(event.external_registration_url);
+            if (!safeRegistrationUrl) {
+              return (
+                <div className="card-box">
+                  <div className="card-box-header">
+                    <h3 className="card-box-title">Registration Link</h3>
+                  </div>
+                  <div className="card-box-body">
+                    <p style={{ fontSize: '13px', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertTriangle size={14} />
+                      <span>External link was blocked because it does not use a secure http/https protocol.</span>
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="card-box">
+                <div className="card-box-header">
+                  <h3 className="card-box-title">Registration Link</h3>
+                </div>
+                <div className="card-box-body">
+                  <a
+                    href={safeRegistrationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ width: '100%', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <span>Open External Portal</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
               </div>
-              <div className="card-box-body">
-                <a
-                  href={event.external_registration_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary"
-                  style={{ width: '100%', wordBreak: 'break-all', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                  <span>Open External Portal</span>
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 

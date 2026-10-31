@@ -153,7 +153,7 @@ export async function buildSnapshotRevisionPayloads(
   // 2. Carousel Items
   const { data: rawCarousel } = await supabase
     .from('carousel_items')
-    .select('id,item_type,event_id,advertisement_id,media_id,sort_order,is_active,start_at,end_at,display_duration_ms,custom_title,custom_subtitle,custom_cta_text,custom_cta_url,badge_text,events:event_id(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(name),categories(name,key),subcategories(name,key)),advertisements:advertisement_id(id,name,redirect_url,media_id,status),media_assets:media_id(id,object_key)')
+    .select('id,item_type,event_id,media_id,sort_order,is_active,start_at,end_at,display_duration_ms,custom_title,custom_subtitle,custom_cta_text,custom_cta_url,badge_text,events:event_id(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(name),categories(name,key),subcategories(name,key)),media_assets:media_id(id,object_key)')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
@@ -169,11 +169,6 @@ export async function buildSnapshotRevisionPayloads(
     .select('event_id,sort_order,events(id,name,description,start_at,end_at,venue_name,registration_mode,pricing_type,price_amount,external_registration_url,banner_media_id,status,category_id,subcategory_id,media_assets:banner_media_id(id,object_key),organizations(id,name),categories(name,key),subcategories(name,key))')
     .order('sort_order', { ascending: true });
 
-  // 5. Active Advertisements
-  const { data: rawAds } = await supabase
-    .from('advertisements')
-    .select('id,name,media_id,redirect_url,start_at,end_at,status,media_assets:media_id(id,object_key)')
-    .eq('status', 'active');
 
   // 6. Global Settings (STRICTLY filter to student-safe settings only)
   const { data: rawSettings } = await supabase
@@ -259,16 +254,10 @@ export async function buildSnapshotRevisionPayloads(
     carousel: (rawCarousel || []).filter((c: any) => c.is_active).map((c: any) => ({
       ...c,
       events: singleRel(c.events),
-      advertisements: singleRel(c.advertisements),
       media_assets: singleRel(c.media_assets),
     })),
     featured: (rawFeatured || []).map((f: any) => singleRel(f.events)).filter(Boolean),
     trending: (rawTrending || []).map((t: any) => singleRel(t.events)).filter(Boolean),
-    advertisements: (rawAds || []).map((a: any) => ({
-      ...a,
-      advertisement_positions: null,
-      media_assets: singleRel(a.media_assets),
-    })),
     settings: filteredSettings,
     events: homepageEvents.map((e: any) => ({
       ...e,
@@ -304,7 +293,7 @@ export async function buildSnapshotRevisionPayloads(
       past_event_count: 0,
       category_count: categories.total_count,
       carousel_count: homepage.carousel.length,
-      ad_count: homepage.advertisements.length,
+      ad_count: 0,
       db_resource_versions: dbVersions,
       db_version_fingerprint: calculateVersionFingerprint(dbVersions),
     },

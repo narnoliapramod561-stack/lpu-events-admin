@@ -62,8 +62,7 @@ async function runProductionValidation() {
     { name: 'Categories Taxonomy', path: '/api/public/categories' },
     { name: 'Events Feed (Page 1)', path: '/api/public/events?page=1' },
     { name: 'Featured Events', path: '/api/public/featured' },
-    { name: 'Trending Events', path: '/api/public/trending' },
-    { name: 'Advertisements', path: '/api/public/advertisements' }
+    { name: 'Hero Carousel', path: '/api/public/carousel' }
   ];
 
   console.log('2. EXECUTING REAL PRODUCTION CACHE PROFILING...\n');

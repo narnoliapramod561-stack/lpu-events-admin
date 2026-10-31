@@ -22,39 +22,39 @@ class PersistentCacheManager {
   private _listeners = new Set<CacheListener>();
 
   constructor() {
-    this._loadFromStorage();
-  }
-
-  private _loadFromStorage(): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    try {
-      const now = Date.now();
-      for (let i = 0; i < localStorage.length; i++) {
-        const fullKey = localStorage.key(i);
-        if (fullKey && fullKey.startsWith(this._prefix)) {
-          const raw = localStorage.getItem(fullKey);
-          if (raw) {
-            try {
-              const record: CacheRecord = JSON.parse(raw);
-              // Discard expired records
-              if (record && record.expiresAt && record.expiresAt < now) {
-                localStorage.removeItem(fullKey);
-              } else if (record && record.data !== undefined) {
-                const key = fullKey.substring(this._prefix.length);
-                this._memCache.set(key, record);
+    // Schedule lazy background cleanup of expired records during idle time
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const scheduleCleanup = () => {
+        try {
+          const now = Date.now();
+          for (let i = 0; i < localStorage.length; i++) {
+            const fullKey = localStorage.key(i);
+            if (fullKey && fullKey.startsWith(this._prefix)) {
+              const raw = localStorage.getItem(fullKey);
+              if (raw) {
+                try {
+                  const record: CacheRecord = JSON.parse(raw);
+                  if (record && record.expiresAt && record.expiresAt < now) {
+                    localStorage.removeItem(fullKey);
+                  }
+                } catch {
+                  localStorage.removeItem(fullKey);
+                }
               }
-            } catch {
-              localStorage.removeItem(fullKey);
             }
           }
-        }
+        } catch {}
+      };
+
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(scheduleCleanup);
+      } else {
+        setTimeout(scheduleCleanup, 2000);
       }
-    } catch {
-      // Storage access blocked or restricted
     }
   }
 
-  public get<T>(key: string, maxAgeMs?: number): T | null {
+  public get<T>(key: string, maxAgeMs?: number, allowStale = true): T | null {
     // 1. Fast in-memory check
     let record = this._memCache.get(key);
     const now = Date.now();
@@ -76,14 +76,14 @@ class PersistentCacheManager {
 
     if (!record) return null;
 
-    // Check expiration
-    if (record.expiresAt && record.expiresAt < now) {
+    // Stale-While-Revalidate: serve cached snapshot for instant hydration
+    if (record.expiresAt && record.expiresAt < now && !allowStale) {
       this.delete(key);
       return null;
     }
 
     // Check optional maxAge
-    if (maxAgeMs && (now - record.storedAt) > maxAgeMs) {
+    if (maxAgeMs && (now - record.storedAt) > maxAgeMs && !allowStale) {
       return null;
     }
 

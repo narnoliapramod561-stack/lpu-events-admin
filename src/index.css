@@ -1,4 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #ff6b00;
+  --color-primary-hover: #a04100;
+  --color-primary-container: #ff6b00;
+  --color-on-primary-container: #ffffff;
+  --color-secondary: #a04100;
+  --color-secondary-container: #fc721e;
+  --color-background: #fff8f6;
+  --color-surface: #ffffff;
+  --color-surface-bright: #fff8f6;
+  --color-surface-container: #ffeae1;
+  --color-surface-container-high: #fee3d8;
+  --color-surface-container-highest: #f8ddd2;
+  --color-surface-container-low: #fff1eb;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #261812;
+  --color-on-surface-variant: #5a4136;
+  --color-outline-variant: #e2bfb0;
+  --color-outline: #8e7164;
+  --color-tertiary: #0062a1;
+  --color-tertiary-container: #059eff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+}
 
 :root {
   --bg-base: #fff8f6;
@@ -78,11 +109,10 @@
   --info-subtle: rgba(56, 189, 248, 0.18);
 }
 
-* {
+*, ::before, ::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
+
 
 html {
   overscroll-behavior: none;

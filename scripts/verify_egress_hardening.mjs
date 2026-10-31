@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(__dirname, '../..');
 
 console.log('================================================================');
 console.log('   LPU EVENTS — FREE TIER EGRESS HARDENING VERIFICATION SUITE   ');
@@ -72,7 +72,9 @@ const deletedTables = [
   'sponsors',
   'backup_records',
   'archive_records',
-  'background_jobs'
+  'background_jobs',
+  'advertisements',
+  'advertisement_positions'
 ];
 
 function scanDirForPatterns(dir, patternRegex, excludePatterns = []) {
@@ -129,7 +131,6 @@ const corePanels = [
   'lpu-events-admin/src/components/superadmin/SettingsPanel.tsx',
   'lpu-events-admin/src/components/superadmin/ApprovedOrganizersPanel.tsx',
   'lpu-events-admin/src/components/superadmin/PlatformEventsPanel.tsx',
-  'lpu-events-admin/src/components/superadmin/AdvertisementsPanel.tsx',
   'lpu-events-admin/src/components/organizer/ClubProfilePanel.tsx',
   'lpu-events-admin/src/components/organizer/OrganizerDashboard.tsx'
 ];
@@ -165,21 +166,20 @@ assert(
   workerContent.includes('/api/public/events') &&
   workerContent.includes('/api/public/events/:id') &&
   workerContent.includes('/api/public/search') &&
-  workerContent.includes('/api/public/advertisements') &&
   workerContent.includes('/api/public/settings'),
-  'All 9 public endpoints are edge-routed and cached'
+  'All 8 public endpoints are edge-routed and cached'
 );
 
 assert(
-  workerContent.includes("newHeaders.set('CF-Cache-Status', 'HIT')") &&
-  workerContent.includes("'CF-Cache-Status': 'MISS'") &&
+  workerContent.includes("'CF-Cache-Status', 'HIT'") &&
+  workerContent.includes("'CF-Cache-Status', 'MISS'") &&
   workerContent.includes('stale-while-revalidate'),
   'Cloudflare Edge Cache headers (HIT, MISS, stale-while-revalidate) configured'
 );
 
 assert(
   workerContent.includes('inFlightRequests') &&
-  workerContent.includes('inFlightRequests.get(inFlightKey)'),
+  workerContent.includes('inFlightRequests.get(cacheKeyUrl)'),
   'Single-flight request coalescing protects Supabase from concurrent stampedes'
 );
 

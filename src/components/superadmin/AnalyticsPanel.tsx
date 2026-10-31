@@ -6,9 +6,7 @@ import {
   Tag, 
   RotateCw, 
   Download, 
-  Activity,
-  AlertCircle,
-  Megaphone
+  Activity
 } from 'lucide-react';
 
 interface CategoryBreakdownItem {
@@ -216,7 +214,7 @@ export const AnalyticsPanel: React.FC = () => {
       ) : (
         <>
           {/* KPI Bento Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-5">
             {/* Card 1: Total Events */}
             <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl p-5 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
@@ -287,54 +285,6 @@ export const AnalyticsPanel: React.FC = () => {
                   Domains
                 </span>
               </div>
-            </div>
-
-            {/* Card 4: Advertisement Analytics (Explicitly Not Monitored) */}
-            <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl p-5 shadow-sm relative overflow-hidden">
-              <div className="flex justify-between items-start">
-                <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                  <Megaphone size={20} />
-                </div>
-                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 uppercase">
-                  Not Monitored
-                </span>
-              </div>
-              <p className="text-xs font-bold text-[#5a4136] dark:text-[#ffb693] uppercase tracking-wider mt-4">
-                Ad Impressions & Clicks
-              </p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-xl font-bold font-['Outfit'] text-zinc-500 dark:text-zinc-400">
-                  Not Monitored
-                </h3>
-              </div>
-              <span className="text-[11px] text-[#5a4136] dark:text-[#ffb693] font-medium block mt-1">
-                Ad telemetry is not instrumented in this phase.
-              </span>
-            </div>
-          </div>
-
-          {/* Advertisement Telemetry Status Notice (Truthful State) */}
-          <div className="bg-white dark:bg-[#261812] border border-[#e2bfb0] dark:border-[#5a4136] rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/60 flex items-center justify-center text-[#ff6b00]">
-                <AlertCircle size={20} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold font-['Outfit'] text-[#261812] dark:text-[#ffede6]">
-                  Advertisement Engagement Telemetry
-                </h3>
-                <p className="text-xs text-[#5a4136] dark:text-[#ffb693]">
-                  Instrumentation Status
-                </p>
-              </div>
-            </div>
-            <div className="p-5 rounded-xl bg-[#fff8f6] dark:bg-[#1a120e] border border-[#e2bfb0]/60 dark:border-[#5a4136]/60 text-center">
-              <p className="text-sm font-bold text-[#261812] dark:text-[#ffede6]">
-                Ad Impression, Click, and CTR Telemetry Not Currently Monitored
-              </p>
-              <p className="text-xs text-[#5a4136] dark:text-[#ffb693] mt-1 max-w-xl mx-auto">
-                Promotional campaign impression tracking and click conversions are not currently instrumented. In accordance with platform telemetry truthfulness rules, placeholder counts and zero-valued analytics charts are not displayed.
-              </p>
             </div>
           </div>
 

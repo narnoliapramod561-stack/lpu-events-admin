@@ -507,7 +507,7 @@ async function runAllTests() {
       'https://lpuevents.live/api/public/categories/cultural',
       'https://lpuevents.live/api/public/categories/gaming',
       'https://lpuevents.live/api/public/categories/workshops',
-      'https://lpuevents.live/api/public/advertisements',
+      'https://lpuevents.live/api/public/carousel',
       'https://lpuevents.live/api/public/categories',
     ];
 

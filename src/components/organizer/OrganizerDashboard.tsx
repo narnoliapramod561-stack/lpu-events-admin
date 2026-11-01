@@ -22,7 +22,7 @@ import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
 import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
 import { ProgressiveImage } from '../ProgressiveImage';
-import { getStudentEventUrl } from '@lpu-events/shared';
+import { getStudentEventUrl, formatEventTime, formatEventTimeRange } from '@lpu-events/shared';
 
 interface OrganizerDashboardProps {
   onSelectEvent: (eventId: string) => void;
@@ -363,7 +363,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Clock size={13} color="var(--accent-primary)" />
                           <span>
-                            {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr; {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            {formatEventTimeRange(evt.start_at, evt.end_at)}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -522,7 +522,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '12.5px' }}>
                             <span style={{ color: 'var(--text-main)' }}>{new Date(evt.start_at).toLocaleDateString()}</span>
                             <span style={{ color: 'var(--text-dim)', fontSize: '11.5px' }}>
-                              {new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                              {formatEventTime(evt.start_at)}
                             </span>
                           </div>
                         </td>

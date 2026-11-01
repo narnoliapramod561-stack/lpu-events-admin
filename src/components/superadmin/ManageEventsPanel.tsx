@@ -3,7 +3,7 @@ import { supabase, lpuClient } from '../../supabase';
 import { getEventImage, resolveDefaultEventImage } from '../../utils/images';
 import { ProgressiveImage } from '../ProgressiveImage';
 import { EventQrCard } from '../organizer/EventQrCard';
-import { getStudentEventUrl } from '@lpu-events/shared';
+import { getStudentEventUrl, formatEventDateRange, formatEventTimeRange } from '@lpu-events/shared';
 
 interface ManageEventsPanelProps {
   mode?: 'active' | 'past' | 'all';
@@ -576,8 +576,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                         schedule
                       </span>
                       <span className="font-semibold text-[#261812] dark:text-[#ffede6]">
-                        {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr;{' '}
-                        {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                        {formatEventTimeRange(evt.start_at, evt.end_at)}
                       </span>
                     </div>
 
@@ -744,8 +743,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                           })}
                         </div>
                         <div className="text-[11px] text-[#5a4136] dark:text-[#ffb693]">
-                          {start.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} &rarr;{' '}
-                          {end.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                          {formatEventTimeRange(evt.start_at, evt.end_at)}
                         </div>
                       </td>
 
@@ -909,18 +907,7 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
                 <div className="p-3.5 rounded-xl bg-[#fff8f6] dark:bg-[#1a120e] border border-[#e2bfb0]/50 dark:border-[#5a4136]/50">
                   <span className="text-[#5a4136] dark:text-[#ffb693] block font-medium">Date & Timeline:</span>
                   <p className="font-bold text-[#261812] dark:text-[#ffede6] mt-1">
-                    {new Date(previewEvent.start_at).toLocaleString(undefined, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}{' '}
-                    &rarr;{' '}
-                    {new Date(previewEvent.end_at).toLocaleString(undefined, {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatEventDateRange(previewEvent.start_at, previewEvent.end_at)} • {formatEventTimeRange(previewEvent.start_at, previewEvent.end_at)}
                   </p>
                 </div>
 

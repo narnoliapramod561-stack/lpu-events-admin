@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
+import { formatEventTime } from '@lpu-events/shared';
 
 export const PlatformEventsPanel: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -165,7 +166,7 @@ export const PlatformEventsPanel: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '12.5px' }}>
                           <span>{new Date(evt.start_at).toLocaleDateString()}</span>
                           <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                            {new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            {formatEventTime(evt.start_at)}
                           </span>
                         </div>
                       </td>

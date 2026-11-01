@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Eye
 } from 'lucide-react';
-import { HappeningTodayConfig } from '@lpu-events/shared';
+import { HappeningTodayConfig, formatEventTimeRange } from '@lpu-events/shared';
 
 const DEFAULT_CONFIG: HappeningTodayConfig = {
   slide_duration_ms: 4500,
@@ -119,7 +119,7 @@ export const HappeningTodayManagerPanel: React.FC = () => {
       image: getEventImage(evt, 'hero'),
       fallbackImage: resolveDefaultEventImage(evt),
       date: new Date(evt.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
-      time: `${new Date(evt.start_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })} – ${new Date(evt.end_at).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+      time: formatEventTimeRange(evt.start_at, evt.end_at),
       venue: evt.venue_name,
       organizer: evt.organizations?.name || 'LPU Club',
       ctaText: 'View Details',

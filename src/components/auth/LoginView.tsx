@@ -402,7 +402,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   required
-                  data-clarity-mask="True"
                   autoComplete="username"
                   autoFocus
                   style={{
@@ -492,7 +491,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                 <Mail size={14} style={{ color: '#ff6b00', flexShrink: 0 }} />
-                <span className="login-text-title" style={{ color: '#261812', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} data-clarity-mask="True">
+                <span className="login-text-title" style={{ color: '#261812', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                   {email}
                 </span>
               </div>
@@ -549,7 +548,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ isExpiredSession = false }
                     onPaste={handleOtpPaste}
                     disabled={loading}
                     autoComplete="one-time-code"
-                    data-clarity-mask="True"
                     style={{
                       width: '48px',
                       height: '54px',

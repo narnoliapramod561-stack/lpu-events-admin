@@ -5,7 +5,6 @@ import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import { collectSupabaseTelemetry } from "./providers/supabase.ts";
 import { collectCloudflareTelemetry } from "./providers/cloudflare.ts";
 import { collectResendTelemetry } from "./providers/resend.ts";
-import { collectSentryTelemetry } from "./providers/sentry.ts";
 import {
   NormalizedMetricSnapshot,
   HealthProbeResult,
@@ -94,7 +93,6 @@ export async function executeTelemetryCollection(
     collectSupabaseTelemetry(supabaseAdmin),
     collectCloudflareTelemetry(supabaseAdmin),
     collectResendTelemetry(),
-    collectSentryTelemetry(),
   ]);
 
   for (const res of results) {

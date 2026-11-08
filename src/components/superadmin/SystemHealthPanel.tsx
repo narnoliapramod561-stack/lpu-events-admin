@@ -282,7 +282,7 @@ export const SystemHealthPanel: React.FC = () => {
                   <span className="badge badge-purple">PHASE 3 TELEMETRY ENGINE</span>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px', marginBottom: 0 }}>
-                  Server-side operational gateway testing strictly enforced for Super Admins. Triggers single-flight telemetry collection across Supabase, Cloudflare, Resend, and Sentry with data freshness tracking.
+                  Server-side operational gateway testing strictly enforced for Super Admins. Triggers single-flight telemetry collection across Supabase, Cloudflare, and Resend with data freshness tracking.
                 </p>
               </div>
               <button

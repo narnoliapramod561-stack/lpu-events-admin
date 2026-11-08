@@ -21,6 +21,7 @@ export type AdminNavTab =
   | 'analytics'
   | 'audit-logs'
   | 'system-health'
+  | 'event-backups'
   | 'settings';
 
 interface SidebarProps {
@@ -105,7 +106,8 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'create-event', label: 'Create Event', icon: 'add_circle' },
         { id: 'all-events', label: 'All Active Events', icon: 'calendar_month' },
-        { id: 'past-events', label: 'Past Events', icon: 'history' }
+        { id: 'past-events', label: 'Past Events', icon: 'history' },
+        { id: 'event-backups', label: 'Event Backups (D1)', icon: 'cloud_sync' }
       ]
     },
     {

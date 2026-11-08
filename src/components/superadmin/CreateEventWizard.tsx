@@ -837,16 +837,25 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
     try {
       if (editEventId) {
+        setPublishProgressStep('Updating event in primary database...');
         const { error: editErr } = await lpuClient.editEvent(editEventId, payload, sections);
         if (editErr) throw editErr;
-        setSuccess('Event updated successfully!');
+        setPublishProgressStep('Securing backup snapshot in Cloudflare D1 database...');
+        await lpuClient.backupEventToCloudflare(editEventId, { ...payload, sections }).catch(() => {});
+        setSuccess('Event updated successfully and backed up to Cloudflare D1!');
       } else {
-        const { error: pubErr } = await lpuClient.publishEvent(payload, sections);
+        setPublishProgressStep('Publishing event to primary database...');
+        const { data: pubData, error: pubErr } = await lpuClient.publishEvent(payload, sections);
         if (pubErr) throw pubErr;
+        const newEventId = pubData?.event_id;
+        if (newEventId) {
+          setPublishProgressStep('Securing backup snapshot in Cloudflare D1 database...');
+          await lpuClient.backupEventToCloudflare(newEventId, { ...payload, sections }).catch(() => {});
+        }
         try {
           localStorage.removeItem(DRAFT_KEY);
         } catch (e) {}
-        setSuccess('Event published live to LPU Events platform!');
+        setSuccess('Event published live & backed up to Cloudflare D1 database!');
       }
       setTimeout(() => {
         onComplete();

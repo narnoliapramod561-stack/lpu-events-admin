@@ -10,7 +10,8 @@ import {
   Sliders,
   FileSpreadsheet,
   Activity,
-  LogOut
+  LogOut,
+  Database
 } from 'lucide-react';
 import { LpuLogo } from './common/LpuLogo';
 
@@ -22,6 +23,7 @@ export type AdminTab =
   | 'org-past-events'
   | 'org-workspace'
   | 'org-info'
+  | 'org-event-backups'
   // Super Admin Tabs
   | 'access-requests'
   | 'platform-events'
@@ -131,6 +133,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <Building2 size={17} />
                 <span>Club Profile</span>
+              </button>
+
+              <button
+                className={`admin-nav-item ${activeTab === 'org-event-backups' ? 'active' : ''}`}
+                onClick={() => handleTabClick('org-event-backups')}
+              >
+                <Database size={17} />
+                <span>Event Backups</span>
               </button>
             </div>
           </>

@@ -16,6 +16,7 @@ import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselMa
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
 import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
 import { StudentInquiriesPanel } from './components/superadmin/StudentInquiriesPanel';
+import { EventBackupCenterPanel } from './components/superadmin/EventBackupCenterPanel';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { useAuth } from './auth';
 
@@ -284,6 +285,12 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
             {visitedTabs.has('system-health') && (
               <div style={{ display: activeTab === 'system-health' ? 'block' : 'none' }}>
                 <SystemHealthPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('event-backups') && (
+              <div style={{ display: activeTab === 'event-backups' ? 'block' : 'none' }}>
+                <EventBackupCenterPanel />
               </div>
             )}
 

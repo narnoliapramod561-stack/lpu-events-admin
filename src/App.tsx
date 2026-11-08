@@ -6,6 +6,7 @@ import { OrganizerDashboard } from './components/organizer/OrganizerDashboard';
 import { EventForm } from './components/organizer/EventForm';
 import { EventWorkspace } from './components/organizer/EventWorkspace';
 import { ClubProfilePanel } from './components/organizer/ClubProfilePanel';
+import { EventBackupCenterPanel } from './components/superadmin/EventBackupCenterPanel';
 import { LoginView } from './components/auth/LoginView';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { ToastProvider } from './components/shell/NotificationContext';
@@ -60,7 +61,7 @@ function AdminDashboard() {
   const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
     try {
       const saved = sessionStorage.getItem('lpu_organizer_active_tab');
-      if (saved && (saved === 'org-dashboard' || saved === 'org-create-event' || saved === 'org-workspace' || saved === 'org-info')) {
+      if (saved && (saved === 'org-dashboard' || saved === 'org-create-event' || saved === 'org-workspace' || saved === 'org-info' || saved === 'org-event-backups')) {
         return saved as AdminTab;
       }
     } catch (e) {}
@@ -147,6 +148,8 @@ function AdminDashboard() {
           );
         case 'org-info':
           return <ClubProfilePanel />;
+        case 'org-event-backups':
+          return <EventBackupCenterPanel />;
         default:
           return <OrganizerDashboard onSelectEvent={setSelectedEventId} onCreateEventTrigger={() => setActiveTab('org-create-event')} />;
       }

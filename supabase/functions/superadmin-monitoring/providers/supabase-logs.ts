@@ -23,7 +23,7 @@ function getProjectRef(): string {
 function getManagementToken(providedToken?: string): string {
   if (providedToken) return providedToken;
   if (typeof Deno !== "undefined") {
-    return Deno.env.get("SUPABASE_MANAGEMENT_API_TOKEN") || "";
+    return Deno.env.get("MANAGEMENT_API_TOKEN") || Deno.env.get("SUPABASE_MANAGEMENT_API_TOKEN") || "";
   }
   return "";
 }

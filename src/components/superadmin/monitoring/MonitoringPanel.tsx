@@ -13,6 +13,7 @@ import { MonitoringOverview } from './sections/MonitoringOverview.tsx';
 import { ErrorInbox } from './sections/ErrorInbox.tsx';
 import { ServicesStatus } from './sections/ServicesStatus.tsx';
 import { BackendLogsPanel } from './sections/BackendLogsPanel.tsx';
+import { SeoHealthPanel } from './sections/SeoHealthPanel.tsx';
 
 export type MonitoringSubSection = 'overview' | 'inbox' | 'services' | 'logs' | 'seo';
 
@@ -55,7 +56,6 @@ export const MonitoringPanel: React.FC = () => {
       shortLabel: 'SEO Health',
       icon: Search,
       desc: 'Google Search Console telemetry',
-      stage: 'Stage 13',
     },
   ];
 
@@ -79,11 +79,6 @@ export const MonitoringPanel: React.FC = () => {
             >
               <Icon className="w-4 h-4 shrink-0" />
               <span>{item.shortLabel}</span>
-              {item.stage && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-200/60 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 font-mono font-normal">
-                  {item.stage}
-                </span>
-              )}
             </button>
           );
         })}
@@ -112,15 +107,7 @@ export const MonitoringPanel: React.FC = () => {
       )}
 
       {activeSection === 'seo' && (
-        <div className="p-12 rounded-2xl bg-white dark:bg-[#252528] border border-zinc-200 dark:border-white/10 text-center space-y-3">
-          <Search className="w-10 h-10 text-purple-500 mx-auto" />
-          <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-            Section E: SEO & Google Search Console
-          </h3>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-            Scheduled for <strong>Stage 13</strong>. Will surface search analytics, click-through rates, average search positions, and sitemap indexing status.
-          </p>
-        </div>
+        <SeoHealthPanel />
       )}
     </div>
   );

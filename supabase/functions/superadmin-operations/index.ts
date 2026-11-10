@@ -9,6 +9,7 @@ import { verifySuperAdmin } from "./auth.ts";
 import { executeOperation } from "./operations.ts";
 import { corsHeaders, resolveCorsHeaders, buildSuccessResponse, buildErrorResponse } from "./responses.ts";
 import { normalizeError, OperationsError } from "./errors.ts";
+import { captureEdgeException } from "../_shared/telemetry.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -107,6 +108,18 @@ serve(async (req: Request) => {
     return buildSuccessResponse(data, ctx);
   } catch (err: unknown) {
     const normalized = normalizeError(err);
+
+    // Capture technical exceptions (HTTP 5xx) to PostHog; client 4xx errors are excluded per taxonomy
+    if (normalized.status >= 500) {
+      captureEdgeException(err, {
+        function_name: "superadmin-operations",
+        correlation_id: ctx.correlationId,
+        operation: ctx.operation || "unknown",
+        http_method: req.method,
+        status_code: normalized.status,
+        admin_user_id: ctx.adminUserId && ctx.adminUserId !== "unauthenticated" ? ctx.adminUserId : undefined,
+      });
+    }
 
     logOperationsEvent({
       timestamp: new Date().toISOString(),

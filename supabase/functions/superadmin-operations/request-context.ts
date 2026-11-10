@@ -14,10 +14,11 @@ export interface OperationsRequestContext {
 export function createRequestContext(req: Request): OperationsRequestContext {
   const requestId = `ops_req_${crypto.randomUUID()}`;
   
-  // Validate incoming correlation id (alphanumeric, hyphen, underscore, max 64 chars)
-  const incomingCorrelation = req.headers.get("x-correlation-id") || req.headers.get("X-Correlation-Id");
+  // Validate incoming correlation id (alphanumeric, hyphen, underscore, dot, max 64 chars)
+  const rawCorrelation = req.headers.get("x-correlation-id") || req.headers.get("X-Correlation-Id");
+  const incomingCorrelation = rawCorrelation ? rawCorrelation.trim() : null;
   let correlationId = requestId;
-  if (incomingCorrelation && /^[A-Za-z0-9_-]{1,64}$/.test(incomingCorrelation)) {
+  if (incomingCorrelation && /^[A-Za-z0-9_.-]{1,64}$/.test(incomingCorrelation)) {
     correlationId = incomingCorrelation;
   }
 
@@ -51,6 +52,7 @@ export interface StructuredOperationsLog {
 export function logOperationsEvent(log: StructuredOperationsLog): void {
   const serialized = JSON.stringify({
     channel: "operations_control_plane",
+    correlation_id: log.correlationId,
     ...log,
   });
   if (log.success) {

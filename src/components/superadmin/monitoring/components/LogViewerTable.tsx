@@ -179,3 +179,4 @@ export const LogViewerTable: React.FC<LogViewerTableProps> = ({
     </div>
   );
 };
+

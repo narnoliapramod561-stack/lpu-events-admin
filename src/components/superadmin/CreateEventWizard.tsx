@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
 import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage, resolveDefaultEventImage, reconcileMediaVariants } from '@lpu-events/shared';
-import { isSafeHttpUrl } from '../../utils/security';
+import { isSafeHttpUrl, normalizeRegistrationUrl } from '../../utils/security';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -613,7 +613,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         return false;
       }
       if (externalUrl.trim() && !isSafeHttpUrl(externalUrl.trim())) {
-        setError('External registration link must start with http:// or https://');
+        setError('Please enter a valid link (e.g. forms.gle/..., unstop.com/..., or https://...)');
         return false;
       }
     }
@@ -810,9 +810,10 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
     const endIso = new Date(`${effectiveEndDate}T${effectiveEndTime}`).toISOString();
 
-    const isExternal = pricingType === 'PAID' || !!externalUrl.trim();
-    if (isExternal && externalUrl.trim() && !isSafeHttpUrl(externalUrl.trim())) {
-      setError('External registration link must start with http:// or https://');
+    const normalizedUrl = normalizeRegistrationUrl(externalUrl);
+    const isExternal = pricingType === 'PAID' || !!normalizedUrl;
+    if (isExternal && externalUrl.trim() && !normalizedUrl) {
+      setError('Please enter a valid registration link.');
       setSaving(false);
       return;
     }
@@ -828,7 +829,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
       end_at: endIso,
       venue_name: venueName.trim(),
       registration_mode: isExternal ? 'EXTERNAL' : 'NONE',
-      external_registration_url: isExternal ? externalUrl.trim() : null,
+      external_registration_url: isExternal ? normalizedUrl : null,
       pricing_type: pricingType,
       price_amount: pricingType === 'PAID' ? Number(priceAmount) || 0 : 0,
       registration_format: registrationFormat || 'INDIVIDUAL',
@@ -2020,8 +2021,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
                     <span className="text-[10px] text-[#ff6b00] font-bold">Required</span>
                   </label>
                   <input
-                    type="url"
-                    placeholder="e.g. https://unstop.com/... or https://forms.gle/..."
+                    type="text"
+                    placeholder="e.g. forms.gle/... or unstop.com/... or https://..."
                     value={externalUrl}
                     onChange={(e) => setExternalUrl(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-[#e2bfb0] dark:border-[#5a4136] bg-white dark:bg-[#261812] text-[#261812] dark:text-[#ffede6] text-sm font-medium outline-none focus:border-[#ff6b00] focus:ring-2 focus:ring-[#ff6b00]/20 transition-all"

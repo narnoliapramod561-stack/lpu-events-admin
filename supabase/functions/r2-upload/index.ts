@@ -7,6 +7,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.18";
+import { captureEdgeException } from "../_shared/telemetry.ts";
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -822,6 +823,9 @@ serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  const correlationId = req.headers.get("x-correlation-id") || req.headers.get("x-request-id") || `req_r2_${crypto.randomUUID()}`;
+  let effectiveAdminId: string | undefined = undefined;
+
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -875,6 +879,13 @@ serve(async (req: Request) => {
       .maybeSingle();
 
     if (adminProfileError) {
+      captureEdgeException(adminProfileError, {
+        function_name: "r2-upload",
+        correlation_id: correlationId,
+        operation: "admin-profile-lookup",
+        http_method: req.method,
+        status_code: 500,
+      });
       return new Response(
         JSON.stringify({ error: "AUTHORIZATION_LOOKUP_FAILED", message: "Could not verify the admin profile." }),
         { status: 500, headers: corsHeaders }
@@ -887,7 +898,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const effectiveAdminId = adminProfile.id;
+    effectiveAdminId = adminProfile.id;
     const [superAdminResult, membershipsResult] = await Promise.all([
       adminClient
         .from("platform_admin_roles")
@@ -933,6 +944,15 @@ serve(async (req: Request) => {
       }
 
       if ((superAdminResult.error && userSuperAdminRes.error) && (membershipsResult.error && userMembershipsRes.error)) {
+        const authLookupErr = superAdminResult.error || membershipsResult.error || new Error("Permission lookup failure");
+        captureEdgeException(authLookupErr, {
+          function_name: "r2-upload",
+          correlation_id: correlationId,
+          operation: "authorization-lookup",
+          http_method: req.method,
+          status_code: 500,
+          admin_user_id: effectiveAdminId,
+        });
         console.error("Critical authorization lookup error:", {
           adminSuperAdminErr: superAdminResult.error,
           adminMembershipsErr: membershipsResult.error,
@@ -1040,6 +1060,14 @@ serve(async (req: Request) => {
 
       const r2Config = getR2Config();
       if (!r2Config || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
+        captureEdgeException(new Error("Cloudflare R2 is not configured"), {
+          function_name: "r2-upload",
+          correlation_id: correlationId,
+          operation: "r2-config-check",
+          http_method: req.method,
+          status_code: 502,
+          admin_user_id: effectiveAdminId,
+        });
         return new Response(
           JSON.stringify({ error: "R2_CONFIGURATION_MISSING", message: "Cloudflare R2 is not configured." }),
           { status: 502, headers: corsHeaders }
@@ -1490,6 +1518,14 @@ serve(async (req: Request) => {
 
     if (assetErr || !assetData?.id) {
       console.error("media_assets registration failed:", assetErr);
+      captureEdgeException(assetErr || new Error("Could not register media asset record"), {
+        function_name: "r2-upload",
+        correlation_id: correlationId,
+        operation: "media-assets-registration",
+        http_method: req.method,
+        status_code: 500,
+        admin_user_id: effectiveAdminId,
+      });
       return new Response(
         JSON.stringify({ error: "DATABASE_REGISTRATION_FAILED", message: "Could not register media asset record." }),
         { status: 500, headers: corsHeaders }
@@ -1524,6 +1560,14 @@ serve(async (req: Request) => {
     );
   } catch (fatalErr: any) {
     console.error("Fatal unhandled Edge Function error in r2-upload:", fatalErr);
+    captureEdgeException(fatalErr, {
+      function_name: "r2-upload",
+      correlation_id: correlationId,
+      operation: "upload-media",
+      http_method: req.method,
+      status_code: 500,
+      admin_user_id: effectiveAdminId,
+    });
     return new Response(
       JSON.stringify({
         error: "INTERNAL_SERVER_ERROR",

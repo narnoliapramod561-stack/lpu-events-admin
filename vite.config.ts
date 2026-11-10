@@ -195,7 +195,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: false,
+    sourcemap: process.env.CI ? 'hidden' : false,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {

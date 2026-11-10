@@ -21,6 +21,7 @@ export type AdminNavTab =
   | 'analytics'
   | 'audit-logs'
   | 'system-health'
+  | 'monitoring'
   | 'event-backups'
   | 'settings';
 
@@ -118,6 +119,16 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
         { id: 'trending-events', label: 'Trending Events', icon: 'local_fire_department' },
         { id: 'featured-events', label: 'Featured Events', icon: 'star' },
         { id: 'categories', label: 'Categories & Tags', icon: 'category' }
+      ]
+    },
+    {
+      group: 'System & Operations',
+      items: [
+        { id: 'monitoring', label: 'Monitoring & Health', icon: 'monitoring' },
+        { id: 'system-health', label: 'Legacy Health', icon: 'health_and_safety' },
+        { id: 'analytics', label: 'Analytics', icon: 'insights' },
+        { id: 'audit-logs', label: 'Audit Logs', icon: 'security' },
+        { id: 'settings', label: 'Settings', icon: 'settings' }
       ]
     }
   ];

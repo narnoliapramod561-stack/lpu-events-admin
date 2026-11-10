@@ -11,6 +11,7 @@ import { AnalyticsPanel } from './components/superadmin/AnalyticsPanel';
 import { CategoriesPanel } from './components/superadmin/CategoriesPanel';
 import { AuditLogsPanel } from './components/superadmin/AuditLogsPanel';
 import { SystemHealthPanel } from './components/superadmin/SystemHealthPanel';
+import { MonitoringPanel } from './components/superadmin/monitoring/MonitoringPanel';
 import { SettingsPanel } from './components/superadmin/SettingsPanel';
 import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselManagerPanel';
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
@@ -279,6 +280,12 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
             {visitedTabs.has('audit-logs') && (
               <div style={{ display: activeTab === 'audit-logs' ? 'block' : 'none' }}>
                 <AuditLogsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('monitoring') && (
+              <div style={{ display: activeTab === 'monitoring' ? 'block' : 'none' }}>
+                <MonitoringPanel />
               </div>
             )}
 

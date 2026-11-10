@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
+import { captureEdgeException } from "../_shared/telemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -223,6 +224,8 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const correlationId = req.headers.get("x-correlation-id") || req.headers.get("x-request-id") || `req_pub_${crypto.randomUUID()}`;
+  let authenticatedAdminId: string | undefined = undefined;
   let queueId: string | null = null;
   let revision: string | null = null;
   let supabaseAdmin: any = null;
@@ -232,6 +235,14 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      const configErr = new Error("Edge function misconfigured: missing server credentials");
+      captureEdgeException(configErr, {
+        function_name: "publish-snapshots",
+        correlation_id: correlationId,
+        operation: "publish-snapshots",
+        http_method: req.method,
+        status_code: 500,
+      });
       return new Response(
         JSON.stringify({ error: "Edge function misconfigured: missing server credentials" }),
         { status: 500, headers: corsHeaders }
@@ -266,6 +277,7 @@ serve(async (req: Request) => {
 
         if (adminUser) {
           isAuthorized = true;
+          authenticatedAdminId = adminUser.id;
         }
       }
     }
@@ -787,6 +799,16 @@ serve(async (req: Request) => {
     );
   } catch (err: any) {
     const errorMsg = `Snapshot publication failed: ${err?.message || String(err)}`;
+
+    captureEdgeException(err, {
+      function_name: "publish-snapshots",
+      correlation_id: correlationId,
+      operation: "publish-snapshots",
+      http_method: req.method,
+      status_code: 500,
+      admin_user_id: authenticatedAdminId,
+    });
+
     try {
       if (queueId && supabaseAdmin) {
         await supabaseAdmin.rpc("fail_snapshot_publication", {

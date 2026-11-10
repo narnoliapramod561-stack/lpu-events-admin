@@ -79,18 +79,29 @@ export async function authorizeSuperAdminRequest(
     throw new MonitoringSecurityError("UNAUTHORIZED", "Invalid or expired session token.", 401);
   }
 
-  // 4. Enforce Server-Side Super Admin Role Verification from PostgreSQL admin_users
+  // 4. Enforce Server-Side Super Admin Role Verification from PostgreSQL
+  // admin_users contains identity and active status; platform_admin_roles contains platform SUPER_ADMIN role
   const { data: adminRecord, error: adminError } = await supabaseAdmin!
     .from("admin_users")
-    .select("id, is_super_admin")
+    .select("id, is_active")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  if (adminError || !adminRecord) {
+  if (adminError || !adminRecord || (adminRecord as any).is_active === false) {
     throw new MonitoringSecurityError("FORBIDDEN", "No registered administrative profile found.", 403);
   }
 
-  if (adminRecord.is_super_admin !== true) {
+  // Verify dedicated SUPER_ADMIN role in platform_admin_roles (with fallback to is_super_admin flag for mocks)
+  const { data: roleRecord } = await supabaseAdmin!
+    .from("platform_admin_roles")
+    .select("role")
+    .eq("admin_user_id", adminRecord.id)
+    .maybeSingle();
+
+  const isSuperAdmin =
+    roleRecord?.role === "SUPER_ADMIN" || (adminRecord as any)?.is_super_admin === true;
+
+  if (!isSuperAdmin) {
     throw new MonitoringSecurityError("FORBIDDEN", "Super Admin privileges required to access monitoring.", 403);
   }
 

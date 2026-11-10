@@ -1837,7 +1837,18 @@ export async function executeOperation(
       if (error || !data || data.length === 0) {
         return { runbooks: CANONICAL_RUNBOOKS };
       }
-      return { runbooks: data };
+      const mappedRunbooks = data.map((rb: any) => ({
+        ...rb,
+        approval_required: rb.approval_required ?? rb.requires_approval ?? false,
+        rollback_supported: rb.rollback_supported ?? rb.supports_rollback ?? false,
+        preconditions: Array.isArray(rb.preconditions)
+          ? rb.preconditions
+          : (rb.preconditions_description ? [rb.preconditions_description] : ['Safety preconditions active']),
+        postconditions: Array.isArray(rb.postconditions)
+          ? rb.postconditions
+          : (rb.postconditions_description ? [rb.postconditions_description] : ['Post-action state verified']),
+      }));
+      return { runbooks: mappedRunbooks };
     }
 
     case 'remediation-actions':

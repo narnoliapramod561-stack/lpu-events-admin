@@ -1,0 +1,17 @@
+# LPU Events — Administrative & Organizer Console
+
+> Official administrative control portal and organizer management dashboard for LPU Events at Lovely Professional University (LPU).
+
+## Overview
+LPU Events Admin Portal (`https://admin.lpuevents.live/`) is the central operational platform for university staff, student organizations, and club organizers to manage campus event lifecycles, publish new events, monitor attendee registrations, scan entry tickets, and configure notifications.
+
+## Primary Entrypoints
+- [Admin Portal Login](https://admin.lpuevents.live/): Secure entry point for authorized university administrators and event organizers.
+- [Public Student Portal](https://lpuevents.live/): Main public directory for student event discovery and registrations.
+
+## Capabilities & Workflows
+- **Event Lifecycle Management**: Draft, approve, schedule, and publish campus workshops, hackathons, and cultural fests.
+- **Organizer Authorization**: Role-based access control (RBAC) powered by Supabase authentication and secure session management.
+- **Real-Time Analytics**: Campus attendee metrics, ticket verification, and registration tracking.
+- **Broadcast Notifications**: Automated student alerts via push notifications and live campus updates.
+

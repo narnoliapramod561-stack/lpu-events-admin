@@ -70,64 +70,87 @@ export async function fetchUptimeRobotMonitors(apiKey?: string): Promise<Normali
 
   const retrievedAt = new Date().toISOString();
 
-  return (data.monitors || []).map((m: any): NormalizedMonitorStatus => {
-    // 1. Parse custom uptime ratio safely without assuming 100%
-    let ratio30d: number | null = null;
-    if (typeof m.custom_uptime_ratios === "string" && m.custom_uptime_ratios.trim().length > 0) {
-      const parsed = parseFloat(m.custom_uptime_ratios.split("-")[0]);
-      if (!isNaN(parsed)) ratio30d = parsed;
-    }
+  return Promise.all(
+    (data.monitors || []).map(async (m: any): Promise<NormalizedMonitorStatus> => {
+      // 1. Parse custom uptime ratio safely without assuming 100%
+      let ratio30d: number | null = null;
+      if (typeof m.custom_uptime_ratios === "string" && m.custom_uptime_ratios.trim().length > 0) {
+        const parsed = parseFloat(m.custom_uptime_ratios.split("-")[0]);
+        if (!isNaN(parsed)) ratio30d = parsed;
+      }
 
-    // 2. Parse response time safely without assuming 0ms
-    let avgResponseTime: number | null = null;
-    if (m.average_response_time !== undefined && m.average_response_time !== null && m.average_response_time !== "") {
-      const parsed = parseInt(String(m.average_response_time), 10);
-      if (!isNaN(parsed) && parsed > 0) avgResponseTime = parsed;
-    }
+      // 2. Parse response time safely without assuming 0ms
+      let avgResponseTime: number | null = null;
+      if (m.average_response_time !== undefined && m.average_response_time !== null && m.average_response_time !== "") {
+        const parsed = parseInt(String(m.average_response_time), 10);
+        if (!isNaN(parsed) && parsed > 0) avgResponseTime = parsed;
+      }
 
-    // 3. Extract sample and check timestamps
-    let sampleTimeIso: string | null = null;
-    if (m.response_times?.[0]?.datetime) {
-      sampleTimeIso = new Date(m.response_times[0].datetime * 1000).toISOString();
-    }
+      // 3. Extract sample and check timestamps
+      let sampleTimeIso: string | null = null;
+      if (m.response_times?.[0]?.datetime) {
+        sampleTimeIso = new Date(m.response_times[0].datetime * 1000).toISOString();
+      }
 
-    let lastCheckIso: string | null = null;
-    const latestCheck = m.logs?.[0]?.datetime || m.response_times?.[0]?.datetime;
-    if (typeof latestCheck === "number" && latestCheck > 0) {
-      lastCheckIso = new Date(latestCheck * 1000).toISOString();
-    }
+      let lastCheckIso: string | null = null;
+      const latestCheck = m.logs?.[0]?.datetime || m.response_times?.[0]?.datetime;
+      if (typeof latestCheck === "number" && latestCheck > 0) {
+        lastCheckIso = new Date(latestCheck * 1000).toISOString();
+      }
 
-    // Normalize legacy admin hostname if returned by UptimeRobot
-    const normalizedUrl = (m.url || "").replace("admin.lpuevents.live", "www.lpueventsadmin.live");
+      // Normalize legacy admin hostname if returned by UptimeRobot
+      const normalizedUrl = (m.url || "").replace("admin.lpuevents.live", "www.lpueventsadmin.live");
 
-    // Self-healing: attempt to update UptimeRobot monitor destination if key has write permission
-    if (m.url && m.url.includes("admin.lpuevents.live") && m.id) {
-      try {
-        fetch("https://api.uptimerobot.com/v2/editMonitor", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            api_key: key,
-            format: "json",
-            id: String(m.id),
-            url: normalizedUrl,
-          }),
-        }).catch(() => {});
-      } catch {}
-    }
+      // Self-healing: attempt to update UptimeRobot monitor destination if key has write permission
+      if (m.url && m.url.includes("admin.lpuevents.live") && m.id) {
+        try {
+          fetch("https://api.uptimerobot.com/v2/editMonitor", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              api_key: key,
+              format: "json",
+              id: String(m.id),
+              url: normalizedUrl,
+            }),
+          }).catch(() => {});
+        } catch {}
+      }
 
-    return {
-      id: String(m.id),
-      name: m.friendly_name || "Monitor",
-      url: normalizedUrl,
-      status: mapUptimeRobotStatus(m.status),
-      uptimeRatio30d: ratio30d,
-      averageResponseTimeMs: avgResponseTime,
-      dataRetrievedAt: retrievedAt,
-      lastResponseTimeSampleAt: sampleTimeIso,
-      lastCheckAt: lastCheckIso,
-    };
-  });
+      let status = mapUptimeRobotStatus(m.status);
+
+      // If monitor was pointing to legacy admin domain and reported down, probe live URL directly
+      if (m.url && m.url.includes("admin.lpuevents.live") && status !== "up") {
+        try {
+          const probeStart = performance.now();
+          const probeRes = await fetch("https://www.lpueventsadmin.live/login", {
+            method: "HEAD",
+            signal: AbortSignal.timeout(3000),
+          });
+          if (probeRes.ok) {
+            status = "up";
+            if (avgResponseTime === null) {
+              avgResponseTime = Math.round(performance.now() - probeStart);
+            }
+          }
+        } catch {
+          // preserve original status if live probe also fails
+        }
+      }
+
+      return {
+        id: String(m.id),
+        name: m.friendly_name || "Monitor",
+        url: normalizedUrl,
+        status,
+        uptimeRatio30d: ratio30d,
+        averageResponseTimeMs: avgResponseTime,
+        dataRetrievedAt: retrievedAt,
+        lastResponseTimeSampleAt: sampleTimeIso,
+        lastCheckAt: lastCheckIso,
+      };
+    })
+  );
 }
 
 export async function pingUptimeRobot(apiKey?: string): Promise<ProviderConnectivityStatus> {

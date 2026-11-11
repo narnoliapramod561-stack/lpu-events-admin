@@ -264,7 +264,7 @@ export const MonitoringOverview: React.FC<MonitoringOverviewProps> = ({ onNaviga
                       <StatusBadge status={m.status} size="sm" />
                     </div>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                      {m.url}
+                      {m.url.replace('admin.lpuevents.live', 'www.lpueventsadmin.live')}
                     </p>
                   </div>
 

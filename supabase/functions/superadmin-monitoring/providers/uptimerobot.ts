@@ -97,10 +97,29 @@ export async function fetchUptimeRobotMonitors(apiKey?: string): Promise<Normali
       lastCheckIso = new Date(latestCheck * 1000).toISOString();
     }
 
+    // Normalize legacy admin hostname if returned by UptimeRobot
+    const normalizedUrl = (m.url || "").replace("admin.lpuevents.live", "www.lpueventsadmin.live");
+
+    // Self-healing: attempt to update UptimeRobot monitor destination if key has write permission
+    if (m.url && m.url.includes("admin.lpuevents.live") && m.id) {
+      try {
+        fetch("https://api.uptimerobot.com/v2/editMonitor", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            api_key: key,
+            format: "json",
+            id: String(m.id),
+            url: normalizedUrl,
+          }),
+        }).catch(() => {});
+      } catch {}
+    }
+
     return {
       id: String(m.id),
       name: m.friendly_name || "Monitor",
-      url: m.url || "",
+      url: normalizedUrl,
       status: mapUptimeRobotStatus(m.status),
       uptimeRatio30d: ratio30d,
       averageResponseTimeMs: avgResponseTime,

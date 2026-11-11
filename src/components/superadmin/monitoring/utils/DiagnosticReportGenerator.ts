@@ -53,7 +53,7 @@ export class DiagnosticReportGenerator {
       issue.app === 'student'
         ? 'student (`lpuevents.live`)'
         : issue.app === 'admin'
-        ? 'admin (`admin.lpuevents.live`)'
+        ? 'admin (`www.lpueventsadmin.live`)'
         : issue.app === 'backend'
         ? 'backend (`api.lpuevents.live` / Supabase Edge)'
         : 'multi-platform';

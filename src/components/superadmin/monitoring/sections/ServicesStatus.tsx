@@ -139,7 +139,7 @@ export const ServicesStatus: React.FC = () => {
             <span>P0 Public Endpoints (Geo-Distributed Checks)</span>
           </h3>
           <span className="text-[11px] font-mono text-zinc-400">
-            Target Hostnames: lpuevents.live & admin.lpuevents.live
+            Target Hostnames: lpuevents.live & www.lpueventsadmin.live
           </span>
         </div>
 

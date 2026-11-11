@@ -18,7 +18,7 @@ import { fetchGscOverview } from '../../../../supabase/functions/superadmin-moni
 
 test('Stage 7: Secure Super Admin Monitoring Proxy Suite', async (t) => {
   await t.test('1. should throw 401 UNAUTHORIZED when Authorization header is missing', async () => {
-    const req = new Request('https://admin.lpuevents.live/functions/v1/superadmin-monitoring', {
+    const req = new Request('https://www.lpueventsadmin.live/functions/v1/superadmin-monitoring', {
       headers: {},
     });
 
@@ -36,7 +36,7 @@ test('Stage 7: Secure Super Admin Monitoring Proxy Suite', async (t) => {
   });
 
   await t.test('2. should throw 401 UNAUTHORIZED when Bearer token is empty or malformed', async () => {
-    const req = new Request('https://admin.lpuevents.live/functions/v1/superadmin-monitoring', {
+    const req = new Request('https://www.lpueventsadmin.live/functions/v1/superadmin-monitoring', {
       headers: {
         Authorization: 'Bearer ',
       },
@@ -74,7 +74,7 @@ test('Stage 7: Secure Super Admin Monitoring Proxy Suite', async (t) => {
       }),
     };
 
-    const req = new Request('https://admin.lpuevents.live/functions/v1/superadmin-monitoring', {
+    const req = new Request('https://www.lpueventsadmin.live/functions/v1/superadmin-monitoring', {
       headers: {
         Authorization: 'Bearer valid_organizer_jwt',
       },
@@ -114,7 +114,7 @@ test('Stage 7: Secure Super Admin Monitoring Proxy Suite', async (t) => {
       }),
     };
 
-    const req = new Request('https://admin.lpuevents.live/functions/v1/superadmin-monitoring', {
+    const req = new Request('https://www.lpueventsadmin.live/functions/v1/superadmin-monitoring', {
       headers: {
         Authorization: 'Bearer valid_student_jwt',
       },
@@ -154,7 +154,7 @@ test('Stage 7: Secure Super Admin Monitoring Proxy Suite', async (t) => {
       }),
     };
 
-    const req = new Request('https://admin.lpuevents.live/functions/v1/superadmin-monitoring', {
+    const req = new Request('https://www.lpueventsadmin.live/functions/v1/superadmin-monitoring', {
       headers: {
         Authorization: 'Bearer valid_superadmin_jwt',
       },

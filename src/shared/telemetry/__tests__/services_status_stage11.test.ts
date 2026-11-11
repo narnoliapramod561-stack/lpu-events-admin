@@ -36,7 +36,7 @@ test('Stage 11: Section C Services Status & UptimeRobot Suite', async (t) => {
                 {
                   id: '102',
                   name: 'Admin Web UI',
-                  url: 'https://admin.lpuevents.live',
+                  url: 'https://www.lpueventsadmin.live',
                   status: 'up',
                   uptimeRatio30d: 99.95,
                   averageResponseTimeMs: 148,
@@ -116,14 +116,14 @@ test('Stage 11: Section C Services Status & UptimeRobot Suite', async (t) => {
   await t.test('4. Hostname standardization verification', () => {
     const targetUrls = [
       'https://lpuevents.live',
-      'https://admin.lpuevents.live',
+      'https://www.lpueventsadmin.live',
       'https://api.lpuevents.live/health',
     ];
 
     for (const url of targetUrls) {
       assert(!url.includes('localhost'));
       assert(!url.includes('127.0.0.1'));
-      assert(url.includes('lpuevents.live'));
+      assert(url.includes('lpuevents.live') || url.includes('lpueventsadmin.live'));
     }
   });
 

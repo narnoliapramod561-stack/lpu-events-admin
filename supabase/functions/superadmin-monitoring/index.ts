@@ -45,7 +45,7 @@ const ALLOWED_ORIGINS = new Set([
 
 function resolveCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
-  let allowedOrigin = "https://admin.lpuevents.live";
+  let allowedOrigin = "https://www.lpueventsadmin.live";
   if (origin) {
     if (
       ALLOWED_ORIGINS.has(origin) ||

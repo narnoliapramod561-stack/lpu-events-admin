@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase';
+import { sanitizeCsvCell } from '../../utils/security';
 import { 
   Mail, 
   Search, 
@@ -73,6 +74,21 @@ export const StudentInquiriesPanel: React.FC = () => {
     } catch {
       return { 'Content-Type': 'application/json' };
     }
+  };
+
+  const requestEdge = async (endpoint: string, init?: RequestInit): Promise<Response> => {
+    const response = await fetch(getEdgeApiUrl(endpoint), {
+      ...init,
+      headers: {
+        ...(await getAuthHeaders()),
+        ...(init?.headers || {}),
+      },
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(body || `Edge request failed (${response.status})`);
+    }
+    return response;
   };
 
   const fetchInquiries = async () => {
@@ -163,27 +179,20 @@ export const StudentInquiriesPanel: React.FC = () => {
 
     try {
       // 1. Primary: Cloudflare D1 Edge update
-      try {
-        const headers = await getAuthHeaders();
-        await fetch(getEdgeApiUrl(`/api/admin/inquiries/${item.id}`), {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ status: newStatus, resolved_at: resolvedAt })
-        });
-      } catch (edgeErr) {
-        console.warn('Edge D1 status update notice:', edgeErr);
-      }
+      await requestEdge(`/api/admin/inquiries/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus, resolved_at: resolvedAt })
+      });
 
       // 2. Secondary: Sync to Supabase row if present
-      try {
-        await supabase
-          .from('student_inquiries')
-          .update({
-            status: newStatus,
-            resolved_at: resolvedAt
-          })
-          .eq('id', item.id);
-      } catch {}
+      const { error: syncError } = await supabase
+        .from('student_inquiries')
+        .update({
+          status: newStatus,
+          resolved_at: resolvedAt
+        })
+        .eq('id', item.id);
+      if (syncError) throw syncError;
 
       const updated = inquiries.map(q => {
         if (q.id === item.id) {
@@ -207,23 +216,14 @@ export const StudentInquiriesPanel: React.FC = () => {
     if (!confirm('Are you sure you want to permanently delete this message record?')) return;
     try {
       // 1. Primary: Delete from Cloudflare D1 Edge
-      try {
-        const headers = await getAuthHeaders();
-        await fetch(getEdgeApiUrl(`/api/admin/inquiries/${id}`), {
-          method: 'DELETE',
-          headers
-        });
-      } catch (edgeErr) {
-        console.warn('Edge D1 delete notice:', edgeErr);
-      }
+      await requestEdge(`/api/admin/inquiries/${id}`, { method: 'DELETE' });
 
       // 2. Secondary: Delete from Supabase database
-      try {
-        const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_student_inquiry', { p_id: id });
-        if (rpcErr || (rpcRes && (rpcRes as any).ok === false)) {
-          await supabase.from('student_inquiries').delete().eq('id', id);
-        }
-      } catch {}
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_student_inquiry', { p_id: id });
+      if (rpcErr || (rpcRes && (rpcRes as any).ok === false)) {
+        const { error: deleteError } = await supabase.from('student_inquiries').delete().eq('id', id);
+        if (deleteError) throw deleteError;
+      }
 
       const updated = inquiries.filter(q => q.id !== id);
       setInquiries(updated);
@@ -249,31 +249,24 @@ export const StudentInquiriesPanel: React.FC = () => {
     setIsDeletingAll(true);
     try {
       // 1. Primary: Delete all from Cloudflare D1 Edge Database
-      try {
-        const headers = await getAuthHeaders();
-        await fetch(getEdgeApiUrl('/api/admin/inquiries'), {
-          method: 'DELETE',
-          headers
-        });
-      } catch (edgeErr) {
-        console.warn('Edge D1 Delete All notice:', edgeErr);
-      }
+      await requestEdge('/api/admin/inquiries', { method: 'DELETE' });
 
       // 2. Secondary: Delete all from Supabase table & legacy settings
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('delete_all_student_inquiries');
-        if (rpcError || (rpcData && (rpcData as any).ok === false)) {
-          await supabase.from('student_inquiries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-      } catch {}
+      const { data: rpcData, error: rpcError } = await supabase.rpc('delete_all_student_inquiries');
+      if (rpcError || (rpcData && (rpcData as any).ok === false)) {
+        const { error: deleteError } = await supabase
+          .from('student_inquiries')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (deleteError) throw deleteError;
+      }
 
       // 3. Clear legacy global_settings if any
-      try {
-        await supabase
-          .from('global_settings')
-          .update({ value: [] })
-          .eq('key', 'student_support_inquiries');
-      } catch {}
+      const { error: settingsError } = await supabase
+        .from('global_settings')
+        .update({ value: [] })
+        .eq('key', 'student_support_inquiries');
+      if (settingsError) throw settingsError;
 
       setInquiries([]);
       setSelectedInquiry(null);
@@ -291,24 +284,17 @@ export const StudentInquiriesPanel: React.FC = () => {
     setSavingNote(true);
     try {
       // 1. Primary: Cloudflare D1 Edge update
-      try {
-        const headers = await getAuthHeaders();
-        await fetch(getEdgeApiUrl(`/api/admin/inquiries/${selectedInquiry.id}`), {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ admin_notes: adminNoteInput })
-        });
-      } catch (edgeErr) {
-        console.warn('Edge D1 note update notice:', edgeErr);
-      }
+      await requestEdge(`/api/admin/inquiries/${selectedInquiry.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ admin_notes: adminNoteInput })
+      });
 
       // 2. Secondary: Sync to Supabase
-      try {
-        await supabase
-          .from('student_inquiries')
-          .update({ admin_notes: adminNoteInput })
-          .eq('id', selectedInquiry.id);
-      } catch {}
+      const { error: syncError } = await supabase
+        .from('student_inquiries')
+        .update({ admin_notes: adminNoteInput })
+        .eq('id', selectedInquiry.id);
+      if (syncError) throw syncError;
 
       const updated = inquiries.map(q => {
         if (q.id === selectedInquiry.id) {
@@ -351,8 +337,7 @@ export const StudentInquiriesPanel: React.FC = () => {
         adminId = au?.id;
       }
       if (!adminId) {
-        const { data: fa } = await supabase.from('admin_users').select('id').eq('is_active', true).limit(1).maybeSingle();
-        adminId = fa?.id;
+        throw new Error('Active administrative profile required to modify global settings.');
       }
 
       await supabase
@@ -432,25 +417,27 @@ export const StudentInquiriesPanel: React.FC = () => {
   const exportCSV = () => {
     const headers = ['ID', 'Date', 'Name', 'Email', 'Topic', 'Message', 'Status', 'Device_ID', 'Admin_Notes'];
     const rows = filteredInquiries.map(i => [
-      i.id,
-      new Date(i.created_at).toISOString(),
-      `"${i.name.replace(/"/g, '""')}"`,
-      `"${(i.email || '').replace(/"/g, '""')}"`,
-      `"${i.subject.replace(/"/g, '""')}"`,
-      `"${i.message.replace(/"/g, '""')}"`,
-      i.status,
-      `"${(i.device_id || '').replace(/"/g, '""')}"`,
-      `"${(i.admin_notes || '').replace(/"/g, '""')}"`
+      sanitizeCsvCell(i.id),
+      sanitizeCsvCell(new Date(i.created_at).toISOString()),
+      sanitizeCsvCell(i.name),
+      sanitizeCsvCell(i.email || ''),
+      sanitizeCsvCell(i.subject),
+      sanitizeCsvCell(i.message),
+      sanitizeCsvCell(i.status),
+      sanitizeCsvCell(i.device_id || ''),
+      sanitizeCsvCell(i.admin_notes || '')
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `lpu_message_center_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.href = url;
+    link.download = `lpu_message_center_export_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const getTopicColor = (topic: string) => {

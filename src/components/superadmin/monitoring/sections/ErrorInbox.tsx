@@ -11,14 +11,19 @@ import {
   AlertOctagon,
   ChevronRight,
   ShieldAlert,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { MonitoringApiClient } from '../utils/MonitoringApiClient.ts';
 import { StatusBadge } from '../components/StatusBadge.tsx';
 import { OccurrenceDisclaimer } from '../components/OccurrenceDisclaimer.tsx';
 import { IssueDetailDrawer } from './IssueDetailDrawer.tsx';
 import { SuppressionConfirmModal } from '../components/SuppressionConfirmModal.tsx';
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal.tsx';
 import { CopyReportButton } from '../components/CopyReportButton.tsx';
 import type { NormalizedPostHogIssue } from '../types.ts';
+
+const PAGE_SIZE = 50;
 
 interface ErrorInboxProps {
   onSearchLogs?: (correlationId: string) => void;
@@ -31,30 +36,37 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters & Pagination
   const [statusFilter, setStatusFilter] = useState<'active' | 'resolved' | 'suppressed' | 'all'>('active');
-  const [surfaceFilter, setSurfaceFilter] = useState<'all' | 'student' | 'admin' | 'backend'>('all');
+  const [surfaceFilter, setSurfaceFilter] = useState<'all' | 'student' | 'admin' | 'backend' | 'app'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkResolving, setBulkResolving] = useState<boolean>(false);
+  const [bulkDeleting, setBulkDeleting] = useState<boolean>(false);
 
   // Drawer & Modal state
   const [selectedIssue, setSelectedIssue] = useState<NormalizedPostHogIssue | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [issueToSuppress, setIssueToSuppress] = useState<NormalizedPostHogIssue | null>(null);
   const [suppressing, setSuppressing] = useState<boolean>(false);
+  const [issueToDelete, setIssueToDelete] = useState<NormalizedPostHogIssue | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
 
-  const loadIssues = useCallback(async (isRefresh: boolean = false) => {
+  const loadIssues = useCallback(async (isRefresh: boolean = false, targetPage: number = page) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
 
     try {
-      const statusParam = statusFilter === 'all' ? undefined : statusFilter;
+      const offset = (targetPage - 1) * PAGE_SIZE;
+      const statusParam = statusFilter === 'all' ? 'all' : statusFilter;
       const { issues: fetched, total } = await MonitoringApiClient.getIssues({
         status: statusParam,
-        limit: 100,
+        limit: PAGE_SIZE,
+        offset,
       });
       setIssues(fetched);
       setTotalCount(total);
@@ -65,11 +77,16 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
       setLoading(false);
       setRefreshing(false);
     }
+  }, [statusFilter, page]);
+
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
   }, [statusFilter]);
 
   useEffect(() => {
-    loadIssues(false);
-  }, [loadIssues]);
+    loadIssues(false, page);
+  }, [loadIssues, page]);
 
   const handleRowClick = (issue: NormalizedPostHogIssue) => {
     setSelectedIssue(issue);
@@ -85,6 +102,9 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
     setIssues((prev) =>
       prev.map((i) => (i.id === updated.id ? { ...i, status: updated.status } : i))
     );
+    if (statusFilter !== 'all' && updated.status !== statusFilter) {
+      setTotalCount((prev) => Math.max(0, prev - 1));
+    }
     if (selectedIssue && selectedIssue.id === updated.id) {
       setSelectedIssue(updated);
     }
@@ -97,6 +117,36 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
       handleStatusUpdated({ ...issue, status: 'resolved' });
     } catch (err: any) {
       alert(`Could not resolve issue: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleQuickReopen = async (e: React.MouseEvent, issue: NormalizedPostHogIssue) => {
+    e.stopPropagation();
+    try {
+      await MonitoringApiClient.updateIssue(issue.id, 'active');
+      handleStatusUpdated({ ...issue, status: 'active' });
+    } catch (err: any) {
+      alert(`Could not reopen issue: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleBulkResolve = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkResolving(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map((id) => MonitoringApiClient.updateIssue(id, 'resolved')));
+      setIssues((prev) =>
+        prev.map((i) => (selectedIds.has(i.id) ? { ...i, status: 'resolved' } : i))
+      );
+      if (statusFilter !== 'all') {
+        setTotalCount((prev) => Math.max(0, prev - ids.length));
+      }
+      setSelectedIds(new Set());
+    } catch (err: any) {
+      alert(`Bulk resolve error: ${err.message || 'Unknown error'}`);
+    } finally {
+      setBulkResolving(false);
     }
   };
 
@@ -118,8 +168,51 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
     }
   };
 
+  const handleRequestDelete = (issue: NormalizedPostHogIssue) => {
+    setIssueToDelete(issue);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!issueToDelete) return;
+    setDeleting(true);
+    try {
+      await MonitoringApiClient.deleteIssue(issueToDelete.id);
+      setIssues((prev) => prev.filter((i) => i.id !== issueToDelete.id));
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      if (selectedIssue && selectedIssue.id === issueToDelete.id) {
+        setIsDrawerOpen(false);
+        setSelectedIssue(null);
+      }
+      setIssueToDelete(null);
+    } catch (err: any) {
+      alert(`Could not delete issue: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} selected exceptions?`)) return;
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map((id) => MonitoringApiClient.deleteIssue(id)));
+      setIssues((prev) => prev.filter((i) => !selectedIds.has(i.id)));
+      setTotalCount((prev) => Math.max(0, prev - ids.length));
+      setSelectedIds(new Set());
+    } catch (err: any) {
+      alert(`Bulk delete error: ${err.message || 'Unknown error'}`);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Filtered issues client-side
   const filteredIssues = issues.filter((issue) => {
+    if (statusFilter !== 'all' && issue.status !== statusFilter) {
+      return false;
+    }
     if (surfaceFilter !== 'all' && issue.app !== surfaceFilter) {
       return false;
     }
@@ -152,6 +245,7 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
   };
 
   const selectedIssuesList = filteredIssues.filter((i) => selectedIds.has(i.id));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
@@ -166,17 +260,37 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
             </span>
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Grouped technical exceptions from Student, Admin, and Edge Worker runtimes.
+            Grouped technical exceptions from Student, Admin, Mobile App, and Edge Worker runtimes.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {selectedIds.size > 0 && (
-            <CopyReportButton
-              issues={selectedIssuesList}
-              variant="primary"
-              label={`Copy Selected (${selectedIds.size})`}
-            />
+            <>
+              <button
+                type="button"
+                onClick={handleBulkResolve}
+                disabled={bulkResolving}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{bulkResolving ? 'Resolving...' : `Resolve Selected (${selectedIds.size})`}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 active:scale-95 text-xs font-bold transition-all disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{bulkDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}</span>
+              </button>
+              <CopyReportButton
+                issues={selectedIssuesList}
+                variant="primary"
+                label={`Copy Selected (${selectedIds.size})`}
+              />
+            </>
           )}
 
           <CopyReportButton
@@ -186,7 +300,7 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
 
           <button
             type="button"
-            onClick={() => loadIssues(true)}
+            onClick={() => loadIssues(true, page)}
             disabled={refreshing}
             className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg bg-orange-500 hover:bg-orange-600 active:scale-95 text-white shadow-xs transition-all disabled:opacity-50"
           >
@@ -228,6 +342,7 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
               <option value="all">All Surfaces</option>
               <option value="student">Student Website</option>
               <option value="admin">Admin Portal</option>
+              <option value="app">Mobile App</option>
               <option value="backend">Backend & Edge</option>
             </select>
           </div>
@@ -330,9 +445,10 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase font-mono ${
                         issue.app === 'backend' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' :
                         issue.app === 'admin' ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400' :
+                        issue.app === 'app' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
                         'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                       }`}>
-                        {issue.app}
+                        {issue.app === 'app' ? 'mobile' : issue.app}
                       </span>
                     </td>
 
@@ -353,7 +469,10 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap text-zinc-500 dark:text-zinc-400 text-[11px]">
-                      {new Date(issue.lastSeen).toLocaleDateString()}
+                      <div>{new Date(issue.lastSeen).toLocaleDateString()}</div>
+                      <div className="text-[10px] font-mono text-zinc-400">
+                        {new Date(issue.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -372,6 +491,16 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
+                        {issue.status !== 'active' && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleQuickReopen(e, issue)}
+                            className="p-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10"
+                            title="Reopen Issue"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         {issue.status !== 'suppressed' && (
                           <button
                             type="button"
@@ -385,6 +514,17 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
                             <AlertOctagon className="w-4 h-4" />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRequestDelete(issue);
+                          }}
+                          className="p-1 rounded-md text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10"
+                          title="Delete Exception"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         <CopyReportButton issue={issue} variant="inline" label="" />
                         <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
                       </div>
@@ -396,8 +536,35 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
           </div>
         )}
 
-        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01]">
+        {/* Pagination & Disclaimers Footer */}
+        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-4">
           <OccurrenceDisclaimer variant="full" />
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3 text-xs shrink-0 font-medium">
+              <span className="text-zinc-500">
+                Page {page} of {totalPages} ({totalCount} total)
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-800 disabled:opacity-40 font-bold hover:bg-zinc-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-800 disabled:opacity-40 font-bold hover:bg-zinc-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -408,6 +575,7 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
         onClose={handleCloseDrawer}
         onStatusUpdated={handleStatusUpdated}
         onRequestSuppress={handleRequestSuppress}
+        onRequestDelete={handleRequestDelete}
         onSearchLogs={onSearchLogs}
       />
 
@@ -418,6 +586,15 @@ export const ErrorInbox: React.FC<ErrorInboxProps> = ({ onSearchLogs }) => {
         onClose={() => setIssueToSuppress(null)}
         onConfirm={handleConfirmSuppress}
         loading={suppressing}
+      />
+
+      {/* Exception Deletion Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(issueToDelete)}
+        issue={issueToDelete}
+        onClose={() => setIssueToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
       />
     </div>
   );

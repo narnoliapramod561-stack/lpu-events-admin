@@ -81,30 +81,37 @@ test('Stage 12: Section D Backend ClickHouse Logs Explorer Suite', async (t) => 
     assert(invalidDuration > MAX_WINDOW_MS);
   });
 
-  await t.test('3. ClickHouse SQL separation between function_logs (event_message) and function_edge_logs (log_attributes)', () => {
-    const buildSql = (source: string, isoStart: string, isoEnd: string, correlationId?: string) => {
-      const correlationFilter = correlationId
-        ? `AND event_message LIKE '%${correlationId}%'`
+  await t.test('3. ClickHouse SQL construction with API time range parameters', () => {
+    const buildSqlAndParams = (source: string, isoStart: string, isoEnd: string, correlationId?: string) => {
+      const safeSearch = (correlationId || '').replace(/[';\\]/g, '').slice(0, 100).trim();
+      const correlationFilter = safeSearch
+        ? `AND event_message LIKE '%${safeSearch}%'`
         : '';
 
-      if (source === 'function_logs') {
-        return `SELECT id, timestamp, event_message, source FROM logs WHERE source = 'function_logs' AND timestamp >= '${isoStart}' AND timestamp <= '${isoEnd}' ${correlationFilter} ORDER BY timestamp DESC LIMIT 100`;
-      }
-      return `SELECT id, timestamp, log_attributes, source FROM logs WHERE source = '${source}' AND timestamp >= '${isoStart}' AND timestamp <= '${isoEnd}' ORDER BY timestamp DESC LIMIT 100`;
+      const sql = `SELECT timestamp, event_message FROM logs WHERE source = '${source}' ${correlationFilter} ORDER BY timestamp DESC LIMIT 100`;
+      const params = new URLSearchParams({
+        sql,
+        iso_timestamp_start: isoStart,
+        iso_timestamp_end: isoEnd,
+      });
+
+      return { sql, params: params.toString() };
     };
 
     const tStart = '2026-11-10T09:00:00Z';
     const tEnd = '2026-11-10T10:00:00Z';
 
-    const functionLogsSql = buildSql('function_logs', tStart, tEnd, 'req_123');
-    assert(functionLogsSql.includes('event_message'));
+    const { sql: functionLogsSql, params: fParams } = buildSqlAndParams('function_logs', tStart, tEnd, 'req_123');
+    assert(functionLogsSql.includes("SELECT timestamp, event_message FROM logs"));
     assert(functionLogsSql.includes("WHERE source = 'function_logs'"));
     assert(functionLogsSql.includes("LIKE '%req_123%'"));
+    assert(fParams.includes('iso_timestamp_start=2026-11-10T09%3A00%3A00Z'));
+    assert(fParams.includes('iso_timestamp_end=2026-11-10T10%3A00%3A00Z'));
 
-    const edgeLogsSql = buildSql('function_edge_logs', tStart, tEnd);
-    assert(edgeLogsSql.includes('log_attributes'));
-    assert(!edgeLogsSql.includes('event_message'));
-    assert(edgeLogsSql.includes("WHERE source = 'function_edge_logs'"));
+    const { sql: edgeLogsSql, params: eParams } = buildSqlAndParams('edge_logs', tStart, tEnd);
+    assert(edgeLogsSql.includes("SELECT timestamp, event_message FROM logs"));
+    assert(edgeLogsSql.includes("WHERE source = 'edge_logs'"));
+    assert(eParams.includes('iso_timestamp_start=2026-11-10T09%3A00%3A00Z'));
   });
 
   await t.test('4. Structured JSON decoding of correlation ID and operations telemetry', () => {
@@ -119,6 +126,40 @@ test('Stage 12: Section D Backend ClickHouse Logs Explorer Suite', async (t) => 
     assert.equal(parsed.correlation_id, 'req_cross_nav_99');
     assert.equal(parsed.operation, 'r2_upload');
     assert.equal(parsed.statusCode, 200);
+  });
+
+  await t.test('5. Microsecond timestamp normalization prevents year overflow', () => {
+    const formatLogTimestamp = (ts: string | number): string => {
+      if (!ts) return 'Unknown';
+      let date: Date;
+      if (typeof ts === 'number') {
+        date = new Date(ts > 1e14 ? Math.round(ts / 1000) : ts);
+      } else if (/^\d{15,18}$/.test(ts)) {
+        date = new Date(Math.round(Number(ts) / 1000));
+      } else {
+        date = new Date(ts);
+      }
+      return isNaN(date.getTime()) ? String(ts) : date.toISOString();
+    };
+
+    // Microsecond integer: ~Nov 2024
+    const microsecondTs = 1731553800000000;
+    const formatted = formatLogTimestamp(microsecondTs);
+    assert(formatted.startsWith('2024-') || formatted.startsWith('2025-') || formatted.startsWith('2026-'));
+    assert(!formatted.includes('+56'));
+
+    // ISO string directly formatted
+    const isoTs = '2026-11-10T10:00:00.000Z';
+    assert.equal(formatLogTimestamp(isoTs), '2026-11-10T10:00:00.000Z');
+  });
+
+  await t.test('6. SQL search sanitizer allows whitespace and slashes while stripping SQL injection chars', () => {
+    const sanitizeSearch = (term: string) => {
+      return term.replace(/[';\\]/g, '').slice(0, 100).trim();
+    };
+
+    assert.equal(sanitizeSearch("POST /api/v1/events'; DROP TABLE logs;--"), "POST /api/v1/events DROP TABLE logs--");
+    assert.equal(sanitizeSearch("req-123_test 456"), "req-123_test 456");
   });
 });
 

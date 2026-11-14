@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
+import { sanitizeCsvCell } from '../../utils/security';
 import { 
   Calendar, 
   Building2, 
@@ -137,18 +138,18 @@ export const AnalyticsPanel: React.FC = () => {
     }
     const headers = ['Type', 'Name', 'Total Events', 'Active Events', 'Share (%)'];
     const catRows = categoryBreakdown.map(c => [
-      'Category',
-      `"${c.name.replace(/"/g, '""')}"`,
-      c.count,
-      '-',
-      `${c.percentage}%`
+      sanitizeCsvCell('Category'),
+      sanitizeCsvCell(c.name),
+      sanitizeCsvCell(c.count),
+      sanitizeCsvCell('-'),
+      sanitizeCsvCell(`${c.percentage}%`)
     ]);
     const clubRows = topClubs.map(c => [
-      'Club',
-      `"${c.name.replace(/"/g, '""')}"`,
-      c.totalEvents,
-      c.activeCount,
-      '-'
+      sanitizeCsvCell('Club'),
+      sanitizeCsvCell(c.name),
+      sanitizeCsvCell(c.totalEvents),
+      sanitizeCsvCell(c.activeCount),
+      sanitizeCsvCell('-')
     ]);
     const csvContent = [headers.join(','), ...catRows.map(r => r.join(',')), ...clubRows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

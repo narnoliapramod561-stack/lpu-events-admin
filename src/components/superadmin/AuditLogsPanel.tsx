@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
+import { sanitizeCsvCell } from '../../utils/security';
 import { 
   FileSpreadsheet, 
   Search, 
@@ -78,13 +79,13 @@ export const AuditLogsPanel: React.FC = () => {
     if (filteredLogs.length === 0) return;
     const headers = ['Timestamp', 'Actor', 'Role', 'Action', 'Target Type', 'Target ID', 'Justification'];
     const rows = filteredLogs.map((log) => [
-      `"${new Date(log.created_at).toISOString()}"`,
-      `"${log.admin_users?.email || log.admin_users?.display_name || 'System'}"`,
-      `"${log.actor_role}"`,
-      `"${log.action}"`,
-      `"${log.target_type}"`,
-      `"${log.target_id || ''}"`,
-      `"${(log.justification || log.reason || '').replace(/"/g, '""')}"`,
+      sanitizeCsvCell(new Date(log.created_at).toISOString()),
+      sanitizeCsvCell(log.admin_users?.email || log.admin_users?.display_name || 'System'),
+      sanitizeCsvCell(log.actor_role),
+      sanitizeCsvCell(log.action),
+      sanitizeCsvCell(log.target_type),
+      sanitizeCsvCell(log.target_id || ''),
+      sanitizeCsvCell(log.justification || log.reason || ''),
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

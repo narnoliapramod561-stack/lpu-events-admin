@@ -14,6 +14,7 @@ import { AdminShell } from './components/shell/AdminShell';
 import { RefreshCw, Send } from 'lucide-react';
 import { LoadingSpinner } from './components/shell/LoadingState';
 import { LpuLogo } from './components/common/LpuLogo';
+import { reportHandledError } from '@lpu-events/shared';
 
 import { SuperAdminApp } from './SuperAdminApp';
 
@@ -195,6 +196,7 @@ function UnapprovedView({ user, signOut, refreshProfile }: { user: any; signOut:
       setMyRequests(data || []);
     } catch (err: any) {
       console.error('Error fetching request status:', err);
+      reportHandledError(err, { source: 'AdminApp:fetchOrganizerRequestStatus' });
     }
   };
 
@@ -242,6 +244,7 @@ function UnapprovedView({ user, signOut, refreshProfile }: { user: any; signOut:
       await fetchOrganizerRequestStatus();
     } catch (err: any) {
       console.error(err);
+      reportHandledError(err, { source: 'AdminApp:handleCreateRequest' });
       setActionError('Failed to submit access request. You may already have an active request.');
     } finally {
       setIsSubmitting(false);

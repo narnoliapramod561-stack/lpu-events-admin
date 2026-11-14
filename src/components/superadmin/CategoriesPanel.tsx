@@ -18,8 +18,12 @@ export const CategoriesPanel: React.FC = () => {
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // Explicit notification state machine to eliminate co-existing error/success banners
+  const [notice, setNotice] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const error = notice?.type === 'error' ? notice.message : '';
+  const success = notice?.type === 'success' ? notice.message : '';
+  const setError = (msg: string) => setNotice(msg ? { type: 'error', message: msg } : null);
+  const setSuccess = (msg: string) => setNotice(msg ? { type: 'success', message: msg } : null);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showAddSubcategory, setShowAddSubcategory] = useState<string | null>(null);
   const [newCatKey, setNewCatKey] = useState('');

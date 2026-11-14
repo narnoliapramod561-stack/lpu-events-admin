@@ -13,14 +13,14 @@ function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   // Local development: allow any port on localhost, 127.0.0.1, or [::1]
   if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin)) return true;
-  // Production and staging domains for LPU Events
-  if (/^https:\/\/(.*\.)?(lpuevents\.live|lpueventsadmin\.live)$/i.test(origin)) return true;
+  // Production and staging domains for LPU Events with strict dot-boundary
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)*(lpuevents\.live|lpueventsadmin\.live)$/i.test(origin)) return true;
   return false;
 }
 
 function getCorsHeaders(req: Request): HeadersInit {
   const origin = req.headers.get("Origin") || "";
-  const allowedOrigin = isAllowedOrigin(origin) ? origin : (origin ? origin : "https://www.lpueventsadmin.live");
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : "https://www.lpueventsadmin.live";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",

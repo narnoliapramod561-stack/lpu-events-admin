@@ -135,4 +135,57 @@ test('Stage 11: Section C Services Status & UptimeRobot Suite', async (t) => {
     const isDebounced = (immediateNextClick - lastFetchedAt) < (RATE_LIMIT_COOLDOWN_SEC * 1000);
     assert.equal(isDebounced, true);
   });
+
+  await t.test('6. getMonitors passes force_refresh param when requested', async () => {
+    let capturedUrl = '';
+    const mockSupabase: any = {
+      auth: { getSession: async () => ({ data: { session: { access_token: 'test_token' } } }) },
+      functions: {
+        invoke: async (url: string) => {
+          capturedUrl = url;
+          return { data: { data: [] }, error: null };
+        },
+      },
+    };
+
+    MonitoringApiClient.setSupabaseClient(mockSupabase);
+    await MonitoringApiClient.getMonitors(true);
+    assert(capturedUrl.includes('force_refresh=true'));
+
+    await MonitoringApiClient.getMonitors(false);
+    assert(!capturedUrl.includes('force_refresh=true'));
+  });
+
+  await t.test('7. Monitor status color and label semantics', () => {
+    const formatStatus = (status: string) => {
+      let statusText = status.toUpperCase();
+      let statusColor = 'text-zinc-500';
+      if (status === 'up') {
+        statusText = 'OPERATIONAL';
+        statusColor = 'text-emerald-600';
+      } else if (status === 'seems_down') {
+        statusText = 'SEEMS DOWN';
+        statusColor = 'text-amber-600';
+      } else if (status === 'down') {
+        statusText = 'DOWN';
+        statusColor = 'text-rose-600';
+      } else if (status === 'paused') {
+        statusText = 'PAUSED';
+        statusColor = 'text-zinc-500';
+      }
+      return { statusText, statusColor };
+    };
+
+    assert.equal(formatStatus('up').statusText, 'OPERATIONAL');
+    assert.equal(formatStatus('up').statusColor, 'text-emerald-600');
+
+    assert.equal(formatStatus('paused').statusText, 'PAUSED');
+    assert.equal(formatStatus('paused').statusColor, 'text-zinc-500'); // NOT red
+
+    assert.equal(formatStatus('seems_down').statusText, 'SEEMS DOWN');
+    assert.equal(formatStatus('seems_down').statusColor, 'text-amber-600'); // Warning amber
+
+    assert.equal(formatStatus('down').statusText, 'DOWN');
+    assert.equal(formatStatus('down').statusColor, 'text-rose-600'); // Red only for true down
+  });
 });

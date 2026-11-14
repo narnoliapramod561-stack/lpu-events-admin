@@ -33,12 +33,22 @@ export const MonitoringOverview: React.FC<MonitoringOverviewProps> = ({ onNaviga
   const [error, setError] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<number>(Date.now());
   const [now, setNow] = useState<number>(Date.now());
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
 
   // Clock tick to compute relative staleness
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 10000);
     return () => clearInterval(timer);
   }, []);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (cooldownRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownRemaining]);
 
   const loadOverview = useCallback(async (isManualRefresh: boolean = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -49,6 +59,9 @@ export const MonitoringOverview: React.FC<MonitoringOverviewProps> = ({ onNaviga
       const result = await MonitoringApiClient.getOverview();
       setData(result);
       setLastFetchedAt(Date.now());
+      if (isManualRefresh) {
+        setCooldownRemaining(30); // 30s cooldown to protect provider rate limits
+      }
     } catch (err: any) {
       console.error('Failed to load monitoring overview:', err);
       setError(err?.message || 'Failed to retrieve platform monitoring overview.');
@@ -108,11 +121,17 @@ export const MonitoringOverview: React.FC<MonitoringOverviewProps> = ({ onNaviga
         <button
           type="button"
           onClick={() => loadOverview(true)}
-          disabled={refreshing}
+          disabled={refreshing || cooldownRemaining > 0}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg bg-orange-500 hover:bg-orange-600 active:scale-95 text-white shadow-xs transition-all disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+          <span>
+            {refreshing
+              ? 'Refreshing...'
+              : cooldownRemaining > 0
+                ? `Cooldown (${cooldownRemaining}s)`
+                : 'Refresh Data'}
+          </span>
         </button>
       </div>
 

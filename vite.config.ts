@@ -25,7 +25,8 @@ const ADMIN_SECURITY_HEADERS = {
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
   'X-Permitted-Cross-Domain-Policies': 'none',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com https://upload.wikimedia.org https://*.supabase.co https://api.lpuevents.live https://lpuevents.live https://images.lpuevents.live; connect-src 'self' http: ws: https://*.supabase.co wss://*.supabase.co https://api.lpuevents.live wss://api.lpuevents.live https://images.lpuevents.live https://lpuevents.live https://*.lpuevents.live wss://*.lpuevents.live https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://us-assets.i.posthog.com https://*.cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
+  'X-Robots-Tag': 'noindex, nofollow, noarchive',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com https://upload.wikimedia.org https://*.supabase.co https://api.lpuevents.live https://lpuevents.live https://images.lpuevents.live; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.lpuevents.live wss://api.lpuevents.live https://images.lpuevents.live https://lpuevents.live https://*.lpuevents.live wss://*.lpuevents.live https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://us-assets.i.posthog.com https://*.cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
 };
 
 function securityHeadersPlugin(): Plugin {
@@ -175,7 +176,7 @@ export default defineConfig({
   server: {
     port: 3001,
     strictPort: true,
-    host: true,
+    host: '127.0.0.1',
     proxy: {
       '/api': {
         target: 'https://lpuevents.live',

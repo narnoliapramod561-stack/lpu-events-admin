@@ -14,6 +14,7 @@ import {
   Clock,
   Layers,
   Terminal,
+  Trash2,
 } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge.tsx';
 import { CopyReportButton } from '../components/CopyReportButton.tsx';
@@ -26,6 +27,7 @@ interface IssueDetailDrawerProps {
   onClose: () => void;
   onStatusUpdated: (updatedIssue: NormalizedPostHogIssue) => void;
   onRequestSuppress: (issue: NormalizedPostHogIssue) => void;
+  onRequestDelete?: (issue: NormalizedPostHogIssue) => void;
   onSearchLogs?: (correlationId: string) => void;
 }
 
@@ -35,6 +37,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   onClose,
   onStatusUpdated,
   onRequestSuppress,
+  onRequestDelete,
   onSearchLogs,
 }) => {
   const [detailData, setDetailData] = useState<any | null>(null);
@@ -87,13 +90,33 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     detailData?.first_seen_correlation_id ||
     '';
 
-  const stacktrace =
+  const rawFrames =
     detailData?.properties?.$exception_list?.[0]?.stacktrace?.frames ||
-    detailData?.stack_trace ||
-    [];
+    detailData?.first_seen_event?.properties?.$exception_list?.[0]?.stacktrace?.frames ||
+    detailData?.last_seen_event?.properties?.$exception_list?.[0]?.stacktrace?.frames ||
+    detailData?.events?.[0]?.properties?.$exception_list?.[0]?.stacktrace?.frames ||
+    (Array.isArray(detailData?.stack_trace) ? detailData.stack_trace : []);
+
+  const stacktrace =
+    rawFrames && rawFrames.length > 0
+      ? rawFrames
+      : detailData?.top_in_app_frame
+      ? [
+          {
+            function: detailData.top_in_app_frame.function || 'anonymous',
+            filename: detailData.top_in_app_frame.source || detailData.top_in_app_frame.filename,
+            lineno: detailData.top_in_app_frame.line || detailData.top_in_app_frame.lineno,
+            colno: detailData.top_in_app_frame.column || detailData.top_in_app_frame.colno,
+            in_app: detailData.top_in_app_frame.in_app !== false,
+          },
+        ]
+      : [];
 
   const breadcrumbs =
     detailData?.properties?.$breadcrumbs ||
+    detailData?.first_seen_event?.properties?.$breadcrumbs ||
+    detailData?.last_seen_event?.properties?.$breadcrumbs ||
+    detailData?.events?.[0]?.properties?.$breadcrumbs ||
     detailData?.breadcrumbs ||
     [];
 
@@ -182,6 +205,18 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
             )}
 
             <CopyReportButton issue={issue} detail={detailData} variant="primary" label="Copy AI Report" />
+
+            {onRequestDelete && (
+              <button
+                type="button"
+                onClick={() => onRequestDelete(issue)}
+                disabled={actionLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-white/10 hover:border-rose-500/40 text-zinc-600 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 font-bold transition-all disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            )}
           </div>
 
           <a

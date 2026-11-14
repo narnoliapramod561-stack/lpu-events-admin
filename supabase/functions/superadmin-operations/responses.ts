@@ -23,9 +23,17 @@ const ALLOWED_ORIGINS = new Set([
 export function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.has(origin)) return true;
-  if (origin.endsWith(".lpueventsadmin.live") || origin.endsWith(".lpuevents.live")) return true;
-  if (origin.endsWith(".pages.dev") || origin.endsWith(".workers.dev")) return true;
-  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.protocol === "https:") {
+      if (host === "lpueventsadmin.live" || host === "lpuevents.live") return true;
+      if (host.endsWith(".lpueventsadmin.live") || host.endsWith(".lpuevents.live")) return true;
+    }
+    if (parsed.protocol === "http:" && (host === "localhost" || host === "127.0.0.1")) return true;
+  } catch {
+    return false;
+  }
   return false;
 }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth';
 import { supabase, lpuClient } from '../../supabase';
 import { PublishEventPayload, ContentSectionInput, uploadAndOptimizeImage, toLocalDateString, getOptimizedImage, resolveDefaultEventImage, reconcileMediaVariants } from '@lpu-events/shared';
-import { isSafeHttpUrl, normalizeRegistrationUrl } from '../../utils/security';
+import { isSafeHttpUrl, sanitizeSafeUrl } from '../../utils/security';
 import { CustomDatePicker, CustomTimePicker } from '../common/CustomDateTimePicker';
 import { AutoExpandingTextarea } from '../common/AutoExpandingTextarea';
 
@@ -810,7 +810,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
 
     const endIso = new Date(`${effectiveEndDate}T${effectiveEndTime}`).toISOString();
 
-    const normalizedUrl = normalizeRegistrationUrl(externalUrl);
+    const normalizedUrl = sanitizeSafeUrl(externalUrl);
     const isExternal = pricingType === 'PAID' || !!normalizedUrl;
     if (isExternal && externalUrl.trim() && !normalizedUrl) {
       setError('Please enter a valid registration link.');

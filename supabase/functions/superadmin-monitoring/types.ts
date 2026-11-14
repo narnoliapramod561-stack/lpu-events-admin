@@ -6,10 +6,12 @@ export type MonitoringAction =
   | 'posthog_issues'
   | 'posthog_issue_detail'
   | 'posthog_issue_update'
+  | 'posthog_issue_delete'
   | 'uptimerobot_monitors'
   | 'supabase_logs'
   | 'gsc_overview'
-  | 'provider_health';
+  | 'provider_health'
+  | 'internal_services_health';
 
 export class MonitoringSecurityError extends Error {
   code: string;
@@ -64,7 +66,7 @@ export interface NormalizedPostHogIssue {
   name: string;
   status: 'active' | 'resolved' | 'suppressed';
   severity: 'P0' | 'P1' | 'P2' | 'P3';
-  app: 'student' | 'admin' | 'backend' | 'multi';
+  app: 'student' | 'admin' | 'backend' | 'multi' | 'app';
   environment: string;
   component: string;
   occurrences: number;
@@ -108,6 +110,14 @@ export interface SupabaseLogRecord {
   metadata?: Record<string, unknown>;
 }
 
+export interface GscDimensionRow {
+  key: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
 export interface GscOverviewData {
   clicks: number;
   impressions: number;
@@ -119,4 +129,9 @@ export interface GscOverviewData {
   };
   delayNotice: string;
   deepLink: string;
+  topQueries?: GscDimensionRow[];
+  topPages?: GscDimensionRow[];
+  status?: 'connected' | 'unconfigured' | 'error';
+  errorMessage?: string;
+  propertyUrl?: string;
 }

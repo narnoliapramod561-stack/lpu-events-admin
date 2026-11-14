@@ -1,16 +1,5 @@
 # robots.txt for LPU Events Administrative Portal
-# Allow indexing of official login & landing while shielding internal endpoints
+# Strictly private administrative surface — indexing disallowed
 
 User-agent: *
-Allow: /$
-Allow: /login
-Allow: /llms.txt
-Disallow: /superadmin/
-Disallow: /events/
-Disallow: /organizers/
-Disallow: /analytics/
-Disallow: /notifications/
-Disallow: /settings/
-Disallow: /api/
-
-Sitemap: https://admin.lpuevents.live/sitemap.xml
+Disallow: /

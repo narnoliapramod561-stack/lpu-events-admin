@@ -5,6 +5,19 @@ import React, { useState } from 'react';
 import { Copy, Check, ChevronRight, ChevronDown, Terminal, Clock } from 'lucide-react';
 import type { SupabaseLogRecord } from '../types.ts';
 
+function formatLogTimestamp(ts: string | number): string {
+  if (!ts) return 'Unknown';
+  let date: Date;
+  if (typeof ts === 'number') {
+    date = new Date(ts > 1e14 ? Math.round(ts / 1000) : ts);
+  } else if (/^\d{15,18}$/.test(ts)) {
+    date = new Date(Math.round(Number(ts) / 1000));
+  } else {
+    date = new Date(ts);
+  }
+  return isNaN(date.getTime()) ? String(ts) : date.toLocaleTimeString();
+}
+
 interface LogViewerTableProps {
   logs: SupabaseLogRecord[];
   highlightQuery?: string;
@@ -101,7 +114,7 @@ export const LogViewerTable: React.FC<LogViewerTableProps> = ({
 
                   <span className="flex items-center gap-1 text-zinc-500 shrink-0">
                     <Clock className="w-3 h-3" />
-                    <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span>{formatLogTimestamp(log.timestamp)}</span>
                   </span>
 
                   <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold border uppercase ${sourceColor}`}>

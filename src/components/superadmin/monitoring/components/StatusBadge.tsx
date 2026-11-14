@@ -47,7 +47,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   } else if (norm === 'DEGRADED' || norm === 'SEEMS_DOWN') {
     colorClasses = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25';
     dotColor = 'bg-amber-500';
-  } else if (norm === 'OUTAGE' || norm === 'DOWN' || norm === 'DISCONNECTED') {
+  } else if (norm === 'OUTAGE' || norm === 'DOWN' || norm === 'DISCONNECTED' || norm === 'OFFLINE') {
     colorClasses = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25';
     dotColor = 'bg-rose-500';
   } else if (norm === 'STALE' || norm === 'UNKNOWN' || norm === 'PAUSED' || norm === 'UNAVAILABLE') {

@@ -8,7 +8,7 @@ import { scrubSensitiveData } from './scrub.ts';
 
 let posthogClient: typeof posthogType | null = null;
 let isInitialized = false;
-let activeApp: AppIdentifier = 'admin';
+let activeApp: AppIdentifier = 'student';
 let configuredRelease: string = '1.0.0';
 let configuredGitCommit: string = 'unknown';
 
@@ -226,7 +226,7 @@ export function evaluateExceptionRateLimit(
 export function _resetPostHogForTesting(): void {
   isInitialized = false;
   posthogClient = null;
-  activeApp = 'admin';
+  activeApp = 'student';
   configuredRelease = '1.0.0';
   configuredGitCommit = 'unknown';
   earlyBuffer.length = 0;
@@ -449,4 +449,15 @@ export function trackAdminAction(
 
 export function isPostHogReady(): boolean {
   return isInitialized && posthogClient !== null;
+}
+
+/**
+ * Safely captures a caught or handled application exception.
+ * Preserves error details, context, and execution metadata without crashing.
+ */
+export function reportHandledError(error: unknown, context: Record<string, any> = {}): void {
+  captureOrBufferException(error, {
+    ...context,
+    handled: true,
+  });
 }

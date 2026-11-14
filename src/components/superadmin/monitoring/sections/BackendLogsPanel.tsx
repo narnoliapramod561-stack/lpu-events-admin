@@ -28,9 +28,12 @@ type LogSourceOption =
 export const BackendLogsPanel: React.FC<BackendLogsPanelProps> = ({
   initialCorrelationId = '',
 }) => {
-  const [source, setSource] = useState<LogSourceOption>('function_logs');
+  const [source, setSource] = useState<LogSourceOption>(
+    initialCorrelationId ? 'function_logs' : 'edge_logs'
+  );
   const [windowHours, setWindowHours] = useState<number>(1);
   const [filterText, setFilterText] = useState<string>(initialCorrelationId);
+  const [debouncedFilterText, setDebouncedFilterText] = useState<string>(initialCorrelationId);
   const [limit, setLimit] = useState<number>(100);
   const [showSql, setShowSql] = useState<boolean>(false);
 
@@ -39,11 +42,20 @@ export const BackendLogsPanel: React.FC<BackendLogsPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [queryDurationMs, setQueryDurationMs] = useState<number | null>(null);
 
+  // Debounce search input to avoid query flood on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilterText(filterText);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [filterText]);
+
   // Automatically sync if initialCorrelationId changes from drawer cross-navigation
   useEffect(() => {
     if (initialCorrelationId) {
       setSource('function_logs');
       setFilterText(initialCorrelationId);
+      setDebouncedFilterText(initialCorrelationId);
     }
   }, [initialCorrelationId]);
 
@@ -60,34 +72,28 @@ export const BackendLogsPanel: React.FC<BackendLogsPanelProps> = ({
 
   const generatePreviewSql = useCallback((): string => {
     const { isoStart, isoEnd } = constructQueryDates();
-    const correlationFilter = filterText.trim()
-      ? `AND event_message LIKE '%${filterText.trim().replace(/'/g, '')}%'`
+    const safeSearch = filterText.replace(/[';\\]/g, '').slice(0, 100).trim();
+    const correlationFilter = safeSearch
+      ? `AND event_message LIKE '%${safeSearch}%'`
       : '';
 
-    if (source === 'function_logs') {
-      return `SELECT id, timestamp, event_message, source\nFROM logs\nWHERE source = 'function_logs'\n  AND timestamp >= '${isoStart}'\n  AND timestamp <= '${isoEnd}'\n  ${correlationFilter}\nORDER BY timestamp DESC\nLIMIT ${limit}`;
-    }
-
-    if (source === 'function_edge_logs') {
-      return `SELECT id, timestamp, log_attributes, source\nFROM logs\nWHERE source = 'function_edge_logs'\n  AND timestamp >= '${isoStart}'\n  AND timestamp <= '${isoEnd}'\nORDER BY timestamp DESC\nLIMIT ${limit}`;
-    }
-
-    return `SELECT id, timestamp, log_attributes, source\nFROM logs\nWHERE source = '${source}'\n  AND timestamp >= '${isoStart}'\n  AND timestamp <= '${isoEnd}'\nORDER BY timestamp DESC\nLIMIT ${limit}`;
+    return `SELECT timestamp, event_message\nFROM logs\nWHERE source = '${source}'\n  ${correlationFilter}\nORDER BY timestamp DESC\nLIMIT ${limit}\n\n-- ClickHouse Time Range Parameters (passed via API):\n-- iso_timestamp_start: ${isoStart}\n-- iso_timestamp_end:   ${isoEnd}`;
   }, [constructQueryDates, filterText, source, limit]);
 
-  const executeQuery = useCallback(async () => {
+  const executeQuery = useCallback(async (overrideFilter?: string) => {
     setLoading(true);
     setError(null);
     const startTimer = performance.now();
 
     const { isoStart, isoEnd } = constructQueryDates();
+    const activeFilter = overrideFilter !== undefined ? overrideFilter : debouncedFilterText;
 
     try {
       const records = await MonitoringApiClient.queryLogs({
         source,
         iso_timestamp_start: isoStart,
         iso_timestamp_end: isoEnd,
-        correlation_id: filterText.trim() || undefined,
+        correlation_id: activeFilter.trim() || undefined,
         limit,
       });
 
@@ -99,9 +105,9 @@ export const BackendLogsPanel: React.FC<BackendLogsPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [source, constructQueryDates, filterText, limit]);
+  }, [source, constructQueryDates, debouncedFilterText, limit]);
 
-  // Execute query on mount or when initial correlation ID arrives
+  // Execute query on mount or when debounced filter, source, or limit changes
   useEffect(() => {
     executeQuery();
   }, [executeQuery]);
@@ -122,7 +128,7 @@ export const BackendLogsPanel: React.FC<BackendLogsPanelProps> = ({
 
         <button
           type="button"
-          onClick={executeQuery}
+          onClick={() => executeQuery(filterText)}
           disabled={loading}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs transition-all disabled:opacity-50"
         >

@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { captureSafeException } from '@lpu-events/shared';
+import { captureOrBufferException } from '@lpu-events/shared';
 
 interface Props {
   children: ReactNode;
@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[AdminShell:ErrorBoundary] Render error caught:', error, errorInfo);
-    captureSafeException(error, {
+    captureOrBufferException(error, {
       componentStack: errorInfo.componentStack,
       surface: 'admin-web-react-shell'
     });

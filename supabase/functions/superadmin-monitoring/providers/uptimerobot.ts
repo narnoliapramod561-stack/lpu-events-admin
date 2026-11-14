@@ -9,6 +9,15 @@ declare const Deno: {
   };
 } | undefined;
 
+let monitorsCache: {
+  data: NormalizedMonitorStatus[];
+  timestamp: number;
+} | null = null;
+
+let inFlightFetch: Promise<NormalizedMonitorStatus[]> | null = null;
+
+const CACHE_TTL_MS = 30 * 1000; // 30s in-memory cache to safeguard 10 req/min limit
+
 function getApiKey(providedKey?: string): string {
   if (providedKey) return providedKey;
   if (typeof Deno !== "undefined") {
@@ -32,125 +41,122 @@ function mapUptimeRobotStatus(status: number): NormalizedMonitorStatus["status"]
   }
 }
 
-export async function fetchUptimeRobotMonitors(apiKey?: string): Promise<NormalizedMonitorStatus[]> {
+export function _clearMonitorsCacheForTesting() {
+  monitorsCache = null;
+  inFlightFetch = null;
+}
+
+export async function fetchUptimeRobotMonitors(
+  apiKey?: string,
+  forceRefresh: boolean = false
+): Promise<NormalizedMonitorStatus[]> {
   const key = getApiKey(apiKey);
   if (!key) {
     throw new Error("UPTIMEROBOT_API_KEY is not configured.");
   }
 
-  const response = await fetch("https://api.uptimerobot.com/v2/getMonitors", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Cache-Control": "no-cache",
-    },
-    body: new URLSearchParams({
-      api_key: key,
-      format: "json",
-      custom_uptime_ratios: "30",
-      response_times: "1",
-      response_times_average: "30",
-      logs: "1",
-    }),
-    signal: AbortSignal.timeout(5000), // 5s timeout
-  });
-
-  if (response.status === 429) {
-    throw new Error("UptimeRobot API rate limit reached (10 req/min on Free plan).");
+  const now = Date.now();
+  if (!forceRefresh && monitorsCache && now - monitorsCache.timestamp < CACHE_TTL_MS) {
+    return monitorsCache.data;
   }
 
-  if (!response.ok) {
-    throw new Error(`UptimeRobot HTTP error: ${response.status} ${response.statusText}`);
+  if (inFlightFetch) {
+    return inFlightFetch;
   }
 
-  const data = await response.json();
-  if (data.stat !== "ok") {
-    throw new Error(`UptimeRobot error: ${data.error?.message || "Unknown error"}`);
-  }
+  inFlightFetch = (async () => {
+    try {
+      const response = await fetch("https://api.uptimerobot.com/v2/getMonitors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cache-Control": "no-cache",
+        },
+        body: new URLSearchParams({
+          api_key: key,
+          format: "json",
+          custom_uptime_ratios: "30",
+          response_times: "1",
+          response_times_average: "30",
+          logs: "1",
+        }),
+        signal: AbortSignal.timeout(5000), // 5s timeout
+      });
 
-  const retrievedAt = new Date().toISOString();
-
-  return Promise.all(
-    (data.monitors || []).map(async (m: any): Promise<NormalizedMonitorStatus> => {
-      // 1. Parse custom uptime ratio safely without assuming 100%
-      let ratio30d: number | null = null;
-      if (typeof m.custom_uptime_ratios === "string" && m.custom_uptime_ratios.trim().length > 0) {
-        const parsed = parseFloat(m.custom_uptime_ratios.split("-")[0]);
-        if (!isNaN(parsed)) ratio30d = parsed;
+      if (response.status === 429) {
+        throw new Error("UptimeRobot API rate limit reached (10 req/min on Free plan).");
       }
 
-      // 2. Parse response time safely without assuming 0ms
-      let avgResponseTime: number | null = null;
-      if (m.average_response_time !== undefined && m.average_response_time !== null && m.average_response_time !== "") {
-        const parsed = parseInt(String(m.average_response_time), 10);
-        if (!isNaN(parsed) && parsed > 0) avgResponseTime = parsed;
+      if (!response.ok) {
+        throw new Error(`UptimeRobot HTTP error: ${response.status} ${response.statusText}`);
       }
 
-      // 3. Extract sample and check timestamps
-      let sampleTimeIso: string | null = null;
-      if (m.response_times?.[0]?.datetime) {
-        sampleTimeIso = new Date(m.response_times[0].datetime * 1000).toISOString();
+      const data = await response.json();
+      if (data.stat !== "ok") {
+        throw new Error(`UptimeRobot error: ${data.error?.message || "Unknown error"}`);
       }
 
-      let lastCheckIso: string | null = null;
-      const latestCheck = m.logs?.[0]?.datetime || m.response_times?.[0]?.datetime;
-      if (typeof latestCheck === "number" && latestCheck > 0) {
-        lastCheckIso = new Date(latestCheck * 1000).toISOString();
-      }
+      const retrievedAt = new Date().toISOString();
 
-      // Normalize legacy admin hostname if returned by UptimeRobot
-      const normalizedUrl = (m.url || "").replace("admin.lpuevents.live", "www.lpueventsadmin.live");
+      // Filter out legacy decommissioned monitors (e.g. onrender.com)
+      const relevantMonitors = (data.monitors || []).filter((m: any) => {
+        const url = m.url || "";
+        return !url.includes("onrender.com");
+      });
 
-      // Self-healing: attempt to update UptimeRobot monitor destination if key has write permission
-      if (m.url && m.url.includes("admin.lpuevents.live") && m.id) {
-        try {
-          fetch("https://api.uptimerobot.com/v2/editMonitor", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              api_key: key,
-              format: "json",
-              id: String(m.id),
-              url: normalizedUrl,
-            }),
-          }).catch(() => {});
-        } catch {}
-      }
-
-      let status = mapUptimeRobotStatus(m.status);
-
-      // If monitor was pointing to legacy admin domain and reported down, probe live URL directly
-      if (m.url && m.url.includes("admin.lpuevents.live") && status !== "up") {
-        try {
-          const probeStart = performance.now();
-          const probeRes = await fetch("https://www.lpueventsadmin.live/login", {
-            method: "HEAD",
-            signal: AbortSignal.timeout(3000),
-          });
-          if (probeRes.ok) {
-            status = "up";
-            if (avgResponseTime === null) {
-              avgResponseTime = Math.round(performance.now() - probeStart);
-            }
-          }
-        } catch {
-          // preserve original status if live probe also fails
+      const parsedMonitors: NormalizedMonitorStatus[] = relevantMonitors.map((m: any): NormalizedMonitorStatus => {
+        // 1. Parse custom uptime ratio safely without assuming 100%
+        // UptimeRobot v2 returns custom_uptime_ratio (singular); tests/fallbacks check custom_uptime_ratios
+        let ratio30d: number | null = null;
+        const rawRatio = m.custom_uptime_ratio ?? m.custom_uptime_ratios;
+        if (typeof rawRatio === "string" && rawRatio.trim().length > 0) {
+          const parsed = parseFloat(rawRatio.split("-")[0]);
+          if (!isNaN(parsed)) ratio30d = parsed;
         }
-      }
 
-      return {
-        id: String(m.id),
-        name: m.friendly_name || "Monitor",
-        url: normalizedUrl,
-        status,
-        uptimeRatio30d: ratio30d,
-        averageResponseTimeMs: avgResponseTime,
-        dataRetrievedAt: retrievedAt,
-        lastResponseTimeSampleAt: sampleTimeIso,
-        lastCheckAt: lastCheckIso,
-      };
-    })
-  );
+        // 2. Parse response time safely without assuming 0ms
+        let avgResponseTime: number | null = null;
+        if (m.average_response_time !== undefined && m.average_response_time !== null && m.average_response_time !== "") {
+          const parsed = parseInt(String(m.average_response_time), 10);
+          if (!isNaN(parsed) && parsed > 0) avgResponseTime = parsed;
+        }
+
+        // 3. Extract sample and check timestamps
+        let sampleTimeIso: string | null = null;
+        if (m.response_times?.[0]?.datetime) {
+          sampleTimeIso = new Date(m.response_times[0].datetime * 1000).toISOString();
+        }
+
+        let lastCheckIso: string | null = null;
+        const latestCheck = m.logs?.[0]?.datetime || m.response_times?.[0]?.datetime;
+        if (typeof latestCheck === "number" && latestCheck > 0) {
+          lastCheckIso = new Date(latestCheck * 1000).toISOString();
+        }
+
+        const normalizedUrl = (m.url || "").replace("admin.lpuevents.live", "www.lpueventsadmin.live");
+        const status = mapUptimeRobotStatus(m.status);
+
+        return {
+          id: String(m.id),
+          name: m.friendly_name || "Monitor",
+          url: normalizedUrl,
+          status,
+          uptimeRatio30d: ratio30d,
+          averageResponseTimeMs: avgResponseTime,
+          dataRetrievedAt: retrievedAt,
+          lastResponseTimeSampleAt: sampleTimeIso,
+          lastCheckAt: lastCheckIso,
+        };
+      });
+
+      monitorsCache = { data: parsedMonitors, timestamp: Date.now() };
+      return parsedMonitors;
+    } finally {
+      inFlightFetch = null;
+    }
+  })();
+
+  return inFlightFetch;
 }
 
 export async function pingUptimeRobot(apiKey?: string): Promise<ProviderConnectivityStatus> {
@@ -161,7 +167,7 @@ export async function pingUptimeRobot(apiKey?: string): Promise<ProviderConnecti
     if (!key) {
       return { connected: false, error: "UPTIMEROBOT_API_KEY not configured", checkedAt };
     }
-    const monitors = await fetchUptimeRobotMonitors(key);
+    await fetchUptimeRobotMonitors(key);
     const latencyMs = Math.round(performance.now() - start);
     return { connected: true, latencyMs, checkedAt };
   } catch (err: any) {

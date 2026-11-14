@@ -20,6 +20,40 @@ const RATE_LIMIT_COOLDOWN_SEC = 60; // 60s cooldown to respect UptimeRobot Free 
 
 export const ServicesStatus: React.FC = () => {
   const [monitors, setMonitors] = useState<NormalizedMonitorStatus[]>([]);
+  const [internalServices, setInternalServices] = useState<
+    Array<{ name: string; target: string; role: string; status: string; latency_ms?: number | null }>
+  >([
+    {
+      name: 'health',
+      target: '/functions/v1/health',
+      role: 'System Health & Availability Probe',
+      status: 'CHECKING',
+    },
+    {
+      name: 'superadmin-monitoring',
+      target: '/functions/v1/superadmin-monitoring',
+      role: 'Secure Monitoring Proxy Gateway',
+      status: 'CHECKING',
+    },
+    {
+      name: 'superadmin-operations',
+      target: '/functions/v1/superadmin-operations',
+      role: 'Operations Control Plane & 27 ops_* tables',
+      status: 'CHECKING',
+    },
+    {
+      name: 'r2-upload',
+      target: '/functions/v1/r2-upload',
+      role: 'Cloudflare R2 authenticated poster uploads',
+      status: 'CHECKING',
+    },
+    {
+      name: 'publish-snapshots',
+      target: '/functions/v1/publish-snapshots',
+      role: 'Pre-rendered R2 JSON event publisher',
+      status: 'CHECKING',
+    },
+  ]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,15 +75,34 @@ export const ServicesStatus: React.FC = () => {
     setError(null);
 
     try {
-      const data = await MonitoringApiClient.getMonitors();
-      setMonitors(data);
+      const [monitorData, liveInternalServices] = await Promise.allSettled([
+        MonitoringApiClient.getMonitors(isRefresh),
+        MonitoringApiClient.getInternalServices(),
+      ]);
+
+      if (monitorData.status === 'fulfilled') {
+        setMonitors(monitorData.value);
+      } else {
+        console.error('Failed to load UptimeRobot monitors:', monitorData.reason);
+        setError('Failed to retrieve monitor status from UptimeRobot.');
+      }
+
+      if (liveInternalServices.status === 'fulfilled' && Array.isArray(liveInternalServices.value)) {
+        setInternalServices(liveInternalServices.value);
+      } else if (liveInternalServices.status === 'rejected') {
+        console.warn('Could not probe internal edge functions:', liveInternalServices.reason);
+        setInternalServices((prev) =>
+          prev.map((svc) => ({ ...svc, status: 'UNKNOWN', latency_ms: null }))
+        );
+      }
+
       setLastFetchedAt(Date.now());
       if (isRefresh) {
         setCooldownRemaining(RATE_LIMIT_COOLDOWN_SEC);
       }
     } catch (err: any) {
-      console.error('Failed to load UptimeRobot monitors:', err);
-      setError(err?.message || 'Failed to retrieve monitor status from UptimeRobot.');
+      console.error('Failed to load monitors:', err);
+      setError(err?.message || 'Failed to retrieve monitor status.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -59,33 +112,6 @@ export const ServicesStatus: React.FC = () => {
   useEffect(() => {
     loadMonitors(false);
   }, [loadMonitors]);
-
-  const internalServices = [
-    {
-      name: 'superadmin-monitoring',
-      target: '/functions/v1/superadmin-monitoring',
-      role: 'Secure Monitoring Proxy Gateway',
-      status: 'OPERATIONAL',
-    },
-    {
-      name: 'superadmin-operations',
-      target: '/functions/v1/superadmin-operations',
-      role: 'Operations Control Plane & 27 ops_* tables',
-      status: 'OPERATIONAL',
-    },
-    {
-      name: 'r2-upload',
-      target: '/functions/v1/r2-upload',
-      role: 'Cloudflare R2 authenticated poster uploads',
-      status: 'OPERATIONAL',
-    },
-    {
-      name: 'publish-snapshots',
-      target: '/functions/v1/publish-snapshots',
-      role: 'Pre-rendered R2 JSON event publisher',
-      status: 'OPERATIONAL',
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -117,8 +143,8 @@ export const ServicesStatus: React.FC = () => {
             {refreshing
               ? 'Probing...'
               : cooldownRemaining > 0
-              ? `Cooldown (${cooldownRemaining}s)`
-              : 'Probe Check'}
+                ? `Cooldown (${cooldownRemaining}s)`
+                : 'Probe Check'}
           </span>
         </button>
       </div>
@@ -139,7 +165,7 @@ export const ServicesStatus: React.FC = () => {
             <span>P0 Public Endpoints (Geo-Distributed Checks)</span>
           </h3>
           <span className="text-[11px] font-mono text-zinc-400">
-            Target Hostnames: lpuevents.live & www.lpueventsadmin.live
+            Target Endpoints: Public Web & Edge Function Health Probes
           </span>
         </div>
 
@@ -158,7 +184,22 @@ export const ServicesStatus: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {monitors.map((m) => {
               const displayUrl = m.url.replace('admin.lpuevents.live', 'www.lpueventsadmin.live');
-              const isUp = m.status === 'up';
+              let statusText = m.status.toUpperCase();
+              let statusColor = 'text-zinc-500 dark:text-zinc-400';
+              if (m.status === 'up') {
+                statusText = 'OPERATIONAL';
+                statusColor = 'text-emerald-600 dark:text-emerald-400';
+              } else if (m.status === 'seems_down') {
+                statusText = 'SEEMS DOWN';
+                statusColor = 'text-amber-600 dark:text-amber-400';
+              } else if (m.status === 'down') {
+                statusText = 'DOWN';
+                statusColor = 'text-rose-600 dark:text-rose-400';
+              } else if (m.status === 'paused') {
+                statusText = 'PAUSED';
+                statusColor = 'text-zinc-500 dark:text-zinc-400';
+              }
+
               return (
                 <div
                   key={m.id}
@@ -188,14 +229,8 @@ export const ServicesStatus: React.FC = () => {
                       <span className="text-[10px] font-bold uppercase text-zinc-400">
                         Status
                       </span>
-                      <p
-                        className={`text-xs font-mono font-bold mt-0.5 ${
-                          isUp
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-600 dark:text-rose-400'
-                        }`}
-                      >
-                        {isUp ? '200 OK' : m.status.toUpperCase()}
+                      <p className={`text-xs font-mono font-bold mt-0.5 ${statusColor}`}>
+                        {statusText}
                       </p>
                     </div>
                   </div>
@@ -275,6 +310,11 @@ export const ServicesStatus: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
+                {typeof svc.latency_ms === 'number' && (
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    {svc.latency_ms}ms
+                  </span>
+                )}
                 <StatusBadge status={svc.status} size="sm" />
               </div>
             </div>

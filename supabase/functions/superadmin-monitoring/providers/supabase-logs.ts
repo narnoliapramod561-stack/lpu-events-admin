@@ -63,22 +63,33 @@ export async function querySupabaseLogs(options: SupabaseLogsQueryOptions): Prom
     throw new Error("Supabase Free Tier log queries are restricted to a maximum window of 24 hours.");
   }
 
-  let finalSql = options.sql;
-  if (!finalSql) {
-    const source = options.source || "function_logs";
-    const limit = options.limit || 100;
-    const correlationFilter = options.correlationId
-      ? `AND event_message LIKE '%${options.correlationId.replace(/'/g, "")}%'`
-      : "";
+  const ALLOWED_SOURCES = new Set([
+    "function_logs",
+    "function_edge_logs",
+    "edge_logs",
+    "postgres_logs",
+    "auth_logs",
+  ]);
 
-    if (source === "function_logs") {
-      finalSql = `SELECT id, timestamp, event_message, source FROM logs WHERE source = 'function_logs' AND timestamp >= '${startTime.toISOString()}' AND timestamp <= '${endTime.toISOString()}' ${correlationFilter} ORDER BY timestamp DESC LIMIT ${limit}`;
-    } else {
-      finalSql = `SELECT id, timestamp, log_attributes, source FROM logs WHERE source = '${source}' AND timestamp >= '${startTime.toISOString()}' AND timestamp <= '${endTime.toISOString()}' ORDER BY timestamp DESC LIMIT ${limit}`;
-    }
-  }
+  const rawSource = options.source || "function_logs";
+  const source = ALLOWED_SOURCES.has(rawSource) ? rawSource : "function_logs";
+  const limit = Math.min(Math.max(Number(options.limit) || 100, 1), 500);
 
-  const endpoint = `https://api.supabase.com/v1/projects/${ref}/analytics/endpoints/logs?sql=${encodeURIComponent(finalSql)}`;
+  // Safely sanitize search query against SQL injection while preserving words, slashes, hyphens
+  const safeSearch = (options.correlationId || "").replace(/[';\\]/g, "").slice(0, 100).trim();
+  const correlationFilter = safeSearch
+    ? `AND event_message LIKE '%${safeSearch}%'`
+    : "";
+
+  const finalSql = `SELECT timestamp, event_message FROM logs WHERE source = '${source}' ${correlationFilter} ORDER BY timestamp DESC LIMIT ${limit}`;
+
+  const queryParams = new URLSearchParams({
+    sql: finalSql,
+    iso_timestamp_start: startTime.toISOString(),
+    iso_timestamp_end: endTime.toISOString(),
+  });
+
+  const endpoint = `https://api.supabase.com/v1/projects/${ref}/analytics/endpoints/logs?${queryParams.toString()}`;
 
   const res = await fetch(endpoint, {
     method: "GET",
@@ -90,20 +101,67 @@ export async function querySupabaseLogs(options: SupabaseLogsQueryOptions): Prom
   });
 
   if (!res.ok) {
-    throw new Error(`Supabase Management Logs API error: ${res.status} ${res.statusText}`);
+    const errorBody = await res.text().catch(() => "");
+    throw new Error(`Supabase Management Logs API error: ${res.status} ${res.statusText} ${errorBody}`.trim());
   }
 
   const data = await res.json();
+
+  if (data.error) {
+    const errMsg = typeof data.error === "string" ? data.error : JSON.stringify(data.error);
+    throw new Error(`ClickHouse logs query failed: ${errMsg}`);
+  }
+
   const rawRows: any[] = data.result || data.data || (Array.isArray(data) ? data : []);
 
-  return rawRows.map((r: any): SupabaseLogRecord => ({
-    id: String(r.id || crypto.randomUUID()),
-    timestamp: r.timestamp || new Date().toISOString(),
-    event_message: r.event_message,
-    source: r.source || options.source || "function_logs",
-    log_attributes: r.log_attributes,
-    metadata: r.metadata,
-  }));
+  return rawRows.map((r: any): SupabaseLogRecord => {
+    let normalizedTs = r.timestamp;
+    if (typeof r.timestamp === "number" && r.timestamp > 1e14) {
+      normalizedTs = new Date(Math.round(r.timestamp / 1000)).toISOString();
+    } else if (typeof r.timestamp === "string" && /^\d{15,18}$/.test(r.timestamp)) {
+      normalizedTs = new Date(Math.round(Number(r.timestamp) / 1000)).toISOString();
+    } else if (typeof r.timestamp === "number") {
+      normalizedTs = new Date(r.timestamp).toISOString();
+    } else if (!r.timestamp) {
+      normalizedTs = new Date().toISOString();
+    }
+
+    // Attempt to decode structured JSON from event_message if present
+    let parsedMeta: Record<string, unknown> = {};
+    if (typeof r.event_message === "string" && r.event_message.trim().startsWith("{")) {
+      try {
+        parsedMeta = JSON.parse(r.event_message);
+      } catch {
+        parsedMeta = {};
+      }
+    }
+
+    const logAttrs = typeof r.log_attributes === "object" && r.log_attributes ? r.log_attributes : parsedMeta;
+    const meta = typeof r.metadata === "object" && r.metadata ? r.metadata : parsedMeta;
+
+    const statusCode =
+      typeof r.status_code === "number"
+        ? r.status_code
+        : typeof logAttrs?.status_code === "number"
+        ? logAttrs.status_code
+        : typeof logAttrs?.statusCode === "number"
+        ? logAttrs.statusCode
+        : typeof meta?.[0]?.response?.[0]?.status_code === "number"
+        ? meta[0].response[0].status_code
+        : typeof meta?.status_code === "number"
+        ? meta.status_code
+        : undefined;
+
+    return {
+      id: String(r.id || r.uuid || crypto.randomUUID()),
+      timestamp: String(normalizedTs),
+      event_message: r.event_message,
+      source: r.source || options.source || "function_logs",
+      status_code: statusCode,
+      log_attributes: logAttrs,
+      metadata: meta,
+    };
+  });
 }
 
 export async function pingSupabaseLogs(options?: {

@@ -57,3 +57,17 @@ export function sanitizeSafeUrl(url: string | null | undefined): string | null {
     return null;
   }
 }
+
+/**
+ * Sanitizes text content against CSV / Spreadsheet Formula Injection (CWE-1236).
+ * Prepends a single quote if the field starts with =, +, -, @, tab, or CR.
+ */
+export function sanitizeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) return '""';
+  let str = String(value);
+  // Neutralize formula triggers
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}

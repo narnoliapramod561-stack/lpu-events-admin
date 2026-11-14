@@ -103,8 +103,22 @@ export class MonitoringApiClient {
     );
 
     if (error) {
+      let message = error.message || 'Failed to communicate with monitoring service';
       const status = (error as any).status || 500;
-      const message = error.message || 'Failed to communicate with monitoring service';
+      if ((error as any).context && typeof (error as any).context.json === 'function') {
+        try {
+          const body = await (error as any).context.json();
+          if (body?.error?.message) {
+            message = body.error.message;
+          } else if (typeof body?.error === 'string') {
+            message = body.error;
+          } else if (body?.message) {
+            message = body.message;
+          }
+        } catch {
+          // ignore stream parse errors
+        }
+      }
       throw new MonitoringApiError(message, 'INVOKE_FAILED', status);
     }
 
@@ -150,8 +164,17 @@ export class MonitoringApiClient {
     });
   }
 
-  static async getMonitors(): Promise<NormalizedMonitorStatus[]> {
-    return this.invokeFunction<NormalizedMonitorStatus[]>('uptimerobot_monitors');
+  static async deleteIssue(issueId: string): Promise<any> {
+    return this.invokeFunction<any>('posthog_issue_delete', {
+      method: 'POST',
+      body: { issue_id: issueId },
+    });
+  }
+
+  static async getMonitors(forceRefresh: boolean = false): Promise<NormalizedMonitorStatus[]> {
+    return this.invokeFunction<NormalizedMonitorStatus[]>('uptimerobot_monitors', {
+      params: forceRefresh ? { force_refresh: 'true' } : undefined,
+    });
   }
 
   static async queryLogs(options: {
@@ -176,5 +199,9 @@ export class MonitoringApiClient {
 
   static async getProviderHealth(): Promise<Record<string, ProviderConnectivityStatus>> {
     return this.invokeFunction<Record<string, ProviderConnectivityStatus>>('provider_health');
+  }
+
+  static async getInternalServices(): Promise<Array<{ name: string; target: string; role: string; status: string; latency_ms: number | null }>> {
+    return this.invokeFunction('internal_services_health');
   }
 }

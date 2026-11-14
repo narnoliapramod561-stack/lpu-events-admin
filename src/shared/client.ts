@@ -942,18 +942,9 @@ export class LpuEventsClient {
             .from('admin_users')
             .select('id')
             .eq('auth_user_id', user.id)
+            .eq('is_active', true)
             .maybeSingle();
           adminId = au?.id || null;
-        }
-        if (!adminId) {
-          const { data: fallbackAu } = await this.supabase
-            .from('admin_users')
-            .select('id')
-            .eq('is_active', true)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          adminId = fallbackAu?.id || null;
         }
       } catch {}
 

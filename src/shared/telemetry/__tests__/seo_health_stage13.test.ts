@@ -8,17 +8,18 @@ import { MonitoringApiClient } from '../../../components/superadmin/monitoring/u
 import type { GscOverviewData } from '../../../components/superadmin/monitoring/types.ts';
 
 test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => {
-  await t.test('1. fetchGscOverview returns structured schema with platform delay notice when unconfigured', async () => {
+  await t.test('1. fetchGscOverview returns structured schema with unconfigured status when credentials absent', async () => {
     const data = await fetchGscOverview({
       days: 28,
       serviceAccountJson: '',
-      siteUrl: 'https://lpuevents.live',
+      siteUrl: 'https://lpuevents.live/',
     });
 
     assert.equal(data.clicks, 0);
     assert.equal(data.impressions, 0);
     assert.equal(data.ctr, 0);
     assert.equal(data.position, 0);
+    assert.equal(data.status, 'unconfigured');
     assert.ok(data.dateRange);
     assert.ok(data.dateRange.startDate);
     assert.ok(data.dateRange.endDate);
@@ -26,13 +27,13 @@ test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => 
     assert.equal(data.deepLink, 'https://search.google.com/search-console');
   });
 
-  await t.test('2. Inherent Latency Invariant: Date window must end at least 2 days prior to current date', async () => {
+  await t.test('2. Inherent Latency Invariant: Date window must end at least 2-3 days prior to current date', async () => {
     const data = await fetchGscOverview({ days: 7, serviceAccountJson: '' });
     const end = new Date(data.dateRange.endDate);
     const now = new Date();
     const diffHours = (now.getTime() - end.getTime()) / (1000 * 60 * 60);
 
-    // End date must reflect Google's 48h platform delay
+    // End date must reflect Google's 48-72h platform processing delay
     assert.ok(diffHours >= 47, `End date ${data.dateRange.endDate} must be at least ~48 hours behind now`);
   });
 
@@ -44,9 +45,6 @@ test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => 
   });
 
   await t.test('4. MonitoringApiClient.getGscOverview proxies to edge function with selected days parameter', async () => {
-    let capturedAction = '';
-    let capturedParams: any = null;
-
     MonitoringApiClient.setSupabaseClient({
       auth: {
         getSession: async () => ({
@@ -67,7 +65,16 @@ test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => 
               position: 8.4,
               dateRange: { startDate: '2026-10-10', endDate: '2026-11-07' },
               delayNotice: 'Note: Search Console performance data reflects search activity from 2–3 days ago (Google platform delay).',
-              deepLink: 'https://search.google.com/search-console',
+              deepLink: 'https://search.google.com/search-console/performance/search-analytics?resource_id=https%3A%2F%2Flpuevents.live%2F',
+              topQueries: [
+                { key: 'lpu events 2026', clicks: 310, impressions: 4200, ctr: 7.38, position: 2.1 },
+                { key: 'youth vibe lpu', clicks: 240, impressions: 3100, ctr: 7.74, position: 1.8 },
+              ],
+              topPages: [
+                { key: 'https://lpuevents.live/events', clicks: 820, impressions: 21000, ctr: 3.9, position: 4.2 },
+              ],
+              status: 'connected',
+              propertyUrl: 'https://lpuevents.live/',
             } satisfies GscOverviewData,
             error: null,
           };
@@ -80,7 +87,10 @@ test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => 
     assert.equal(result.impressions, 48900);
     assert.equal(result.ctr, 2.9);
     assert.equal(result.position, 8.4);
-    assert.equal(result.deepLink, 'https://search.google.com/search-console');
+    assert.equal(result.status, 'connected');
+    assert.equal(result.topQueries?.length, 2);
+    assert.equal(result.topPages?.length, 1);
+    assert.match(result.deepLink, /search-analytics\?resource_id=/);
   });
 
   await t.test('5. Multi-tier GSC quota invariants documentation compliance (MON-004 §7.1)', () => {
@@ -93,5 +103,14 @@ test('Stage 13: Section E Google Search Console SEO Health Suite', async (t) => 
     assert.equal(searchAnalyticsProjectQuotaQPD, 30_000_000);
     assert.equal(urlInspectionSiteQuotaQPD, 2000);
     assert.equal(sitemapsUserQuotaQPS, 20);
+  });
+
+  await t.test('6. Invalid JSON in service account returns clean error state without crashing', async () => {
+    const data = await fetchGscOverview({
+      serviceAccountJson: 'not-valid-json',
+    });
+    assert.equal(data.status, 'error');
+    assert.match(data.errorMessage || '', /invalid JSON syntax/i);
+    assert.equal(data.clicks, 0);
   });
 });

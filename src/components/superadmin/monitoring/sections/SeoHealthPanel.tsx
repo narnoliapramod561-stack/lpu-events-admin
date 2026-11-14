@@ -15,6 +15,9 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
+  AlertTriangle,
+  KeyRound,
+  Globe,
 } from 'lucide-react';
 import { MonitoringApiClient } from '../utils/MonitoringApiClient.ts';
 import type { GscOverviewData } from '../types.ts';
@@ -25,12 +28,25 @@ export const SeoHealthPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState<number>(28);
 
+  // Live Sitemap probe state
+  const [sitemapChecking, setSitemapChecking] = useState<boolean>(false);
+  const [sitemapStatus, setSitemapStatus] = useState<{
+    ok: boolean;
+    statusCode?: number;
+    latencyMs?: number;
+    checkedAt?: string;
+    error?: string;
+  } | null>(null);
+
   const loadData = useCallback(async (selectedDays: number) => {
     setLoading(true);
     setError(null);
     try {
       const result = await MonitoringApiClient.getGscOverview(selectedDays);
       setData(result);
+      if (result.status === 'error' && result.errorMessage) {
+        setError(result.errorMessage);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to retrieve Search Console data';
       setError(msg);
@@ -39,9 +55,39 @@ export const SeoHealthPanel: React.FC = () => {
     }
   }, []);
 
+  const checkLiveSitemap = useCallback(async () => {
+    setSitemapChecking(true);
+    const start = performance.now();
+    try {
+      const res = await fetch('https://lpuevents.live/sitemap.xml', {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000),
+      });
+      const latencyMs = Math.round(performance.now() - start);
+      setSitemapStatus({
+        ok: res.ok,
+        statusCode: res.status,
+        latencyMs,
+        checkedAt: new Date().toLocaleTimeString(),
+      });
+    } catch (err: any) {
+      const latencyMs = Math.round(performance.now() - start);
+      setSitemapStatus({
+        ok: false,
+        latencyMs,
+        error: err.message || 'Network timeout or unreachable edge route',
+        checkedAt: new Date().toLocaleTimeString(),
+      });
+    } finally {
+      setSitemapChecking(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadData(days);
   }, [days, loadData]);
+
+  const connectionStatus = data?.status || (error ? 'error' : 'unconfigured');
 
   return (
     <div className="space-y-6">
@@ -59,9 +105,29 @@ export const SeoHealthPanel: React.FC = () => {
               <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
                 Section E
               </span>
+
+              {/* Status Badge */}
+              {connectionStatus === 'connected' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  CONNECTED
+                </span>
+              )}
+              {connectionStatus === 'unconfigured' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <AlertTriangle className="w-2.5 h-2.5" />
+                  UNCONFIGURED
+                </span>
+              )}
+              {connectionStatus === 'error' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  <AlertCircle className="w-2.5 h-2.5" />
+                  AUTH / PERMISSION ERROR
+                </span>
+              )}
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Organic search discovery, performance trends, and indexing telemetry for lpuevents.live
+              Organic search discovery, keyword rankings, and indexing telemetry for {data?.propertyUrl || 'lpuevents.live'}
             </p>
           </div>
         </div>
@@ -102,7 +168,7 @@ export const SeoHealthPanel: React.FC = () => {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-xs transition-all"
           >
-            <span>Open Full Google Search Console Dashboard</span>
+            <span>Open Google Search Console Dashboard</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
@@ -127,11 +193,34 @@ export const SeoHealthPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Unconfigured Helper Banner */}
+      {data?.status === 'unconfigured' && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs">
+          <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold text-amber-950 dark:text-amber-100">
+              Google Search Console Service Account Required
+            </p>
+            <p className="text-amber-800 dark:text-amber-300">
+              To stream organic search clicks, impressions, and keyword rankings, configure <code className="font-mono font-semibold px-1 py-0.5 rounded bg-amber-500/20">GSC_SERVICE_ACCOUNT_JSON</code> in Supabase Secrets and add the service account email as a Viewer in Google Search Console under Property Settings.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Error State Banner */}
-      {error && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Error loading Search Console telemetry: {error}</span>
+      {(error || data?.status === 'error') && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold text-rose-950 dark:text-rose-200">
+              Search Console API Error
+            </p>
+            <p className="font-mono text-[11px]">{error || data?.errorMessage}</p>
+            <p className="text-[11px] text-rose-600 dark:text-rose-400">
+              Ensure the service account email has Delegated Owner or Viewer permissions on the Search Console property <code className="font-semibold">{data?.propertyUrl || 'https://lpuevents.live/'}</code>.
+            </p>
+          </div>
         </div>
       )}
 
@@ -194,7 +283,129 @@ export const SeoHealthPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Quota Architecture & Sitemap Indexing Documentation Card */}
+      {/* Top Search Queries & Top Pages Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Search Queries */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#252528] border border-zinc-200 dark:border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-purple-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                Top Student Search Queries
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+              Last {days} Days
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="py-8 text-center text-xs text-zinc-400">Loading search queries...</div>
+          ) : !data?.topQueries || data.topQueries.length === 0 ? (
+            <div className="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
+              No search query breakdown available for this date window.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400">
+                    <th className="py-2 px-2 font-semibold">Query</th>
+                    <th className="py-2 px-2 font-semibold text-right">Clicks</th>
+                    <th className="py-2 px-2 font-semibold text-right">Impr.</th>
+                    <th className="py-2 px-2 font-semibold text-right">CTR</th>
+                    <th className="py-2 px-2 font-semibold text-right">Rank</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-white/5 font-mono text-[11px]">
+                  {data.topQueries.map((q, idx) => (
+                    <tr key={idx} className="hover:bg-zinc-50 dark:hover:bg-white/5">
+                      <td className="py-2 px-2 font-sans font-medium text-zinc-900 dark:text-white max-w-[180px] truncate">
+                        {q.key}
+                      </td>
+                      <td className="py-2 px-2 text-right text-blue-600 dark:text-blue-400 font-semibold">
+                        {q.clicks.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-2 text-right text-zinc-600 dark:text-zinc-400">
+                        {q.impressions.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-2 text-right text-amber-600 dark:text-amber-400">
+                        {q.ctr}%
+                      </td>
+                      <td className="py-2 px-2 text-right text-purple-600 dark:text-purple-400">
+                        {q.position.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Top Landing Pages */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#252528] border border-zinc-200 dark:border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                Top Indexed Landing Pages
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+              Last {days} Days
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="py-8 text-center text-xs text-zinc-400">Loading indexed pages...</div>
+          ) : !data?.topPages || data.topPages.length === 0 ? (
+            <div className="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
+              No page breakdown available for this date window.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400">
+                    <th className="py-2 px-2 font-semibold">Page URL</th>
+                    <th className="py-2 px-2 font-semibold text-right">Clicks</th>
+                    <th className="py-2 px-2 font-semibold text-right">Impr.</th>
+                    <th className="py-2 px-2 font-semibold text-right">CTR</th>
+                    <th className="py-2 px-2 font-semibold text-right">Rank</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-white/5 font-mono text-[11px]">
+                  {data.topPages.map((p, idx) => {
+                    const displayPath = p.key.replace(/^https?:\/\/[^/]+/, '') || '/';
+                    return (
+                      <tr key={idx} className="hover:bg-zinc-50 dark:hover:bg-white/5">
+                        <td className="py-2 px-2 font-sans font-medium text-zinc-900 dark:text-white max-w-[180px] truncate" title={p.key}>
+                          {displayPath}
+                        </td>
+                        <td className="py-2 px-2 text-right text-blue-600 dark:text-blue-400 font-semibold">
+                          {p.clicks.toLocaleString()}
+                        </td>
+                        <td className="py-2 px-2 text-right text-zinc-600 dark:text-zinc-400">
+                          {p.impressions.toLocaleString()}
+                        </td>
+                        <td className="py-2 px-2 text-right text-amber-600 dark:text-amber-400">
+                          {p.ctr}%
+                        </td>
+                        <td className="py-2 px-2 text-right text-purple-600 dark:text-purple-400">
+                          {p.position.toFixed(1)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quota Architecture & Live Sitemap Verification Card */}
       <div className="p-5 rounded-2xl bg-white dark:bg-[#252528] border border-zinc-200 dark:border-white/10 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -253,26 +464,45 @@ export const SeoHealthPanel: React.FC = () => {
           </table>
         </div>
 
-        {/* Edge Sitemaps Routing Notice */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200/60 dark:border-white/5 text-xs">
+        {/* Edge Sitemaps Routing Live Probe */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200/60 dark:border-white/5 text-xs">
           <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>
               Edge Sitemap Feed: <code className="font-mono text-zinc-900 dark:text-white font-semibold">https://lpuevents.live/sitemap.xml</code>
             </span>
+            {sitemapStatus && (
+              <span className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                sitemapStatus.ok
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+              }`}>
+                {sitemapStatus.ok ? `HTTP ${sitemapStatus.statusCode} (${sitemapStatus.latencyMs}ms)` : `FAILED (${sitemapStatus.error})`}
+              </span>
+            )}
           </div>
-          <a
-            href="https://lpuevents.live/sitemap.xml"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-semibold text-[11px]"
-          >
-            <span>View Live Sitemap</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void checkLiveSitemap()}
+              disabled={sitemapChecking}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-white/10 text-[11px] font-semibold transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${sitemapChecking ? 'animate-spin' : ''}`} />
+              <span>Probe Route</span>
+            </button>
+            <a
+              href="https://lpuevents.live/sitemap.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-semibold text-[11px]"
+            >
+              <span>View XML</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-

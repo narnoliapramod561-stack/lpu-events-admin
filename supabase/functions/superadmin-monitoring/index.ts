@@ -14,7 +14,9 @@ import {
   fetchPostHogIssues,
   fetchPostHogIssueDetail,
   updatePostHogIssue,
+  deletePostHogIssue,
   pingPostHog,
+  pingPostHogIngestion,
 } from "./providers/posthog.ts";
 import { fetchUptimeRobotMonitors, pingUptimeRobot } from "./providers/uptimerobot.ts";
 import { querySupabaseLogs, pingSupabaseLogs } from "./providers/supabase-logs.ts";
@@ -43,21 +45,28 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:3001",
 ]);
 
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.protocol === "https:") {
+      if (host === "lpueventsadmin.live" || host === "lpuevents.live") return true;
+      if (host.endsWith(".lpueventsadmin.live") || host.endsWith(".lpuevents.live")) return true;
+    }
+    if (parsed.protocol === "http:" && (host === "localhost" || host === "127.0.0.1")) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 function resolveCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
   let allowedOrigin = "https://www.lpueventsadmin.live";
-  if (origin) {
-    if (
-      ALLOWED_ORIGINS.has(origin) ||
-      origin.endsWith(".lpueventsadmin.live") ||
-      origin.endsWith(".lpuevents.live") ||
-      origin.endsWith(".pages.dev") ||
-      origin.endsWith(".workers.dev") ||
-      origin.startsWith("http://localhost:") ||
-      origin.startsWith("http://127.0.0.1:")
-    ) {
-      allowedOrigin = origin;
-    }
+  if (origin && isAllowedOrigin(origin)) {
+    allowedOrigin = origin;
   }
 
   return {
@@ -142,12 +151,13 @@ serve(async (req: Request) => {
 
     switch (action) {
       case "monitoring_overview": {
-        const [issuesRes, monitorsRes, phPing, urPing, logsPing, gscPing, incidentsRes] =
+        const urPingStart = performance.now();
+        const [issuesRes, monitorsRes, phPing, phIngestPing, logsPing, gscPing, incidentsRes] =
           await Promise.allSettled([
             fetchPostHogIssues({ limit: 50, status: "active" }),
             fetchUptimeRobotMonitors(),
             pingPostHog(),
-            pingUptimeRobot(),
+            pingPostHogIngestion(),
             pingSupabaseLogs(),
             pingGsc(),
             supabaseAdmin
@@ -183,6 +193,16 @@ serve(async (req: Request) => {
           checkedAt: nowIso,
         };
 
+        const urLatency = Math.round(performance.now() - urPingStart);
+        const urPing: ProviderConnectivityStatus = monitorsRes.status === "fulfilled"
+          ? { connected: true, latencyMs: urLatency, checkedAt: nowIso }
+          : {
+              connected: false,
+              latencyMs: urLatency,
+              error: (monitorsRes as PromiseRejectedResult).reason?.message || "Failed to reach UptimeRobot",
+              checkedAt: nowIso,
+            };
+
         const recentIncidents =
           incidentsRes.status === "fulfilled" && incidentsRes.value.data
             ? incidentsRes.value.data
@@ -197,10 +217,9 @@ serve(async (req: Request) => {
           monitors,
           providerConnectivity: {
             posthogIngestion:
-              phPing.status === "fulfilled" ? phPing.value : checkedFallback,
+              phIngestPing.status === "fulfilled" ? phIngestPing.value : checkedFallback,
             posthogApi: phPing.status === "fulfilled" ? phPing.value : checkedFallback,
-            uptimeRobot:
-              urPing.status === "fulfilled" ? urPing.value : checkedFallback,
+            uptimeRobot: urPing,
             supabaseLogs:
               logsPing.status === "fulfilled" ? logsPing.value : checkedFallback,
             googleSearchConsole:
@@ -214,7 +233,8 @@ serve(async (req: Request) => {
       }
 
       case "posthog_issues": {
-        const status = url.searchParams.get("status") || bodyData.status || "active";
+        const rawStatus = url.searchParams.get("status") || bodyData.status;
+        const status = rawStatus === "all" ? undefined : rawStatus || "active";
         const limit = parseInt(url.searchParams.get("limit") || bodyData.limit || "50", 10);
         const offset = parseInt(url.searchParams.get("offset") || bodyData.offset || "0", 10);
         responsePayload = await fetchPostHogIssues({ status, limit, offset });
@@ -244,8 +264,22 @@ serve(async (req: Request) => {
         break;
       }
 
+      case "posthog_issue_delete": {
+        const issueId = bodyData.issue_id || url.searchParams.get("issue_id");
+        if (!issueId) {
+          throw new MonitoringSecurityError(
+            "BAD_REQUEST",
+            "Missing issue_id parameter.",
+            400
+          );
+        }
+        responsePayload = await deletePostHogIssue(issueId);
+        break;
+      }
+
       case "uptimerobot_monitors": {
-        responsePayload = await fetchUptimeRobotMonitors();
+        const forceRefresh = url.searchParams.get("force_refresh") === "true" || bodyData.force_refresh === true;
+        responsePayload = await fetchUptimeRobotMonitors(undefined, forceRefresh);
         break;
       }
 
@@ -257,7 +291,6 @@ serve(async (req: Request) => {
           bodyData.iso_timestamp_end || url.searchParams.get("iso_timestamp_end");
         const correlationId =
           bodyData.correlation_id || url.searchParams.get("correlation_id");
-        const sql = bodyData.sql;
         const limit = bodyData.limit ? parseInt(String(bodyData.limit), 10) : 100;
 
         responsePayload = await querySupabaseLogs({
@@ -265,7 +298,6 @@ serve(async (req: Request) => {
           isoTimestampStart,
           isoTimestampEnd,
           correlationId,
-          sql,
           limit,
         });
         break;
@@ -278,18 +310,63 @@ serve(async (req: Request) => {
       }
 
       case "provider_health": {
-        const [ph, ur, logs, gsc] = await Promise.all([
+        const [ph, phIngest, ur, logs, gsc] = await Promise.all([
           pingPostHog(),
+          pingPostHogIngestion(),
           pingUptimeRobot(),
           pingSupabaseLogs(),
           pingGsc(),
         ]);
         responsePayload = {
+          posthogIngestion: phIngest,
+          posthogApi: ph,
           posthog: ph,
           uptimeRobot: ur,
           supabaseLogs: logs,
           googleSearchConsole: gsc,
         };
+        break;
+      }
+
+      case "internal_services_health": {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+        const edgeServices = [
+          { name: 'health', target: '/functions/v1/health', role: 'System Health & Availability Probe' },
+          { name: 'superadmin-monitoring', target: '/functions/v1/superadmin-monitoring', role: 'Secure Monitoring Proxy Gateway' },
+          { name: 'superadmin-operations', target: '/functions/v1/superadmin-operations', role: 'Operations Control Plane & 27 ops_* tables' },
+          { name: 'r2-upload', target: '/functions/v1/r2-upload', role: 'Cloudflare R2 authenticated poster uploads' },
+          { name: 'publish-snapshots', target: '/functions/v1/publish-snapshots', role: 'Pre-rendered R2 JSON event publisher' },
+        ];
+
+        const results = await Promise.all(
+          edgeServices.map(async (svc) => {
+            if (!supabaseUrl) {
+              return { ...svc, status: 'UNKNOWN', latency_ms: null };
+            }
+            const start = performance.now();
+            try {
+              const res = await fetch(`${supabaseUrl}${svc.target}`, {
+                method: 'OPTIONS',
+                headers: { apikey: anonKey },
+                signal: AbortSignal.timeout(4000),
+              });
+              const latency_ms = Math.round(performance.now() - start);
+              return {
+                ...svc,
+                status: (res.ok || res.status === 200 || res.status === 204) ? 'OPERATIONAL' : 'DEGRADED',
+                latency_ms,
+              };
+            } catch {
+              return {
+                ...svc,
+                status: 'OFFLINE',
+                latency_ms: null,
+              };
+            }
+          })
+        );
+        responsePayload = results;
         break;
       }
 

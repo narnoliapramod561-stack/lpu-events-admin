@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predeploy": "node -e \"if (!process.env.GITHUB_ACTIONS && !process.env.CF_PAGES && !process.env.CI) { console.error('\\n❌ [DEPLOY BLOCKED] Direct local wrangler deploy is permanently prohibited.\\nAll deployments must originate exclusively from GitHub via git push origin main.\\n'); process.exit(1); }\"",
+    "deploy": "npm run predeploy && wrangler deploy",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

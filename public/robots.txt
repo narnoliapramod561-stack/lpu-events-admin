@@ -1,5 +1,59 @@
 # robots.txt for LPU Events Administrative Portal
-# Strictly private administrative surface — indexing disallowed
+# Allow indexing of public portal entrypoint & login for search discovery
+# Strictly disallow crawling of private administration, dashboard, and API endpoints
 
 User-agent: *
+Allow: /$
+Allow: /login
+Disallow: /superadmin/
+Disallow: /dashboard/
+Disallow: /events/
+Disallow: /scanners/
+Disallow: /settings/
+Disallow: /api/
+Disallow: /_headers
+Disallow: /_redirects
+
+User-agent: Googlebot
+Allow: /$
+Allow: /login
+Disallow: /superadmin/
+Disallow: /dashboard/
+Disallow: /events/
+Disallow: /scanners/
+Disallow: /settings/
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /$
+Allow: /login
+Disallow: /superadmin/
+Disallow: /dashboard/
+Disallow: /events/
+Disallow: /scanners/
+Disallow: /settings/
+Disallow: /api/
+
+# Block AI scrapers and training bots from harvesting administrative interfaces
+User-agent: GPTBot
 Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Anthropic-AI
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+

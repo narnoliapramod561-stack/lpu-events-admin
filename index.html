@@ -15,20 +15,19 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://admin.lpuevents.live/" />
 
-    <!-- Extreme SEO & Primary Metadata -->
-    <title>LPU Events Admin Portal — Official Organizer & Administrative Login</title>
-    <meta name="title" content="LPU Events Admin Portal — Official Organizer & Administrative Login" />
-    <meta name="description" content="Official administrative and organizer portal for LPU Events at Lovely Professional University. Secure login, event lifecycle control, student registration workflows, and university organizer management." />
-    <meta name="keywords" content="lpuevents admin, lpu events admin, lpuevents admin portal, lpu events superadmin, lovely professional university events admin, lpu event organizer login, lpuevents dashboard, lpu admin live, lpu campus events management" />
+    <!-- Primary SEO & Brand Discovery Metadata for 'lpu events admin' -->
+    <title>LPU Events Admin Portal — Organizer & Administrator Login</title>
+    <meta name="title" content="LPU Events Admin Portal — Organizer & Administrator Login" />
+    <meta name="description" content="Official administrative and event organizer portal for LPU Events at Lovely Professional University. Access organizer dashboard, event operations, and campus administrator login." />
+    <meta name="keywords" content="lpu events admin, lpuevents admin, lpu events admin portal, lpu event organizer login, lovely professional university events admin, lpu admin portal, lpu campus events management, lpu events dashboard" />
     
-    <!-- Robots & Crawler Directives: Strictly Private Admin Console -->
-    <meta name="robots" content="noindex, nofollow, noarchive" />
-    <meta name="googlebot" content="noindex, nofollow, noarchive" />
-    <meta name="bingbot" content="noindex, nofollow, noarchive" />
+    <!-- Robots & Crawler Directives: Index Portal Entrypoint Safely (Strict noarchive to prevent credential/form caching) -->
+    <meta name="robots" content="index, follow, noarchive, max-snippet:-1, max-image-preview:large" />
+    <meta name="googlebot" content="index, follow, noarchive, max-snippet:-1, max-image-preview:large" />
+    <meta name="bingbot" content="index, follow, noarchive, max-snippet:-1" />
     <meta name="author" content="LPU Events" />
     <meta name="publisher" content="Lovely Professional University" />
     <meta name="rating" content="general" />
-    <meta name="revisit-after" content="2 days" />
     <meta name="format-detection" content="telephone=no" />
 
     <!-- Geo Tags (Lovely Professional University, Phagwara, Punjab) -->
@@ -44,29 +43,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#09090b" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Social Previews -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://admin.lpuevents.live/" />
-    <meta property="og:title" content="LPU Events Admin Portal — Official Management & Organizer Access" />
-    <meta property="og:description" content="Official administrative portal for LPU Events at Lovely Professional University. Access organizer dashboard, event publishing, attendee verification, and campus operations." />
+    <meta property="og:title" content="LPU Events Admin Portal — Organizer & Administrator Login" />
+    <meta property="og:description" content="Official administrative and event organizer portal for LPU Events at Lovely Professional University. Access organizer dashboard, event publishing, and campus operations." />
     <meta property="og:image" content="https://admin.lpuevents.live/logo.png" />
     <meta property="og:image:secure_url" content="https://admin.lpuevents.live/logo.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="LPU Events Administrative Console Logo" />
+    <meta property="og:image:alt" content="LPU Events Admin Console Logo" />
     <meta property="og:site_name" content="LPU Events Admin" />
     <meta property="og:locale" content="en_IN" />
 
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://admin.lpuevents.live/" />
-    <meta name="twitter:title" content="LPU Events Admin Portal — Official Organizer & Admin Access" />
-    <meta name="twitter:description" content="Official administrative console for LPU Events at Lovely Professional University. Manage campus events, registrations, and live notifications." />
+    <meta name="twitter:title" content="LPU Events Admin Portal — Organizer & Administrator Login" />
+    <meta name="twitter:description" content="Official administrative console and event organizer login for Lovely Professional University (LPU Events)." />
     <meta name="twitter:image" content="https://admin.lpuevents.live/logo.png" />
     <meta name="twitter:image:alt" content="LPU Events Admin Console" />
 
-    <!-- Structured Data (JSON-LD Linked Data Graph) -->
+    <!-- Structured Data: Verified Brand & WebApplication Entity (Clean & Secure) -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -76,7 +75,14 @@
             "@id": "https://admin.lpuevents.live/#website",
             "url": "https://admin.lpuevents.live/",
             "name": "LPU Events Admin Portal",
-            "description": "Administrative and event organizer management console for Lovely Professional University.",
+            "alternateName": [
+              "lpu events admin",
+              "lpuevents admin",
+              "LPU Events Admin",
+              "LPU Event Organizer Portal",
+              "LPU Admin Portal"
+            ],
+            "description": "Official administrative console and event organizer login for Lovely Professional University (LPU Events).",
             "inLanguage": "en-IN",
             "publisher": {
               "@id": "https://lpuevents.live/#organization"
@@ -101,67 +107,13 @@
             "@id": "https://admin.lpuevents.live/#webapp",
             "url": "https://admin.lpuevents.live/",
             "name": "LPU Events Admin Portal",
-            "alternateName": [
-              "lpuevents admin",
-              "LPU Events Admin",
-              "LPU Event Organizer Portal",
-              "LPU Super Admin Portal"
-            ],
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "All",
             "browserRequirements": "Requires JavaScript. Requires HTML5.",
-            "description": "Official management portal for Lovely Professional University campus events, organizer approvals, ticket scanning, and live operations.",
-            "publisher": {
+            "description": "Official management portal for Lovely Professional University campus events and organizer operations.",
+            "provider": {
               "@id": "https://lpuevents.live/#organization"
             }
-          },
-          {
-            "@type": "BreadcrumbList",
-            "@id": "https://admin.lpuevents.live/#breadcrumb",
-            "itemListElement": [
-              {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "LPU Events",
-                "item": "https://lpuevents.live/"
-              },
-              {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "Admin Portal",
-                "item": "https://admin.lpuevents.live/"
-              }
-            ]
-          },
-          {
-            "@type": "FAQPage",
-            "@id": "https://admin.lpuevents.live/#faq",
-            "mainEntity": [
-              {
-                "@type": "Question",
-                "name": "How do organizers log in to the LPU Events Admin Portal?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Authorized organizers and university administrators log in at https://admin.lpuevents.live using institutional credentials or one-time verification codes."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "What can administrators manage on the LPU Events Admin Console?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "The portal provides event creation, schedule publishing, campus attendee validation, organizer permissions, and live system monitoring across Lovely Professional University."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Where is the public student portal for LPU Events?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Students can discover upcoming events, workshops, and registrations on the official student portal at https://lpuevents.live."
-                }
-              }
-            ]
           }
         ]
       }
@@ -197,59 +149,21 @@
         vertical-align: middle;
         user-select: none;
       }
-      /* Pre-render crawler shell: visually hidden until hydrated or styled cleanly */
-      .seo-prerender-shell {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-      }
     </style>
   </head>
   <body>
-    <!-- Pre-rendered Semantic DOM for Instant 1st-Pass Search Crawler Indexing -->
-    <div id="root">
-      <div class="seo-prerender-shell" aria-hidden="true">
-        <header>
-          <h1>LPU Events Admin Portal — Official Management & Organizer Access</h1>
-          <nav>
-            <a href="https://admin.lpuevents.live/">Admin Login</a>
-            <a href="https://lpuevents.live/">Student Events Directory</a>
-          </nav>
-        </header>
-        <main>
-          <h2>Lovely Professional University Event Operations</h2>
-          <p>
-            Welcome to the official administrative control console for LPU Events at Lovely Professional University.
-            Authorized organizers and university faculty can sign in to oversee event publishing, schedule coordination,
-            attendee ticket scanning, and campus announcement distribution.
-          </p>
-          <section>
-            <h3>Key Capabilities</h3>
-            <ul>
-              <li>Event lifecycle publishing and organizer approval workflows.</li>
-              <li>Attendee ticketing, badge QR verification, and check-in metrics.</li>
-              <li>Push notifications and broadcast communications to campus attendees.</li>
-              <li>Superadmin system monitoring, uptime tracking, and role-based access control.</li>
-            </ul>
-          </section>
-        </main>
-      </div>
-    </div>
+    <div id="root"></div>
 
-    <!-- Noscript Fallback -->
+    <!-- Noscript Fallback & Search Crawler Semantic Summary -->
     <noscript>
       <div style="padding: 2.5rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; max-width: 600px; margin: 4rem auto; border: 1px solid #27272a; border-radius: 12px; background: #09090b; color: #f4f4f5;">
-        <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem; color: #fafafa;">LPU Events Admin Portal</h1>
+        <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem; color: #fafafa;">LPU Events Admin Portal — Official Organizer Access</h1>
         <p style="color: #a1a1aa; line-height: 1.5; margin-bottom: 1.5rem;">
           Official administrative console and event organizer login for Lovely Professional University (LPU Events).
+          Authorized organizers and university faculty can sign in to manage campus events, announcements, and registrations.
         </p>
         <p style="font-size: 0.875rem; color: #71717a;">Please enable JavaScript in your browser to access the administrator dashboard.</p>
+        <p style="margin-top: 1rem; font-size: 0.875rem;"><a href="https://lpuevents.live/" style="color: #ff6b00; text-decoration: underline;">Looking for student events? Visit the Student Portal</a></p>
       </div>
     </noscript>
 

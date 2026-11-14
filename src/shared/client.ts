@@ -818,7 +818,23 @@ export class LpuEventsClient {
     if (!res.error) {
       const eventId = res.data?.event_id;
       this._dispatchTargetedEdgeInvalidation(['events', 'homepage', eventId ? `event:${eventId}` : '']);
+      // IndexNow: Notify search engines of new event for immediate indexing
       if (eventId) {
+        try {
+          fetch('https://api.indexnow.org/indexnow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+              host: 'lpuevents.live',
+              key: 'lpueventslive2026indexnowkey',
+              keyLocation: 'https://lpuevents.live/lpueventslive2026indexnowkey.txt',
+              urlList: [
+                'https://lpuevents.live/',
+                'https://lpuevents.live/sitemap.xml',
+              ],
+            }),
+          }).catch(() => {});
+        } catch {}
         // Immediate Cloudflare D1 dual-backup dispatch
         this.backupEventToCloudflare(eventId, { ...payload, sections }).catch((err) => {
           console.warn('[Cloudflare D1 Backup] Proactive backup notice:', err);
@@ -836,6 +852,22 @@ export class LpuEventsClient {
     });
     if (!res.error) {
       this._dispatchTargetedEdgeInvalidation(['events', 'homepage', `event:${id}`]);
+      // IndexNow: Notify search engines of updated event
+      try {
+        fetch('https://api.indexnow.org/indexnow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({
+            host: 'lpuevents.live',
+            key: 'lpueventslive2026indexnowkey',
+            keyLocation: 'https://lpuevents.live/lpueventslive2026indexnowkey.txt',
+            urlList: [
+              'https://lpuevents.live/',
+              'https://lpuevents.live/sitemap.xml',
+            ],
+          }),
+        }).catch(() => {});
+      } catch {}
       // Immediate Cloudflare D1 dual-backup dispatch on update
       this.backupEventToCloudflare(id, { ...payload, sections }).catch((err) => {
         console.warn('[Cloudflare D1 Backup] Proactive backup notice:', err);

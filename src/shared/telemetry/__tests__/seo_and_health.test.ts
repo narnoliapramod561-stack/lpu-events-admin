@@ -16,7 +16,7 @@ describe('SEO, Robots.txt, and Sitemap Specifications', () => {
     assert.ok(content.includes('sitemap.xml'));
   });
 
-  it('admin robots.txt should strictly disallow all crawling', () => {
+  it('admin robots.txt should allow root portal discovery while disallowing protected subpaths', () => {
     const adminRobotsPath = fs.existsSync(path.join(rootDir, 'lpu-events-admin/public/robots.txt'))
       ? path.join(rootDir, 'lpu-events-admin/public/robots.txt')
       : path.join(rootDir, 'apps/admin-web/public/robots.txt');
@@ -24,19 +24,21 @@ describe('SEO, Robots.txt, and Sitemap Specifications', () => {
 
     const content = fs.readFileSync(adminRobotsPath, 'utf8');
     assert.ok(content.includes('User-agent: *'));
-    assert.ok(content.includes('Disallow: /'));
-    assert.ok(!content.includes('Allow: /'));
+    assert.ok(content.includes('Allow: /'));
+    assert.ok(content.includes('Disallow: /superadmin/'));
+    assert.ok(content.includes('Disallow: /api/'));
   });
 
-  it('admin index.html should have noindex directive', () => {
+  it('admin index.html should have index directive for brand discovery with noarchive security', () => {
     const adminHtmlPath = fs.existsSync(path.join(rootDir, 'lpu-events-admin/index.html'))
       ? path.join(rootDir, 'lpu-events-admin/index.html')
       : path.join(rootDir, 'apps/admin-web/index.html');
     assert.ok(fs.existsSync(adminHtmlPath));
 
     const content = fs.readFileSync(adminHtmlPath, 'utf8');
-    assert.ok(content.includes('noindex'));
-    assert.ok(content.includes('nofollow'));
+    assert.ok(content.includes('index'));
+    assert.ok(content.includes('noarchive'));
+    assert.ok(content.includes('lpu events admin'));
   });
 
   it('student index.html should have canonical link and Open Graph metadata', () => {

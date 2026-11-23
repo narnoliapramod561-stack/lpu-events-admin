@@ -51,13 +51,13 @@ const adminUrlTs = fs.readFileSync(
 
 assert(
   studentUrlTs.includes("'https://images.lpuevents.live'") &&
-  !studentUrlTs.includes("return 'https://nhjphyqiqhmxdhppljap.supabase.co/storage/v1/object/public/media'"),
+  !studentUrlTs.includes("return 'https://tbehdigakmuoqchaaawr.supabase.co/storage/v1/object/public/media'"),
   'Student image resolver defaults to https://images.lpuevents.live (0 Supabase Storage egress)'
 );
 
 assert(
   adminUrlTs.includes("'https://images.lpuevents.live'") &&
-  !adminUrlTs.includes("return 'https://nhjphyqiqhmxdhppljap.supabase.co/storage/v1/object/public/media'"),
+  !adminUrlTs.includes("return 'https://tbehdigakmuoqchaaawr.supabase.co/storage/v1/object/public/media'"),
   'Admin image resolver defaults to https://images.lpuevents.live'
 );
 

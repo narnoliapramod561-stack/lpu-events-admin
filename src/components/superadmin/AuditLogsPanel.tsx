@@ -11,7 +11,11 @@ import {
   Shield,
   Download,
   Copy,
-  Check
+  Check,
+  KeyRound,
+  Calendar,
+  Sliders,
+  Users
 } from 'lucide-react';
 import { EmptyState } from '../shell/EmptyState';
 import { LoadingSpinner } from '../shell/LoadingState';
@@ -22,19 +26,18 @@ interface AuditLogRecord {
   actor_role: string;
   action: string;
   target_type: string;
-  target_id: string;
-  justification?: string;
+  target_id: string | null;
+  reason?: string | null;
   before_data?: Record<string, unknown> | null;
   after_data?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
-  reason?: string;
   admin_users?: {
     email?: string;
     display_name?: string;
   } | null;
 }
 
-type ActionCategory = 'ALL' | 'EVENTS' | 'ACCESS' | 'SETTINGS' | 'SYSTEM';
+type ActionCategory = 'ALL' | 'AUTH' | 'EVENTS' | 'ACCESS' | 'SETTINGS' | 'SYSTEM';
 
 export const AuditLogsPanel: React.FC = () => {
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
@@ -52,7 +55,7 @@ export const AuditLogsPanel: React.FC = () => {
     try {
       const { data, error: err } = await supabase
         .from('audit_logs')
-        .select('id, created_at, actor_role, action, target_type, target_id, justification, before_data, after_data, metadata, admin_users!actor_admin_id(email, display_name)')
+        .select('id, created_at, actor_role, action, target_type, target_id, reason, before_data, after_data, metadata, admin_users!actor_admin_id(email, display_name)')
         .order('created_at', { ascending: false })
         .limit(limit);
       if (err) throw err;
@@ -77,15 +80,15 @@ export const AuditLogsPanel: React.FC = () => {
 
   const handleExportCsv = () => {
     if (filteredLogs.length === 0) return;
-    const headers = ['Timestamp', 'Actor', 'Role', 'Action', 'Target Type', 'Target ID', 'Justification'];
+    const headers = ['Timestamp', 'Actor', 'Role', 'Action', 'Target Type', 'Target ID', 'Reason'];
     const rows = filteredLogs.map((log) => [
       sanitizeCsvCell(new Date(log.created_at).toISOString()),
-      sanitizeCsvCell(log.admin_users?.email || log.admin_users?.display_name || 'System'),
+      sanitizeCsvCell(log.admin_users?.email || log.admin_users?.display_name || (log.actor_role === 'SUPER_ADMIN' ? 'Super Admin' : 'System Service')),
       sanitizeCsvCell(log.actor_role),
       sanitizeCsvCell(log.action),
       sanitizeCsvCell(log.target_type),
       sanitizeCsvCell(log.target_id || ''),
-      sanitizeCsvCell(log.justification || log.reason || ''),
+      sanitizeCsvCell(log.reason || ''),
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -99,18 +102,21 @@ export const AuditLogsPanel: React.FC = () => {
 
   const filteredLogs = logs.filter((log) => {
     // Category filter
-    if (selectedCategory === 'EVENTS') {
+    if (selectedCategory === 'AUTH') {
+      const act = log.action.toUpperCase();
+      if (!act.includes('LOGIN') && !act.includes('LOGOUT') && !act.includes('OTP') && !act.includes('SESSION') && log.target_type !== 'security') return false;
+    } else if (selectedCategory === 'EVENTS') {
       const act = log.action.toLowerCase();
-      if (!act.includes('event') && log.target_type.toLowerCase() !== 'events') return false;
+      if (!act.includes('event') && log.target_type.toLowerCase() !== 'event' && log.target_type.toLowerCase() !== 'events') return false;
     } else if (selectedCategory === 'ACCESS') {
       const act = log.action.toLowerCase();
-      if (!act.includes('access') && !act.includes('organizer') && !act.includes('approval')) return false;
+      if (!act.includes('access') && !act.includes('organizer') && !act.includes('approval') && !act.includes('role')) return false;
     } else if (selectedCategory === 'SETTINGS') {
       const act = log.action.toLowerCase();
-      if (!act.includes('setting') && !act.includes('config')) return false;
+      if (!act.includes('setting') && !act.includes('config') && log.target_type !== 'global_setting') return false;
     } else if (selectedCategory === 'SYSTEM') {
       const act = log.action.toLowerCase();
-      if (act.includes('event') || act.includes('access') || act.includes('setting')) return false;
+      if (act.includes('event') || act.includes('login') || act.includes('logout') || act.includes('otp') || act.includes('access') || act.includes('setting')) return false;
     }
 
     // Search query filter
@@ -121,21 +127,25 @@ export const AuditLogsPanel: React.FC = () => {
       log.target_type.toLowerCase().includes(q) ||
       (log.target_id && log.target_id.toLowerCase().includes(q)) ||
       (log.admin_users?.email && log.admin_users.email.toLowerCase().includes(q)) ||
-      (log.justification && log.justification.toLowerCase().includes(q)) ||
-      (log.reason && log.reason.toLowerCase().includes(q))
+      (log.admin_users?.display_name && log.admin_users.display_name.toLowerCase().includes(q)) ||
+      (log.reason && log.reason.toLowerCase().includes(q)) ||
+      log.actor_role.toLowerCase().includes(q)
     );
   });
 
   const getActionBadgeColor = (action: string) => {
     const act = action.toUpperCase();
-    if (act.includes('DELETE') || act.includes('REJECT') || act.includes('REMOVE')) {
+    if (act.includes('DELETE') || act.includes('REJECT') || act.includes('REMOVE') || act.includes('CANCEL') || act === 'LOGOUT') {
       return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20';
     }
-    if (act.includes('CREATE') || act.includes('APPROVE') || act.includes('INSERT')) {
+    if (act.includes('CREATE') || act.includes('APPROVE') || act.includes('INSERT') || act === 'LOGIN') {
       return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20';
     }
-    if (act.includes('UPDATE') || act.includes('EDIT') || act.includes('MODIFY')) {
+    if (act.includes('UPDATE') || act.includes('EDIT') || act.includes('MODIFY') || act.includes('UPSERT')) {
       return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+    }
+    if (act.includes('OTP') || act.includes('SESSION') || act.includes('REFRESH')) {
+      return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20';
     }
     return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20';
   };
@@ -169,7 +179,7 @@ export const AuditLogsPanel: React.FC = () => {
             <span>Security & Operations Audit Trail</span>
           </h2>
           <p className="text-xs sm:text-sm text-[#5a4136] dark:text-[#8e8e93] mt-1 max-w-2xl">
-            Forensic chronological log tracking administrative state mutations, role elevations, and access decisions.
+            Chronological audit ledger recording authentication events, event lifecycle state changes, and administrative actions.
           </p>
         </div>
 
@@ -208,25 +218,30 @@ export const AuditLogsPanel: React.FC = () => {
           {/* Quick Category Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {[
-              { id: 'ALL', label: 'All Operations' },
-              { id: 'EVENTS', label: 'Events' },
-              { id: 'ACCESS', label: 'Access Requests' },
-              { id: 'SETTINGS', label: 'Settings' },
+              { id: 'ALL', label: 'All Operations', icon: Shield },
+              { id: 'AUTH', label: 'Logins & Auth', icon: KeyRound },
+              { id: 'EVENTS', label: 'Events', icon: Calendar },
+              { id: 'ACCESS', label: 'Access & RBAC', icon: Users },
+              { id: 'SETTINGS', label: 'Settings', icon: Sliders },
               { id: 'SYSTEM', label: 'System' },
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id as ActionCategory)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  selectedCategory === cat.id
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-gray-100 dark:bg-white/5 text-[#5a4136] dark:text-[#8e8e93] hover:bg-gray-200 dark:hover:bg-white/10'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+            ].map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.id as ActionCategory)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-gray-100 dark:bg-white/5 text-[#5a4136] dark:text-[#8e8e93] hover:bg-gray-200 dark:hover:bg-white/10'
+                  }`}
+                >
+                  {Icon && <Icon size={12} />}
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Search & Row Limit */}
@@ -283,7 +298,7 @@ export const AuditLogsPanel: React.FC = () => {
                   <th className="py-3 px-4">Actor</th>
                   <th className="py-3 px-4">Action</th>
                   <th className="py-3 px-4">Target Entity</th>
-                  <th className="py-3 px-4">Justification</th>
+                  <th className="py-3 px-4">Reason / Note</th>
                   <th className="py-3 px-4 text-right">Payload Diff</th>
                 </tr>
               </thead>
@@ -291,7 +306,7 @@ export const AuditLogsPanel: React.FC = () => {
                 {filteredLogs.map((log) => {
                   const hasDiff = log.before_data || log.after_data || log.metadata;
                   const isExpanded = expandedId === log.id;
-                  const email = log.admin_users?.email || log.admin_users?.display_name || 'System Daemon';
+                  const email = log.admin_users?.email || log.admin_users?.display_name || (log.actor_role === 'SUPER_ADMIN' ? 'Super Admin' : 'System Service');
                   const initial = email.charAt(0).toUpperCase();
 
                   return (
@@ -338,12 +353,12 @@ export const AuditLogsPanel: React.FC = () => {
                         {/* Target Entity */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="font-semibold text-[#261812] dark:text-white uppercase tracking-wider text-[11px]">
-                            {log.target_type}
+                            {log.target_type === 'security' || log.target_type === 'auth_session' ? 'Auth Session' : log.target_type}
                           </div>
                           {log.target_id && (
                             <button
                               type="button"
-                              onClick={() => copyToClipboard(log.target_id, log.id)}
+                              onClick={() => copyToClipboard(log.target_id!, log.id)}
                               className="font-mono text-[11px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1 mt-0.5 group cursor-pointer"
                               title="Click to copy ID"
                             >
@@ -357,10 +372,10 @@ export const AuditLogsPanel: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Justification */}
+                        {/* Reason / Note */}
                         <td className="py-3.5 px-4 max-w-xs">
                           <span className="text-[#5a4136] dark:text-gray-300 line-clamp-2">
-                            {log.justification || log.reason || '—'}
+                            {log.reason || '—'}
                           </span>
                         </td>
 
@@ -435,9 +450,9 @@ export const AuditLogsPanel: React.FC = () => {
                                 </div>
                               ) : null}
 
-                              {/* Metadata if no before/after */}
-                              {log.metadata && !log.before_data && !log.after_data && (
-                                <div className="col-span-2 p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#202023] space-y-2">
+                              {/* Metadata */}
+                              {log.metadata && (
+                                <div className={`${log.before_data || log.after_data ? 'col-span-1 md:col-span-2' : 'col-span-2'} p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#202023] space-y-2`}>
                                   <div className="flex items-center justify-between">
                                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                                       Action Payload & Execution Metadata

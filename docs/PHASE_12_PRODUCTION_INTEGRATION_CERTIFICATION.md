@@ -29,8 +29,8 @@ Phase 12 bridges the certified operational architecture to the real deployed LPU
 ====================================================================================================
 Subsystem / Component         Production Value / Identifier             Validation State
 ====================================================================================================
-Supabase Project ID           nhjphyqiqhmxdhppljap                      LIVE PROVIDER VERIFIED
-Supabase Base URL             https://nhjphyqiqhmxdhppljap.supabase.co  LIVE PROVIDER VERIFIED
+Supabase Project ID           tbehdigakmuoqchaaawr                      LIVE PROVIDER VERIFIED
+Supabase Base URL             https://tbehdigakmuoqchaaawr.supabase.co  LIVE PROVIDER VERIFIED
 Cloudflare Student Worker     lpu-events-student                        DEPLOYED PRODUCTION VERIFIED
 Cloudflare Student Domain     lpuevents.live                            LIVE PROVIDER VERIFIED
 Cloudflare R2 Bucket          lpu-events-images                         DEPLOYED PRODUCTION VERIFIED

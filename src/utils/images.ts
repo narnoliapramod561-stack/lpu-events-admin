@@ -83,6 +83,7 @@ export function getEventImage(
     thumbnail: 400,
     'sponsor-logo': 600,
     'admin-preview': 1280,
+    advertisement: 1920,
   };
 
   const targetWidth = maxWidth ?? (defaultWidths[context] || 1080);

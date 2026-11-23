@@ -157,6 +157,9 @@ export const ManageEventsPanel: React.FC<ManageEventsPanelProps> = ({
         setTrendingIds((prev) => new Set([...prev, evt.id]));
         showToast(`Added "${evt.name}" to Trending!`);
       }
+      lpuClient.invalidateClientCache('trending');
+      lpuClient.invalidateClientCache('homepage');
+      await lpuClient.dispatchEdgeInvalidation(['trending', 'homepage']).catch(console.warn);
     } catch (err: any) {
       console.error('Failed to toggle trending:', err);
       alert('Failed to update trending: ' + (err.message || 'Unknown error'));

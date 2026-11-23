@@ -32,8 +32,8 @@ assert(fs.existsSync(studentWranglerPath), '1.1: Cloudflare Worker wrangler conf
 const wranglerContent = fs.readFileSync(studentWranglerPath, 'utf8');
 assert(
   wranglerContent.includes('"name": "lpu-events-student"') &&
-  wranglerContent.includes('nhjphyqiqhmxdhppljap.supabase.co'),
-  '1.2: Production environment identity correctly bound to Supabase project nhjphyqiqhmxdhppljap'
+  wranglerContent.includes('tbehdigakmuoqchaaawr.supabase.co'),
+  '1.2: Production environment identity correctly bound to Supabase project tbehdigakmuoqchaaawr'
 );
 
 const adminEnvExample = fs.readFileSync('lpu-events-admin/.env.example', 'utf8');

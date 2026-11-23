@@ -56,10 +56,10 @@ function probeHttps(urlStr) {
 // -----------------------------------------------------------------------------
 console.log('📌 Test Suite 1: Live Infrastructure Reachability & Production Identity');
 
-const supabaseRes = await probeHttps('https://nhjphyqiqhmxdhppljap.supabase.co/rest/v1/');
+const supabaseRes = await probeHttps('https://tbehdigakmuoqchaaawr.supabase.co/rest/v1/');
 assert(
   supabaseRes.status === 401 || supabaseRes.ok,
-  '1.1: Production Supabase instance nhjphyqiqhmxdhppljap is reachable via HTTPS'
+  '1.1: Production Supabase instance tbehdigakmuoqchaaawr is reachable via HTTPS'
 );
 
 const r2DomainRes = await probeHttps('https://images.lpuevents.live');

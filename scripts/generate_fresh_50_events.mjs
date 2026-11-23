@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SUPABASE_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 const ANON_KEY = 'sb_publishable_S9KH9_RTpx1MiPwyEBWxRQ_QkJVgzsA';
 
 const headers = {
@@ -182,7 +182,7 @@ async function generateSeedSql() {
   const allSlots = [...todaySlots, ...tomorrowSlots, ...dayAfterSlots];
 
   let sql = `-- LPU Events Production Fresh 50-Event Seed
--- Target: nhjphyqiqhmxdhppljap (PostgreSQL 17)
+-- Target: tbehdigakmuoqchaaawr (PostgreSQL 17)
 -- Execution: Transactional
 
 BEGIN;

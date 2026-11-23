@@ -18,11 +18,14 @@ export type AdminNavTab =
   | 'categories'
   | 'student-inquiries'
   | 'messages'
+  | 'ads-hero-strip'
+  | 'ads-hero-carousel'
+  | 'ads-happening-today'
+  | 'ads-event-hub'
   | 'analytics'
   | 'audit-logs'
   | 'system-health'
   | 'monitoring'
-  | 'event-backups'
   | 'settings';
 
 interface SidebarProps {
@@ -45,22 +48,42 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
     const fetchCounts = async () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       try {
-        const [accessRes, inqRes] = await Promise.all([
-          supabase
-            .from('organizer_access_requests')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'PENDING'),
-          supabase
-            .from('student_inquiries')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'OPEN')
+        const accessPromise = supabase
+          .from('organizer_access_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'PENDING');
+
+        const inquiriesPromise = (async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const headers: Record<string, string> = {};
+            if (session?.access_token) {
+              headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
+            const edgeUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+              ? '/api/admin/inquiries'
+              : 'https://lpuevents.live/api/admin/inquiries';
+            const res = await fetch(edgeUrl, { headers });
+            if (res.ok) {
+              const json = await res.json().catch(() => ({}));
+              if (Array.isArray(json.inquiries)) {
+                return json.inquiries.filter((q: any) => q.status === 'OPEN').length;
+              }
+            }
+          } catch {}
+          return null;
+        })();
+
+        const [accessRes, inqCount] = await Promise.all([
+          accessPromise,
+          inquiriesPromise
         ]);
 
         if (!accessRes.error && accessRes.count !== null) {
           setPendingCount(accessRes.count);
         }
-        if (!inqRes.error && inqRes.count !== null) {
-          setOpenInquiriesCount(inqRes.count);
+        if (typeof inqCount === 'number') {
+          setOpenInquiriesCount(inqCount);
         }
       } catch (e) {
         console.error('Error fetching sidebar notification counts:', e);
@@ -107,8 +130,16 @@ export const SuperAdminSidebar: React.FC<SidebarProps> = ({
       items: [
         { id: 'create-event', label: 'Create Event', icon: 'add_circle' },
         { id: 'all-events', label: 'All Active Events', icon: 'calendar_month' },
-        { id: 'past-events', label: 'Past Events', icon: 'history' },
-        { id: 'event-backups', label: 'Event Backups (D1)', icon: 'cloud_sync' }
+        { id: 'past-events', label: 'Past Events', icon: 'history' }
+      ]
+    },
+    {
+      group: 'Sponsorships & Ads',
+      items: [
+        { id: 'ads-hero-strip', label: 'Homepage Ribbon Ad', icon: 'panorama_horizontal' },
+        { id: 'ads-hero-carousel', label: 'Hero Carousel Ads', icon: 'view_carousel' },
+        { id: 'ads-happening-today', label: 'Happening Today Ads', icon: 'bolt' },
+        { id: 'ads-event-hub', label: 'Event Hub Grid Ads', icon: 'grid_view' },
       ]
     },
     {

@@ -564,6 +564,14 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setError('Please select a primary Category.');
         return false;
       }
+      if (optimizingImage || activeUploadPromiseRef.current) {
+        setError('Banner image is still uploading to Cloudflare R2. Please wait for the upload to complete.');
+        return false;
+      }
+      if (!bannerUrl || (!bannerMediaId && !editEventId) || (bannerUrl.startsWith('blob:') && !uploadVerifiedCompleteRef.current)) {
+        setError('Please upload a banner image. An event cannot be saved or created without a successfully uploaded banner.');
+        return false;
+      }
     }
     if (step === 2) {
       const todayStr = toLocalDateString(new Date());
@@ -634,6 +642,16 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
   // Submit to Supabase
   const handlePublish = async () => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(5)) {
+      return;
+    }
+
+    if (optimizingImage || activeUploadPromiseRef.current) {
+      setError('Banner image is still uploading to Cloudflare R2. Please wait for the upload to complete before saving.');
+      return;
+    }
+
+    if (!bannerUrl || (!bannerMediaId && !editEventId) || (bannerUrl.startsWith('blob:') && !uploadVerifiedCompleteRef.current)) {
+      setError('A successfully uploaded banner image is required before saving or publishing.');
       return;
     }
 
@@ -841,22 +859,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
         setPublishProgressStep('Updating event in primary database...');
         const { error: editErr } = await lpuClient.editEvent(editEventId, payload, sections);
         if (editErr) throw editErr;
-        setPublishProgressStep('Securing backup snapshot in Cloudflare D1 database...');
-        await lpuClient.backupEventToCloudflare(editEventId, { ...payload, sections }).catch(() => {});
-        setSuccess('Event updated successfully and backed up to Cloudflare D1!');
+        setSuccess('Event updated successfully!');
       } else {
         setPublishProgressStep('Publishing event to primary database...');
-        const { data: pubData, error: pubErr } = await lpuClient.publishEvent(payload, sections);
+        const { error: pubErr } = await lpuClient.publishEvent(payload, sections);
         if (pubErr) throw pubErr;
-        const newEventId = pubData?.event_id;
-        if (newEventId) {
-          setPublishProgressStep('Securing backup snapshot in Cloudflare D1 database...');
-          await lpuClient.backupEventToCloudflare(newEventId, { ...payload, sections }).catch(() => {});
-        }
         try {
           localStorage.removeItem(DRAFT_KEY);
         } catch (e) {}
-        setSuccess('Event published live & backed up to Cloudflare D1 database!');
+        setSuccess('Event published live successfully!');
       }
       setTimeout(() => {
         onComplete();
@@ -2152,23 +2163,38 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({
           {currentStep < 6 ? (
             <button
               type="button"
+              disabled={currentStep === 1 && optimizingImage}
               onClick={handleNext}
-              className="px-6 py-2 rounded-lg bg-[#ff6b00] hover:bg-[#a04100] text-white text-xs font-bold shadow transition-all flex items-center gap-1.5"
+              className="px-6 py-2 rounded-lg bg-[#ff6b00] hover:bg-[#a04100] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Continue</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              {currentStep === 1 && optimizingImage ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Uploading Image...</span>
+                </>
+              ) : (
+                <>
+                  <span>Continue</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </>
+              )}
             </button>
           ) : (
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || optimizingImage || !bannerUrl || (!bannerMediaId && !editEventId) || (bannerUrl.startsWith('blob:') && !uploadVerifiedCompleteRef.current)}
               onClick={handlePublish}
-              className="px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow transition-all flex items-center gap-1.5"
+              className="px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              {saving ? (
+              {saving || optimizingImage ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{publishProgressStep || 'Publishing...'}</span>
+                  <span>{optimizingImage ? 'Uploading Image...' : (publishProgressStep || 'Publishing...')}</span>
+                </>
+              ) : !bannerUrl || (!bannerMediaId && !editEventId) || (bannerUrl.startsWith('blob:') && !uploadVerifiedCompleteRef.current) ? (
+                <>
+                  <span className="material-symbols-outlined text-[16px]">warning</span>
+                  <span>Banner Image Required</span>
                 </>
               ) : (
                 <>

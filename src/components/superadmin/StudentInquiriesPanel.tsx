@@ -96,50 +96,13 @@ export const StudentInquiriesPanel: React.FC = () => {
     try {
       let records: StudentInquiry[] = [];
 
-      // 1. Primary: Query Cloudflare D1 Edge Gateway (0% Supabase Compute Stress)
-      try {
-        const headers = await getAuthHeaders();
-        const edgeRes = await fetch(getEdgeApiUrl('/api/admin/inquiries'), { headers });
-        if (edgeRes.ok) {
-          const json = await edgeRes.json().catch(() => ({}));
-          if (Array.isArray(json.inquiries) && json.inquiries.length > 0) {
-            records = json.inquiries as StudentInquiry[];
-          }
+      // 100% Cloudflare D1 Native: Fetch all inquiries from Cloudflare Edge
+      const edgeRes = await requestEdge('/api/admin/inquiries').catch(() => null);
+      if (edgeRes && edgeRes.ok) {
+        const json = await edgeRes.json().catch(() => ({}));
+        if (Array.isArray(json.inquiries)) {
+          records = json.inquiries as StudentInquiry[];
         }
-      } catch (edgeErr) {
-        console.warn('Edge D1 fetch notice:', edgeErr);
-      }
-
-      // 2. Secondary fallback: Query Supabase primary table if D1 edge is cold or during transition
-      if (records.length === 0) {
-        const { data } = await supabase
-          .from('student_inquiries')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (data && data.length > 0) {
-          records = data as StudentInquiry[];
-        }
-      }
-
-      // 3. Tertiary fallback check from global_settings legacy queue
-      if (records.length === 0) {
-        try {
-          const { data: legacyData } = await supabase
-            .from('global_settings')
-            .select('value')
-            .eq('key', 'student_support_inquiries')
-            .maybeSingle();
-
-          if (legacyData?.value) {
-            const parsed = Array.isArray(legacyData.value) 
-              ? legacyData.value 
-              : JSON.parse(String(legacyData.value));
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              records = parsed as StudentInquiry[];
-            }
-          }
-        } catch {}
       }
 
       setInquiries(records);
@@ -148,19 +111,18 @@ export const StudentInquiriesPanel: React.FC = () => {
         setAdminNoteInput(records[0].admin_notes || '');
       }
 
-      // Check current message reception status from platform config
+      // Check current message reception status directly from Cloudflare Edge
       try {
-        const { data: deskData } = await supabase
-          .from('global_settings')
-          .select('value')
-          .eq('key', 'contact_messages_config')
-          .maybeSingle();
-        if (deskData?.value && typeof deskData.value === 'object') {
-          setIsReceptionEnabled((deskData.value as any).is_enabled !== false);
+        const settingsRes = await requestEdge('/api/admin/inquiries/settings').catch(() => null);
+        if (settingsRes && settingsRes.ok) {
+          const settingsJson = await settingsRes.json().catch(() => ({}));
+          if (typeof settingsJson.is_enabled === 'boolean') {
+            setIsReceptionEnabled(settingsJson.is_enabled);
+          }
         }
       } catch {}
     } catch (err: any) {
-      console.error('Failed to load inquiries:', err);
+      console.error('Failed to load inquiries from Cloudflare D1:', err);
     } finally {
       setLoading(false);
     }
@@ -178,21 +140,11 @@ export const StudentInquiriesPanel: React.FC = () => {
     const resolvedAt = newStatus === 'RESOLVED' ? new Date().toISOString() : null;
 
     try {
-      // 1. Primary: Cloudflare D1 Edge update
+      // 100% Cloudflare D1 Edge update: Zero Supabase Database Hits
       await requestEdge(`/api/admin/inquiries/${item.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus, resolved_at: resolvedAt })
       });
-
-      // 2. Secondary: Sync to Supabase row if present
-      const { error: syncError } = await supabase
-        .from('student_inquiries')
-        .update({
-          status: newStatus,
-          resolved_at: resolvedAt
-        })
-        .eq('id', item.id);
-      if (syncError) throw syncError;
 
       const updated = inquiries.map(q => {
         if (q.id === item.id) {
@@ -208,31 +160,24 @@ export const StudentInquiriesPanel: React.FC = () => {
 
       showToast(newStatus === 'RESOLVED' ? 'Marked inquiry as resolved' : newStatus === 'SPAM' ? 'Flagged inquiry as SPAM' : 'Re-opened inquiry');
     } catch (err: any) {
-      alert('Error updating status: ' + (err.message || String(err)));
+      alert('Error updating status in Cloudflare D1: ' + (err.message || String(err)));
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to permanently delete this message record?')) return;
     try {
-      // 1. Primary: Delete from Cloudflare D1 Edge
+      // 100% Cloudflare D1 Edge delete: Zero Supabase Database Hits
       await requestEdge(`/api/admin/inquiries/${id}`, { method: 'DELETE' });
-
-      // 2. Secondary: Delete from Supabase database
-      const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_student_inquiry', { p_id: id });
-      if (rpcErr || (rpcRes && (rpcRes as any).ok === false)) {
-        const { error: deleteError } = await supabase.from('student_inquiries').delete().eq('id', id);
-        if (deleteError) throw deleteError;
-      }
 
       const updated = inquiries.filter(q => q.id !== id);
       setInquiries(updated);
       if (selectedInquiry?.id === id) {
         setSelectedInquiry(updated.length > 0 ? updated[0] : null);
       }
-      showToast('Message permanently deleted');
+      showToast('Message permanently deleted from Cloudflare D1 database');
     } catch (err: any) {
-      alert('Error deleting inquiry: ' + (err.message || String(err)));
+      alert('Error deleting inquiry from Cloudflare D1: ' + (err.message || String(err)));
     }
   };
 
@@ -248,32 +193,15 @@ export const StudentInquiriesPanel: React.FC = () => {
 
     setIsDeletingAll(true);
     try {
-      // 1. Primary: Delete all from Cloudflare D1 Edge Database
+      // 100% Cloudflare D1 Edge delete all: Zero Supabase Database Hits
       await requestEdge('/api/admin/inquiries', { method: 'DELETE' });
-
-      // 2. Secondary: Delete all from Supabase table & legacy settings
-      const { data: rpcData, error: rpcError } = await supabase.rpc('delete_all_student_inquiries');
-      if (rpcError || (rpcData && (rpcData as any).ok === false)) {
-        const { error: deleteError } = await supabase
-          .from('student_inquiries')
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000');
-        if (deleteError) throw deleteError;
-      }
-
-      // 3. Clear legacy global_settings if any
-      const { error: settingsError } = await supabase
-        .from('global_settings')
-        .update({ value: [] })
-        .eq('key', 'student_support_inquiries');
-      if (settingsError) throw settingsError;
 
       setInquiries([]);
       setSelectedInquiry(null);
       setAdminNoteInput('');
-      showToast('All messages permanently deleted from database');
+      showToast('All messages permanently deleted from Cloudflare D1 database');
     } catch (err: any) {
-      alert('Failed to delete inquiries: ' + (err.message || String(err)));
+      alert('Failed to delete inquiries from Cloudflare D1: ' + (err.message || String(err)));
     } finally {
       setIsDeletingAll(false);
     }
@@ -283,18 +211,11 @@ export const StudentInquiriesPanel: React.FC = () => {
     if (!selectedInquiry) return;
     setSavingNote(true);
     try {
-      // 1. Primary: Cloudflare D1 Edge update
+      // 100% Cloudflare D1 Edge update: Zero Supabase Database Hits
       await requestEdge(`/api/admin/inquiries/${selectedInquiry.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ admin_notes: adminNoteInput })
       });
-
-      // 2. Secondary: Sync to Supabase
-      const { error: syncError } = await supabase
-        .from('student_inquiries')
-        .update({ admin_notes: adminNoteInput })
-        .eq('id', selectedInquiry.id);
-      if (syncError) throw syncError;
 
       const updated = inquiries.map(q => {
         if (q.id === selectedInquiry.id) {
@@ -305,9 +226,9 @@ export const StudentInquiriesPanel: React.FC = () => {
 
       setInquiries(updated);
       setSelectedInquiry(prev => prev ? { ...prev, admin_notes: adminNoteInput } : null);
-      showToast('Internal note saved successfully');
+      showToast('Internal note saved successfully in Cloudflare D1');
     } catch (err: any) {
-      alert('Error saving note: ' + (err.message || String(err)));
+      alert('Error saving note in Cloudflare D1: ' + (err.message || String(err)));
     } finally {
       setSavingNote(false);
     }
@@ -329,36 +250,11 @@ export const StudentInquiriesPanel: React.FC = () => {
         updated_at: new Date().toISOString()
       };
 
-      // 1. Update in global_settings
-      const { data: { user } } = await supabase.auth.getUser();
-      let adminId: string | undefined;
-      if (user?.id) {
-        const { data: au } = await supabase.from('admin_users').select('id').eq('auth_user_id', user.id).maybeSingle();
-        adminId = au?.id;
-      }
-      if (!adminId) {
-        throw new Error('Active administrative profile required to modify global settings.');
-      }
-
-      await supabase
-        .from('global_settings')
-        .upsert({
-          key: 'contact_messages_config',
-          value: payload,
-          description: 'Controls whether student inquiries/contact message submissions are accepted or paused platform-wide',
-          updated_by: adminId,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
-
-      // 2. Notify Cloudflare edge settings endpoint
-      try {
-        const headers = await getAuthHeaders();
-        await fetch(getEdgeApiUrl('/api/admin/inquiries/settings'), {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload)
-        });
-      } catch {}
+      // 100% Cloudflare Edge Worker toggle: Zero Supabase Database Hits
+      await requestEdge('/api/admin/inquiries/settings', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
 
       setIsReceptionEnabled(nextState);
       showToast(
@@ -367,7 +263,7 @@ export const StudentInquiriesPanel: React.FC = () => {
           : 'Message reception STOPPED. Student portal form is locked.'
       );
     } catch (err: any) {
-      alert('Error updating reception status: ' + (err.message || String(err)));
+      alert('Error updating reception status in Cloudflare: ' + (err.message || String(err)));
     } finally {
       setIsTogglingReception(false);
     }

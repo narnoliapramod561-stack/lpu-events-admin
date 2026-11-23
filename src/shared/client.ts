@@ -14,14 +14,12 @@ import {
   ContentSectionInput,
   CanonicalResourceType,
   ResourceVersionMap,
-  ResourceVersionItem,
-  CloudflareEventBackup,
-  CloudflareBackupRevision,
-  BackupFleetStatus
+  ResourceVersionItem
 } from './types';
 import { slugify, extractEventId } from './slug';
 import { persistentCache, HOMEPAGE_CACHE_KEY } from './persistentCache';
 import { registerMediaAssets } from './images/url';
+import { normalizeEventDetailPayload } from './eventCanonical';
 import { trackEvent, captureOrBufferException } from './telemetry/posthog';
 import { generateCorrelationId, validateCorrelationId } from './telemetry/correlation.ts';
 export { generateCorrelationId, validateCorrelationId };
@@ -215,7 +213,7 @@ export class LpuEventsClient {
 
         if (
           window.location.hostname === 'lpuevents.live' ||
-          (isLocalhostOrLan && (window.location.port === '3000' || window.location.port === '5173'))
+          (isLocalhostOrLan && window.location.port !== '3001')
         ) {
           baseOrigin = '';
         }
@@ -597,8 +595,9 @@ export class LpuEventsClient {
       if (targetUuid) {
         res = await this._fetchPublic<Event>(`events/${targetUuid}`);
         if (res.data) {
-          registerMediaAssets([res.data]);
-          return res;
+          const unwrapped = normalizeEventDetailPayload<Event>(res.data) || res.data;
+          registerMediaAssets([unwrapped]);
+          return { data: unwrapped, error: null };
         }
       } else {
         // Slug lookup: query search endpoint, and find exact match
@@ -608,8 +607,9 @@ export class LpuEventsClient {
           if (match && match.id) {
             res = await this._fetchPublic<Event>(`events/${match.id}`);
             if (res.data) {
-              registerMediaAssets([res.data]);
-              return res;
+              const unwrapped = normalizeEventDetailPayload<Event>(res.data) || res.data;
+              registerMediaAssets([unwrapped]);
+              return { data: unwrapped, error: null };
             }
           }
         }
@@ -732,25 +732,29 @@ export class LpuEventsClient {
           'Authorization': `Bearer ${session.access_token}`,
         };
 
-        await fetch(`${studentSiteUrl}/api/cache/invalidate`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ tags }),
-        });
+        try {
+          await fetch(`${studentSiteUrl}/api/cache/invalidate`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ tags }),
+          });
+        } catch {
+          // Non-blocking if student site is unreachable or cross-origin
+        }
 
         // Trigger snapshot publication queue and edge function
         try {
           await this.supabase.rpc('enqueue_snapshot_publication', {
             p_trigger_source: 'MUTATION',
           });
-          const supabaseUrl = (this.supabase as any)?.supabaseUrl || 'https://nhjphyqiqhmxdhppljap.supabase.co';
+          const supabaseUrl = (this.supabase as any)?.supabaseUrl || 'https://tbehdigakmuoqchaaawr.supabase.co';
           fetch(`${supabaseUrl}/functions/v1/publish-snapshots`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({ trigger_source: 'MUTATION' }),
+            body: JSON.stringify({ trigger_source: 'MUTATION', is_urgent: true }),
           }).catch(() => {});
         } catch {
           // Non-blocking
@@ -818,28 +822,6 @@ export class LpuEventsClient {
     if (!res.error) {
       const eventId = res.data?.event_id;
       this._dispatchTargetedEdgeInvalidation(['events', 'homepage', eventId ? `event:${eventId}` : '']);
-      // IndexNow: Notify search engines of new event for immediate indexing
-      if (eventId) {
-        try {
-          fetch('https://api.indexnow.org/indexnow', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-              host: 'lpuevents.live',
-              key: 'lpueventslive2026indexnowkey',
-              keyLocation: 'https://lpuevents.live/lpueventslive2026indexnowkey.txt',
-              urlList: [
-                'https://lpuevents.live/',
-                'https://lpuevents.live/sitemap.xml',
-              ],
-            }),
-          }).catch(() => {});
-        } catch {}
-        // Immediate Cloudflare D1 dual-backup dispatch
-        this.backupEventToCloudflare(eventId, { ...payload, sections }).catch((err) => {
-          console.warn('[Cloudflare D1 Backup] Proactive backup notice:', err);
-        });
-      }
     }
     return res;
   }
@@ -852,26 +834,6 @@ export class LpuEventsClient {
     });
     if (!res.error) {
       this._dispatchTargetedEdgeInvalidation(['events', 'homepage', `event:${id}`]);
-      // IndexNow: Notify search engines of updated event
-      try {
-        fetch('https://api.indexnow.org/indexnow', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({
-            host: 'lpuevents.live',
-            key: 'lpueventslive2026indexnowkey',
-            keyLocation: 'https://lpuevents.live/lpueventslive2026indexnowkey.txt',
-            urlList: [
-              'https://lpuevents.live/',
-              'https://lpuevents.live/sitemap.xml',
-            ],
-          }),
-        }).catch(() => {});
-      } catch {}
-      // Immediate Cloudflare D1 dual-backup dispatch on update
-      this.backupEventToCloudflare(id, { ...payload, sections }).catch((err) => {
-        console.warn('[Cloudflare D1 Backup] Proactive backup notice:', err);
-      });
     }
     return res;
   }
@@ -883,9 +845,6 @@ export class LpuEventsClient {
     });
     if (!res.error) {
       this._dispatchTargetedEdgeInvalidation(['events', 'homepage', `event:${id}`]);
-      this.backupEventToCloudflare(id).catch((err) => {
-        console.warn('[Cloudflare D1 Backup] Proactive backup notice:', err);
-      });
     }
     return res;
   }
@@ -1044,7 +1003,8 @@ export class LpuEventsClient {
       events: 0,
       featured: 0,
       carousel: 0,
-      settings: 0
+      settings: 0,
+      ads: 0,
     };
     for (const r of rows as ResourceVersionItem[]) {
       if (r.resource in map) {
@@ -1054,141 +1014,4 @@ export class LpuEventsClient {
     return { data: map, error: null };
   }
 
-  // ─── Cloudflare D1 Relational Backup & Disaster Recovery Architecture ───────
-
-  /**
-   * Internal authenticated edge dispatcher for Cloudflare D1 operations
-   */
-  private async _fetchAdminEdge<T>(
-    endpoint: string,
-    method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
-    body?: any
-  ): Promise<{ data: T | null; error: any; correlationId?: string }> {
-    const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const reqCorrelationId = generateCorrelationId('req_adm');
-    try {
-      let baseUrl = 'https://lpuevents.live';
-      if (typeof window !== 'undefined' && window.location) {
-        if (
-          window.location.hostname === 'localhost' ||
-          window.location.hostname === '127.0.0.1' ||
-          /^192\.168\./.test(window.location.hostname) ||
-          /^10\./.test(window.location.hostname)
-        ) {
-          baseUrl = '';
-        }
-      }
-      const { data: { session } } = await this.supabase.auth.getSession();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'x-correlation-id': reqCorrelationId,
-      };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      const res = await fetch(`${baseUrl}${cleanPath}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
-
-      const resCorrelationId = res.headers.get('x-correlation-id') || reqCorrelationId;
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        const errMsg = errJson.error || errJson.message || `HTTP ${res.status}: ${res.statusText}`;
-
-        if (res.status >= 500) {
-          captureOrBufferException(new Error(`Admin Server HTTP ${res.status}: ${errMsg}`), {
-            source: 'admin_api_client_fetch',
-            status: res.status,
-            endpoint: cleanPath,
-            correlation_id: resCorrelationId,
-          });
-        }
-
-        return { data: null, error: errMsg, correlationId: resCorrelationId };
-      }
-
-      const data = await res.json() as T;
-      return { data, error: null, correlationId: resCorrelationId };
-    } catch (err: any) {
-      if (err?.name !== 'AbortError') {
-        captureOrBufferException(err instanceof Error ? err : new Error(String(err || 'Admin Network Error')), {
-          source: 'admin_api_client_network',
-          endpoint: cleanPath,
-          correlation_id: reqCorrelationId,
-        });
-      }
-      return { data: null, error: err.message || 'Network request failed', correlationId: reqCorrelationId };
-    }
-  }
-
-  /**
-   * Backup an event directly to Cloudflare D1 database.
-   * Runs immediately whenever an event is published or updated by an admin.
-   */
-  async backupEventToCloudflare(eventId: string, snapshot?: any): Promise<{ ok: boolean; data?: any; error?: any }> {
-    try {
-      const res = await this._fetchAdminEdge<{ ok: boolean; id: string; version?: number; checksum?: string; backed_up_at?: string }>(
-        '/api/admin/backups/sync-event',
-        'POST',
-        { event_id: eventId, snapshot }
-      );
-      if (res.error) {
-        return { ok: false, error: res.error };
-      }
-      return { ok: true, data: res.data };
-    } catch (err: any) {
-      return { ok: false, error: err?.message || 'Failed to backup event to Cloudflare' };
-    }
-  }
-
-  /**
-   * Fetch Cloudflare D1 backup fleet health, storage stats, and quota
-   */
-  async fetchBackupFleetStatus(): Promise<{ data: BackupFleetStatus | null; error: any }> {
-    return this._fetchAdminEdge<BackupFleetStatus>('/api/admin/backups/status', 'GET');
-  }
-
-  /**
-   * Fetch backed up events from Cloudflare D1 (scoped to user's org if organizer, or all if superadmin)
-   */
-  async fetchEventBackups(filters?: { search?: string; status?: string }): Promise<{ data: { events: CloudflareEventBackup[]; count: number; is_super_admin: boolean } | null; error: any }> {
-    const params = new URLSearchParams();
-    if (filters?.search) params.set('search', filters.search);
-    if (filters?.status) params.set('status', filters.status);
-    const q = params.toString() ? `?${params.toString()}` : '';
-    return this._fetchAdminEdge<{ events: CloudflareEventBackup[]; count: number; is_super_admin: boolean }>(`/api/admin/backups${q}`, 'GET');
-  }
-
-  /**
-   * Fetch single event backup with full content sections and revision history from Cloudflare D1
-   */
-  async fetchEventBackupDetail(eventId: string): Promise<{ data: { backup: CloudflareEventBackup; revisions: CloudflareBackupRevision[] } | null; error: any }> {
-    return this._fetchAdminEdge<{ backup: CloudflareEventBackup; revisions: CloudflareBackupRevision[] }>(`/api/admin/backups/${eventId}`, 'GET');
-  }
-
-  /**
-   * Trigger fleet-wide synchronization from Supabase to Cloudflare D1 (SuperAdmin only)
-   */
-  async triggerFleetBackupSync(): Promise<{ data: { ok: boolean; synced_count: number; failed_count: number } | null; error: any }> {
-    return this._fetchAdminEdge<{ ok: boolean; synced_count: number; failed_count: number }>('/api/admin/backups/sync-fleet', 'POST', {});
-  }
-
-  /**
-   * Restore an event from Cloudflare D1 backup back to Supabase
-   */
-  async restoreEventFromBackup(eventId: string): Promise<{ data: { ok: boolean; restored_id: string } | null; error: any }> {
-    return this._fetchAdminEdge<{ ok: boolean; restored_id: string }>('/api/admin/backups/restore-event', 'POST', { event_id: eventId });
-  }
-
-  /**
-   * Toggle emergency disaster recovery failover mode (SuperAdmin only)
-   */
-  async toggleDisasterMode(enabled: boolean): Promise<{ data: { ok: boolean; disaster_mode: boolean } | null; error: any }> {
-    return this._fetchAdminEdge<{ ok: boolean; disaster_mode: boolean }>('/api/admin/backups/disaster-mode', 'POST', { enabled });
-  }
 }

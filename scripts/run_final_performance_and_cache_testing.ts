@@ -23,7 +23,7 @@ const STUDENT_LOCAL_URL = 'http://localhost:3000';
 const ADMIN_LOCAL_URL = 'http://localhost:3001';
 const LIVE_EDGE_URL = 'https://lpuevents.live';
 const R2_PUBLIC_URL = 'https://images.lpuevents.live';
-const SUPABASE_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_S9KH9_RTpx1MiPwyEBWxRQ_QkJVgzsA';
 const CACHE_ADMIN_ACCESS_TOKEN = process.env.CACHE_ADMIN_ACCESS_TOKEN || '';
 

@@ -11,7 +11,7 @@ console.log('  LPU EVENTS — LIVE REGRESSION, STRESS & FREE-TIER SAFETY TEST');
 console.log('================================================================\n');
 
 const BASE_URL = 'https://lpuevents.live';
-const SUPABASE_PROJECT_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_PROJECT_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 const R2_PUBLIC_URL = 'https://images.lpuevents.live';
 
 console.log('TARGET ENVIRONMENT:');
@@ -19,7 +19,7 @@ console.log({
   TARGET_URL: BASE_URL,
   CLOUDFLARE_WORKER_ROUTE: `${BASE_URL}/api/public/*`,
   CLOUDFLARE_ZONE: 'lpuevents.live',
-  SUPABASE_PROJECT: 'nhjphyqiqhmxdhppljap',
+  SUPABASE_PROJECT: 'tbehdigakmuoqchaaawr',
   R2_BUCKET: 'lpu-events-media',
   UTC_START_TIME: new Date().toISOString()
 });

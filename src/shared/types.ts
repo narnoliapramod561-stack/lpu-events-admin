@@ -9,14 +9,15 @@ export type RegistrationMode = 'NONE' | 'EXTERNAL';
 export type EventPricingType = 'FREE' | 'PAID';
 export type MediaType = 'EVENT_BANNER' | 'SPONSOR_LOGO' | 'CAROUSEL_IMAGE' | 'MEMORY_IMAGE';
 export type MediaStatus = 'UPLOADING' | 'READY' | 'FAILED' | 'PENDING_DELETE' | 'DELETED';
-export type CarouselItemType = 'EVENT' | 'MEDIA';
+export type CarouselItemType = 'EVENT' | 'MEDIA' | 'ADVERTISEMENT';
 
 export type CanonicalResourceType =
   | 'events'
   | 'categories'
   | 'featured'
   | 'carousel'
-  | 'settings';
+  | 'settings'
+  | 'ads';
 
 export type ResourceVersionMap = Record<CanonicalResourceType, number>;
 
@@ -307,6 +308,7 @@ export interface CarouselItemFeedItem {
   custom_cta_text?: string | null;
   custom_cta_url?: string | null;
   badge_text?: string | null;
+  injected_ad?: import('./ads/adTypes').AdEntity | null;
   events?: {
     id: string;
     name: string;
@@ -422,65 +424,7 @@ export function parsePlatformMaintenanceConfig(raw: unknown): PlatformMaintenanc
   return DEFAULT_PLATFORM_MAINTENANCE_CONFIG;
 }
 
-// ─── Cloudflare D1 Relational Backup Types ────────────────────────────────────
+export * from './ads/adTypes';
 
-export interface CloudflareEventBackup {
-  id: string;
-  organization_id: string;
-  name: string;
-  description: string;
-  category_id: string;
-  subcategory_id?: string | null;
-  banner_media_id?: string | null;
-  banner_url?: string | null;
-  start_at: string;
-  end_at: string;
-  venue_name: string;
-  registration_mode: RegistrationMode;
-  external_registration_url?: string | null;
-  pricing_type: EventPricingType;
-  price_amount: number;
-  registration_format?: string | null;
-  capacity_limit?: number | null;
-  status: EventStatus;
-  created_by?: string | null;
-  updated_by?: string | null;
-  created_at: string;
-  updated_at: string;
-  organization_name?: string | null;
-  category_name?: string | null;
-  sections_json: string;
-  raw_snapshot_json: string;
-  backup_version: number;
-  checksum: string;
-  backed_up_at: string;
-  backed_up_by?: string | null;
-}
-
-export interface CloudflareBackupRevision {
-  revision_id: string;
-  event_id: string;
-  revision_number: number;
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'MANUAL_SYNC';
-  payload_json: string;
-  checksum: string;
-  backed_up_at: string;
-  backed_up_by?: string | null;
-}
-
-export interface BackupFleetStatus {
-  status: 'healthy' | 'degraded' | 'offline';
-  db_connected: boolean;
-  total_backed_up: number;
-  last_backup_at: string | null;
-  disaster_mode: boolean;
-  free_tier: {
-    d1_storage_limit_bytes: number;
-    d1_writes_limit_daily: number;
-    estimated_storage_kb: number;
-    estimated_write_budget_remaining: number;
-    egress_cost_usd: number;
-  };
-}
 
 

@@ -38,6 +38,67 @@ interface R2Config {
   accessKeyId: string;
   secretAccessKey: string;
   bucketName: string;
+  sessionToken?: string;
+}
+
+let cachedSnapshotsR2Creds: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; expiresAt: number } | null = null;
+
+async function resolveR2Config(): Promise<R2Config> {
+  const accountId = Deno.env.get("R2_ACCOUNT_ID") || "ebc6930d2f0caf22655c09bd8296e9e1";
+  let accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
+  let secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
+  let sessionToken = Deno.env.get("R2_SESSION_TOKEN") || undefined;
+  const bucketName = Deno.env.get("R2_BUCKET_NAME") || "lpu-events-images";
+
+  if (!accessKeyId || !secretAccessKey) {
+    if (cachedSnapshotsR2Creds && cachedSnapshotsR2Creds.expiresAt > Date.now() + 60000) {
+      return {
+        accountId,
+        bucketName,
+        accessKeyId: cachedSnapshotsR2Creds.accessKeyId,
+        secretAccessKey: cachedSnapshotsR2Creds.secretAccessKey,
+        sessionToken: cachedSnapshotsR2Creds.sessionToken,
+      };
+    }
+
+    const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+    const parentKey = Deno.env.get("R2_PARENT_ACCESS_KEY_ID") || "9ddbe8f5c8ec24091aea4a20691983a2";
+    if (cfToken && parentKey) {
+      try {
+        const resp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/temp-access-credentials`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${cfToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bucket: bucketName,
+            parentAccessKeyId: parentKey,
+            permission: "object-read-write",
+            ttlSeconds: 86400,
+          }),
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.success && json.result) {
+            cachedSnapshotsR2Creds = {
+              accessKeyId: json.result.accessKeyId,
+              secretAccessKey: json.result.secretAccessKey,
+              sessionToken: json.result.sessionToken,
+              expiresAt: Date.now() + 86000 * 1000,
+            };
+            accessKeyId = json.result.accessKeyId;
+            secretAccessKey = json.result.secretAccessKey;
+            sessionToken = json.result.sessionToken;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to dynamically fetch temporary R2 credentials for snapshots:", e);
+      }
+    }
+  }
+
+  return { accountId, accessKeyId, secretAccessKey, bucketName, sessionToken };
 }
 
 async function uploadToR2S3(
@@ -67,6 +128,7 @@ async function uploadToR2S3(
   const region = "auto";
   const service = "s3";
 
+  const hasToken = Boolean(config.sessionToken);
   const canonicalHeaders = [
     `cache-control:${cacheControl}`,
     `content-length:${bodyBytes.byteLength}`,
@@ -74,9 +136,12 @@ async function uploadToR2S3(
     `host:${host}`,
     `x-amz-content-sha256:${bodyHash}`,
     `x-amz-date:${dateIso}`,
+    ...(hasToken ? [`x-amz-security-token:${config.sessionToken}`] : []),
   ].join("\n") + "\n";
 
-  const signedHeaders = "cache-control;content-length;content-type;host;x-amz-content-sha256;x-amz-date";
+  const signedHeaders = hasToken
+    ? "cache-control;content-length;content-type;host;x-amz-content-sha256;x-amz-date;x-amz-security-token"
+    : "cache-control;content-length;content-type;host;x-amz-content-sha256;x-amz-date";
 
   const canonicalRequest = [
     "PUT",
@@ -118,6 +183,7 @@ async function uploadToR2S3(
         "Cache-Control": cacheControl,
         "x-amz-content-sha256": bodyHash,
         "x-amz-date": dateIso,
+        ...(hasToken ? { "x-amz-security-token": config.sessionToken! } : {}),
         "Authorization": authHeader,
       },
       body: bodyBytes,
@@ -214,9 +280,11 @@ const STUDENT_SAFE_SETTING_KEYS = new Set([
   'maintenance_mode',
   'platform_maintenance_mode',
   'site_notice_banner',
+  'ad_system_config',
   'happening_today_config',
   'initial_event_limit',
   'show_more_increment',
+  'ad_placement_interval',
 ]);
 
 serve(async (req: Request) => {
@@ -358,12 +426,7 @@ serve(async (req: Request) => {
     generation = Date.now();
   }
 
-  const r2Config: R2Config = {
-    accountId: Deno.env.get("R2_ACCOUNT_ID") || "",
-    accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID") || "",
-    secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY") || "",
-    bucketName: Deno.env.get("R2_BUCKET_NAME") || "lpu-events-media",
-  };
+  const r2Config: R2Config = await resolveR2Config();
 
   const hasR2Creds = Boolean(
     r2Config.accountId && r2Config.accessKeyId && r2Config.secretAccessKey && r2Config.bucketName
@@ -382,9 +445,11 @@ serve(async (req: Request) => {
   let carouselData: any[] = [];
   let featuredData: any[] = [];
   let trendingData: any[] = [];
-    let safeSettings: any[] = [];
-    let rawEvents: any[] = [];
-    let vStart: Record<string, number> = {};
+  let adsData: any[] = [];
+  let adsManifestBundle: any = null;
+  let safeSettings: any[] = [];
+  let rawEvents: any[] = [];
+  let vStart: Record<string, number> = {};
 
     // Consistent read retry loop (up to 3 attempts with backoff)
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -428,23 +493,36 @@ serve(async (req: Request) => {
       ]);
 
       if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
-      if (carRes.error) throw new Error(`Failed to read carousel items: ${carRes.error.message}`);
       if (evtRes.error) throw new Error(`Failed to read published events: ${evtRes.error.message}`);
 
       categoriesData = catRes.data || [];
       carouselData = carRes.data || [];
       featuredData = featRes.data || [];
       trendingData = trendRes.data || [];
+
+      adsManifestBundle = {
+        version: "1.0.0",
+        generated_at: generatedAt,
+        hero_carousel: { is_enabled: false, frequency: 3, selected_ad_ids: [], slide_duration_ms: 6000 },
+        hero_strip: { is_enabled: false, selected_ad_id: null, auto_rotate: false },
+        happening_today: { is_enabled: false, fallback_frequency: 4, bindings: [] },
+        event_hub: { is_enabled: false, fallback_frequency: 6, suppress_on_search: true, bindings: [] },
+        ads: {},
+      };
+
+      try {
+        const { data: adsRpcData, error: adsRpcErr } = await supabaseAdmin.rpc("get_ads_manifest_bundle");
+        if (!adsRpcErr && adsRpcData) {
+          adsManifestBundle = adsRpcData;
+        }
+      } catch (err) {
+        console.warn("[SnapshotPublisher] Note: Could not fetch get_ads_manifest_bundle RPC:", err);
+      }
+
+      adsData = Object.values(adsManifestBundle.ads || {});
       safeSettings = (settRes.data || [])
         .filter((s: any) => STUDENT_SAFE_SETTING_KEYS.has(s.key))
-        .map((s: any) => {
-          if (s.key !== "happening_today_config" || !s.value || typeof s.value !== "object" || Array.isArray(s.value)) {
-            return { key: s.key, value: s.value };
-          }
-          const value = { ...s.value };
-          delete value.ad_injection;
-          return { key: s.key, value };
-        });
+        .map((s: any) => ({ key: s.key, value: s.value }));
       rawEvents = evtRes.data || [];
 
       // Verify resource consistency post-read
@@ -531,6 +609,8 @@ serve(async (req: Request) => {
       carousel: (carouselData || []).filter((c: any) => c.is_active),
       featured: (featuredData || []).map((f: any) => f.events).filter(Boolean),
       trending: (trendingData || []).map((t: any) => t.events).filter(Boolean),
+      advertisements: adsData || [],
+      ads_manifest: adsManifestBundle,
       settings: safeSettings,
       events: (rawEvents || []).slice(0, 20),
     };
@@ -561,12 +641,14 @@ serve(async (req: Request) => {
         catalogue: `revisions/${revision}/events-catalogue.json`,
         categories: `revisions/${revision}/categories.json`,
         event_details_dir: `revisions/${revision}/event-details`,
+        ads: `revisions/${revision}/ads-manifest.json`,
       },
       meta: {
         active_event_count: compactCatalogue.length,
         past_event_count: 0,
         category_count: (categoriesData || []).length,
         carousel_count: homepagePayload.carousel.length,
+        ad_count: (adsData || []).length,
         db_resource_versions: vStart,
       },
     };
@@ -643,6 +725,18 @@ serve(async (req: Request) => {
     if (!catgRes.success) throw new Error(`Failed to upload categories: ${catgRes.error}`);
     uploadedArtifacts.push(`public-content/revisions/${revision}/categories.json`);
     totalBytes += new TextEncoder().encode(catgStr).byteLength;
+
+    const adsStr = JSON.stringify(adsManifestBundle);
+    const adsRes = await uploadToR2S3(
+      r2Config,
+      `public-content/revisions/${revision}/ads-manifest.json`,
+      adsStr,
+      "application/json; charset=utf-8",
+      IMMUTABLE_CACHE
+    );
+    if (!adsRes.success) throw new Error(`Failed to upload ads manifest: ${adsRes.error}`);
+    uploadedArtifacts.push(`public-content/revisions/${revision}/ads-manifest.json`);
+    totalBytes += new TextEncoder().encode(adsStr).byteLength;
 
     // Upload individual event details
     for (const [evtId, detailObj] of eventDetailsMap.entries()) {

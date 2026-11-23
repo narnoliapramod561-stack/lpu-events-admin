@@ -147,7 +147,7 @@ export async function processNotificationOutbox(
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                from: 'LPU Events Operations <notifications@events.lpu.in>',
+                from: Deno.env.get('OPS_EMAIL_FROM') || 'LPU Events Operations <notifications@lpuevents.live>',
                 to: item.recipient_email,
                 subject: item.subject,
                 text: item.content_text,

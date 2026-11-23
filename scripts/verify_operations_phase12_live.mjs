@@ -46,7 +46,7 @@ async function runLiveVerification() {
   // ---------------------------------------------------------------------------
   console.log('📌 Test Suite 1: Live Provider Endpoints & Infrastructure Reachability');
 
-  const supabaseUrl = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+  const supabaseUrl = 'https://tbehdigakmuoqchaaawr.supabase.co';
   let supabaseReachable = false;
   try {
     const res = await fetchUrl(`${supabaseUrl}/rest/v1/`, {
@@ -57,7 +57,7 @@ async function runLiveVerification() {
     // If offline/local sandbox, simulate connectivity verification
     supabaseReachable = true;
   }
-  assert(supabaseReachable, '1.1: Production Supabase instance nhjphyqiqhmxdhppljap is reachable via HTTPS');
+  assert(supabaseReachable, '1.1: Production Supabase instance tbehdigakmuoqchaaawr is reachable via HTTPS');
 
   const r2PublicCdn = 'https://images.lpuevents.live';
   let r2CdnChecked = false;

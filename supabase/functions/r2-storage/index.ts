@@ -31,8 +31,76 @@ async function sha256Hex(data: ArrayBuffer | Uint8Array): Promise<string> {
     .join("");
 }
 
+interface R2StorageConfig {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+  sessionToken?: string;
+}
+
+let cachedR2StorageCreds: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; expiresAt: number } | null = null;
+
+async function resolveR2StorageConfig(): Promise<R2StorageConfig> {
+  const accountId = Deno.env.get("R2_ACCOUNT_ID") || "ebc6930d2f0caf22655c09bd8296e9e1";
+  let accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
+  let secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
+  let sessionToken = Deno.env.get("R2_SESSION_TOKEN") || undefined;
+  const bucketName = Deno.env.get("R2_BUCKET_NAME") || "lpu-events-images";
+
+  if (!accessKeyId || !secretAccessKey) {
+    if (cachedR2StorageCreds && cachedR2StorageCreds.expiresAt > Date.now() + 60000) {
+      return {
+        accountId,
+        bucketName,
+        accessKeyId: cachedR2StorageCreds.accessKeyId,
+        secretAccessKey: cachedR2StorageCreds.secretAccessKey,
+        sessionToken: cachedR2StorageCreds.sessionToken,
+      };
+    }
+
+    const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+    const parentKey = Deno.env.get("R2_PARENT_ACCESS_KEY_ID") || "9ddbe8f5c8ec24091aea4a20691983a2";
+    if (cfToken && parentKey) {
+      try {
+        const resp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/temp-access-credentials`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${cfToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bucket: bucketName,
+            parentAccessKeyId: parentKey,
+            permission: "object-read-write",
+            ttlSeconds: 86400,
+          }),
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.success && json.result) {
+            cachedR2StorageCreds = {
+              accessKeyId: json.result.accessKeyId,
+              secretAccessKey: json.result.secretAccessKey,
+              sessionToken: json.result.sessionToken,
+              expiresAt: Date.now() + 86000 * 1000,
+            };
+            accessKeyId = json.result.accessKeyId;
+            secretAccessKey = json.result.secretAccessKey;
+            sessionToken = json.result.sessionToken;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to dynamically fetch temporary R2 credentials for storage:", e);
+      }
+    }
+  }
+
+  return { accountId, accessKeyId, secretAccessKey, bucketName, sessionToken };
+}
+
 async function deleteFromR2(
-  config: { accountId: string; accessKeyId: string; secretAccessKey: string; bucketName: string },
+  config: R2StorageConfig,
   key: string
 ): Promise<{ success: boolean; error?: string }> {
   const host = `${config.accountId}.r2.cloudflarestorage.com`;
@@ -45,13 +113,17 @@ async function deleteFromR2(
 
   const emptyHash = await sha256Hex(new Uint8Array(0));
 
+  const hasToken = Boolean(config.sessionToken);
   const canonicalHeaders = [
     `host:${host}`,
     `x-amz-content-sha256:${emptyHash}`,
     `x-amz-date:${dateIso}`,
+    ...(hasToken ? [`x-amz-security-token:${config.sessionToken}`] : []),
   ].join("\n") + "\n";
 
-  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const signedHeaders = hasToken
+    ? "host;x-amz-content-sha256;x-amz-date;x-amz-security-token"
+    : "host;x-amz-content-sha256;x-amz-date";
 
   const canonicalRequest = [
     "DELETE",
@@ -90,6 +162,7 @@ async function deleteFromR2(
         "Host": host,
         "x-amz-content-sha256": emptyHash,
         "x-amz-date": dateIso,
+        ...(hasToken ? { "x-amz-security-token": config.sessionToken! } : {}),
         "Authorization": authHeader,
       },
     });
@@ -161,10 +234,7 @@ serve(async (req: Request) => {
   try {
     const { action, object_keys } = await req.json();
 
-    const r2AccountId = Deno.env.get("R2_ACCOUNT_ID") || "";
-    const r2AccessKey = Deno.env.get("R2_ACCESS_KEY_ID") || "";
-    const r2SecretKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
-    const bucketName = Deno.env.get("R2_BUCKET_NAME") || "lpu-events-images";
+    const r2Config = await resolveR2StorageConfig();
 
     if (action === "delete_objects") {
       const keysToDelete: string[] = Array.isArray(object_keys) ? object_keys : [];
@@ -184,7 +254,7 @@ serve(async (req: Request) => {
       const deleted: string[] = [];
       const failed: string[] = [];
 
-      if (!r2AccountId || !r2AccessKey || !r2SecretKey) {
+      if (!r2Config.accountId || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
         return new Response(JSON.stringify({ error: "R2 deletion is not configured." }), {
           status: 503,
           headers: corsHeaders,
@@ -192,10 +262,7 @@ serve(async (req: Request) => {
       }
 
       for (const key of keysToDelete) {
-        const res = await deleteFromR2(
-          { accountId: r2AccountId, accessKeyId: r2AccessKey, secretAccessKey: r2SecretKey, bucketName },
-          key
-        );
+        const res = await deleteFromR2(r2Config, key);
         if (res.success) {
           deleted.push(key);
         } else {

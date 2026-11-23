@@ -23,8 +23,8 @@ All 29 pre-launch operational checklist criteria and blocking gates defined in P
 ====================================================================================================
 Subsystem / Component         Production Value / Identifier             Validation State
 ====================================================================================================
-Supabase Project ID           nhjphyqiqhmxdhppljap                      LIVE VERIFIED (OPERATIONAL)
-Supabase Base URL             https://nhjphyqiqhmxdhppljap.supabase.co  LIVE VERIFIED (OPERATIONAL)
+Supabase Project ID           tbehdigakmuoqchaaawr                      LIVE VERIFIED (OPERATIONAL)
+Supabase Base URL             https://tbehdigakmuoqchaaawr.supabase.co  LIVE VERIFIED (OPERATIONAL)
 Cloudflare Student Worker     lpu-events-student                        DEPLOYED (OPERATIONAL)
 Cloudflare Student Domain     lpuevents.live                            LIVE VERIFIED (OPERATIONAL)
 Cloudflare R2 Bucket          lpu-events-images                         DEPLOYED (OPERATIONAL)

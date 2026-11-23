@@ -80,6 +80,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await fetchProfile(currentSession.user.id);
           }
           trackAdminAction('auth_login_success', { success: true });
+          supabase.rpc('admin_record_auth_audit', {
+            p_action: 'LOGIN',
+            p_reason: 'User session verified',
+            p_metadata: { user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null }
+          }).then(({ error: rpcErr }) => {
+            if (rpcErr) console.warn('Auth audit error:', rpcErr);
+          });
         } else {
           // Token refreshed / window focus / tab switch: update quietly in background without unmounting or reloading UI
           await fetchProfile(currentSession.user.id);
@@ -128,6 +135,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      await supabase.rpc('admin_record_auth_audit', {
+        p_action: 'LOGOUT',
+        p_reason: 'Admin initiated sign out'
+      });
+    } catch (e) {
+      console.warn('Logout audit error:', e);
+    }
     try {
       sessionStorage.removeItem('lpu_organizer_active_tab');
       sessionStorage.removeItem('lpu_superadmin_active_tab');

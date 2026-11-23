@@ -308,7 +308,7 @@ async function getJobRegistryWithTelemetry(
  */
 async function getGitHubWorkflowStatus(): Promise<Record<string, unknown>> {
   const ghToken = Deno.env.get("GITHUB_TOKEN") || Deno.env.get("GH_TOKEN");
-  const ghRepo = Deno.env.get("GITHUB_REPOSITORY") || "subhamKumar/lpu-events";
+  const ghRepo = Deno.env.get("GITHUB_REPOSITORY") || "narnoliapramod561-stack/lpu-events-admin";
 
   if (!ghToken) {
     return {
@@ -1491,7 +1491,7 @@ export async function executeOperation(
           adapter: 'ResendAdapter',
           status: providerStatus,
           is_configured: hasResendKey,
-          from_address: Deno.env.get('OPS_EMAIL_FROM') || 'ops-alerts@resend.dev',
+          from_address: Deno.env.get('OPS_EMAIL_FROM') || 'notifications@lpuevents.live',
         },
         recent_outbox: recentOutbox || [],
         recent_attempts: recentAttempts || [],

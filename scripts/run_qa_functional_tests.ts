@@ -42,7 +42,7 @@ function recordTest(tc: TestCaseResult) {
 
 const STUDENT_URL = 'http://localhost:3000';
 const ADMIN_URL = 'http://localhost:3001';
-const SUPABASE_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 const ANON_KEY = 'sb_publishable_S9KH9_RTpx1MiPwyEBWxRQ_QkJVgzsA';
 
 const headers = {

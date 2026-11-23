@@ -11,7 +11,7 @@ declare const Deno: {
 
 const GSC_BASE_DASHBOARD = "https://search.google.com/search-console";
 const GSC_DELAY_NOTICE = "Note: Search Console performance data reflects search activity from 2–3 days ago (Google platform delay).";
-const DEFAULT_SITE_URL = "https://lpuevents.live/";
+const DEFAULT_SITE_URL = "sc-domain:lpuevents.live";
 
 function getServiceAccountJson(providedJson?: string): string {
   if (providedJson) return providedJson;

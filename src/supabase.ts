@@ -19,5 +19,5 @@ if (isProduction) {
   supabaseAnonKey = supabaseAnonKey || DEFAULT_DEV_KEY;
 }
 
-export const lpuClient = new LpuEventsClient(supabaseUrl, supabaseAnonKey);
+export const lpuClient = new LpuEventsClient(supabaseUrl, supabaseAnonKey, { enableRealtimeSync: true });
 export const supabase = lpuClient.supabase;

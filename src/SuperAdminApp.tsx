@@ -17,7 +17,10 @@ import { HeroCarouselManagerPanel } from './components/superadmin/HeroCarouselMa
 import { HappeningTodayManagerPanel } from './components/superadmin/HappeningTodayManagerPanel';
 import { TrendingEventsPanel } from './components/superadmin/TrendingEventsPanel';
 import { StudentInquiriesPanel } from './components/superadmin/StudentInquiriesPanel';
-import { EventBackupCenterPanel } from './components/superadmin/EventBackupCenterPanel';
+import { HeroCarouselAdsPanel } from './components/superadmin/ads/HeroCarouselAdsPanel';
+import { HeroStripAdPanel } from './components/superadmin/ads/HeroStripAdPanel';
+import { HappeningTodayAdsPanel } from './components/superadmin/ads/HappeningTodayAdsPanel';
+import { EventHubAdsPanel } from './components/superadmin/ads/EventHubAdsPanel';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { useAuth } from './auth';
 
@@ -258,6 +261,31 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
               </div>
             )}
 
+            {/* Sponsorships & Advertising Control Suite */}
+            {visitedTabs.has('ads-hero-strip') && (
+              <div style={{ display: activeTab === 'ads-hero-strip' ? 'block' : 'none' }}>
+                <HeroStripAdPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('ads-hero-carousel') && (
+              <div style={{ display: activeTab === 'ads-hero-carousel' ? 'block' : 'none' }}>
+                <HeroCarouselAdsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('ads-happening-today') && (
+              <div style={{ display: activeTab === 'ads-happening-today' ? 'block' : 'none' }}>
+                <HappeningTodayAdsPanel />
+              </div>
+            )}
+
+            {visitedTabs.has('ads-event-hub') && (
+              <div style={{ display: activeTab === 'ads-event-hub' ? 'block' : 'none' }}>
+                <EventHubAdsPanel />
+              </div>
+            )}
+
 
             {visitedTabs.has('categories') && (
               <div style={{ display: activeTab === 'categories' ? 'block' : 'none' }}>
@@ -292,12 +320,6 @@ export const SuperAdminApp: React.FC<SuperAdminAppProps> = ({ onLogout }) => {
             {visitedTabs.has('system-health') && (
               <div style={{ display: activeTab === 'system-health' ? 'block' : 'none' }}>
                 <SystemHealthPanel />
-              </div>
-            )}
-
-            {visitedTabs.has('event-backups') && (
-              <div style={{ display: activeTab === 'event-backups' ? 'block' : 'none' }}>
-                <EventBackupCenterPanel />
               </div>
             )}
 

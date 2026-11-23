@@ -11,7 +11,7 @@
  */
 
 const BASE_URL = process.argv.find(a => a.startsWith('--base-url='))?.split('=')[1] || 'https://lpuevents.live';
-const SUPABASE_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 
 let passed = 0;
 let failed = 0;

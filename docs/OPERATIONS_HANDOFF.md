@@ -26,7 +26,7 @@ Cloudflare Edge Worker           Admin Single-Page App (SPA)
        │                                     │                              │
        ▼                                     ▼                              ▼
 Supabase Postgres DB                 Provider Adapters              Cloudflare R2 CDN
-(nhjphyqiqhmxdhppljap)          (CF Worker, R2, Resend, Sentry)  (images.lpuevents.live)
+(tbehdigakmuoqchaaawr)          (CF Worker, R2, Resend, Sentry)  (images.lpuevents.live)
 ```
 
 ---

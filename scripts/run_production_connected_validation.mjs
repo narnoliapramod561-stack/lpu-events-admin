@@ -12,14 +12,14 @@ console.log('================================================================\n'
 
 const PROD_BASE_URL = 'https://lpuevents.live';
 const R2_PUBLIC_URL = 'https://images.lpuevents.live';
-const SUPABASE_PROJECT_URL = 'https://nhjphyqiqhmxdhppljap.supabase.co';
+const SUPABASE_PROJECT_URL = 'https://tbehdigakmuoqchaaawr.supabase.co';
 
 console.log('1. REAL TEST ENVIRONMENT:');
 console.log({
   STUDENT_PRODUCTION_URL: PROD_BASE_URL,
   CLOUDFLARE_WORKER_ROUTE: `${PROD_BASE_URL}/api/public/*`,
   CLOUDFLARE_PAGES_DEPLOYMENT: 'lpuevents.live (Cloudflare Pages SPA)',
-  SUPABASE_PROJECT_REF: 'nhjphyqiqhmxdhppljap',
+  SUPABASE_PROJECT_REF: 'tbehdigakmuoqchaaawr',
   R2_BUCKET: 'lpu-events-media',
   R2_PUBLIC_DOMAIN: R2_PUBLIC_URL,
   ACTIVE_WORKER_ENTRY: 'src/worker.ts',

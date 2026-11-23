@@ -6,7 +6,6 @@ import { OrganizerDashboard } from './components/organizer/OrganizerDashboard';
 import { EventForm } from './components/organizer/EventForm';
 import { EventWorkspace } from './components/organizer/EventWorkspace';
 import { ClubProfilePanel } from './components/organizer/ClubProfilePanel';
-import { EventBackupCenterPanel } from './components/superadmin/EventBackupCenterPanel';
 import { LoginView } from './components/auth/LoginView';
 import { ErrorBoundary } from './components/shell/ErrorBoundary';
 import { ToastProvider } from './components/shell/NotificationContext';
@@ -18,21 +17,15 @@ import { reportHandledError } from '@lpu-events/shared';
 
 import { SuperAdminApp } from './SuperAdminApp';
 
-function AdminDashboard() {
-  const { user, profile, signOut, refreshProfile } = useAuth();
-
-  // Determine role
-  const role: 'super-admin' | 'organizer' | 'unapproved' = profile?.is_super_admin
-    ? 'super-admin'
-    : profile?.org_id
-      ? 'organizer'
-      : 'unapproved';
-
-  // If super-admin, render the complete new SuperAdmin portal
-  if (role === 'super-admin') {
-    return <SuperAdminApp onLogout={signOut} />;
-  }
-
+function OrganizerApp({
+  user,
+  profile,
+  signOut
+}: {
+  user: any;
+  profile: any;
+  signOut: () => Promise<void>;
+}) {
   // Theme state
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
@@ -62,7 +55,7 @@ function AdminDashboard() {
   const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
     try {
       const saved = sessionStorage.getItem('lpu_organizer_active_tab');
-      if (saved && (saved === 'org-dashboard' || saved === 'org-create-event' || saved === 'org-workspace' || saved === 'org-info' || saved === 'org-event-backups')) {
+      if (saved && (saved === 'org-dashboard' || saved === 'org-create-event' || saved === 'org-workspace' || saved === 'org-info')) {
         return saved as AdminTab;
       }
     } catch (e) {}
@@ -79,84 +72,71 @@ function AdminDashboard() {
   // Organizer workspace state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  // --- Unapproved user view (access request form) ---
-  if (role === 'unapproved') {
-    return <UnapprovedView user={user} signOut={signOut} refreshProfile={refreshProfile} />;
-  }
+  const role = 'organizer' as const;
 
   const getRoleDisplay = () => {
-    if (profile?.is_super_admin) return 'Super Admin';
     if (profile?.org_id) return `Organizer (${profile.org_name})`;
-    return 'Pending Approval';
+    return 'Organizer';
   };
 
   const getBadgeClass = () => {
-    if (profile?.is_super_admin) return 'badge badge-purple';
-    if (profile?.org_id) return 'badge badge-accent';
-    return 'badge badge-warning';
+    return 'badge badge-accent';
   };
 
   const renderContent = () => {
-    // Organizer tabs
-    if (role === 'organizer') {
-      if (selectedEventId) {
-        return (
-          <EventWorkspace
-            eventId={selectedEventId}
-            onBack={() => { setSelectedEventId(null); setActiveTab('org-dashboard'); }}
-          />
-        );
-      }
-
-      switch (activeTab) {
-        case 'org-dashboard':
-          return (
-            <OrganizerDashboard
-              mode="all"
-              onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
-              onCreateEventTrigger={() => setActiveTab('org-create-event')}
-            />
-          );
-        case 'org-active-events':
-          return (
-            <OrganizerDashboard
-              mode="active"
-              onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
-              onCreateEventTrigger={() => setActiveTab('org-create-event')}
-            />
-          );
-        case 'org-past-events':
-          return (
-            <OrganizerDashboard
-              mode="past"
-              onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
-              onCreateEventTrigger={() => setActiveTab('org-create-event')}
-            />
-          );
-        case 'org-create-event':
-          return (
-            <EventForm
-              onComplete={() => setActiveTab('org-dashboard')}
-              onCancel={() => setActiveTab('org-dashboard')}
-            />
-          );
-        case 'org-workspace':
-          return (
-            <OrganizerDashboard
-              onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
-              onCreateEventTrigger={() => setActiveTab('org-create-event')}
-            />
-          );
-        case 'org-info':
-          return <ClubProfilePanel />;
-        case 'org-event-backups':
-          return <EventBackupCenterPanel />;
-        default:
-          return <OrganizerDashboard onSelectEvent={setSelectedEventId} onCreateEventTrigger={() => setActiveTab('org-create-event')} />;
-      }
+    if (selectedEventId) {
+      return (
+        <EventWorkspace
+          eventId={selectedEventId}
+          onBack={() => { setSelectedEventId(null); setActiveTab('org-dashboard'); }}
+        />
+      );
     }
 
-    return null;
+    switch (activeTab) {
+      case 'org-dashboard':
+        return (
+          <OrganizerDashboard
+            mode="all"
+            onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
+            onCreateEventTrigger={() => setActiveTab('org-create-event')}
+          />
+        );
+      case 'org-active-events':
+        return (
+          <OrganizerDashboard
+            mode="active"
+            onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
+            onCreateEventTrigger={() => setActiveTab('org-create-event')}
+          />
+        );
+      case 'org-past-events':
+        return (
+          <OrganizerDashboard
+            mode="past"
+            onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
+            onCreateEventTrigger={() => setActiveTab('org-create-event')}
+          />
+        );
+      case 'org-create-event':
+        return (
+          <EventForm
+            onComplete={() => setActiveTab('org-dashboard')}
+            onCancel={() => setActiveTab('org-dashboard')}
+          />
+        );
+      case 'org-workspace':
+        return (
+          <OrganizerDashboard
+            onSelectEvent={(id) => { setSelectedEventId(id); setActiveTab('org-workspace'); }}
+            onCreateEventTrigger={() => setActiveTab('org-create-event')}
+          />
+        );
+      case 'org-info':
+        return <ClubProfilePanel />;
+      default:
+        return <OrganizerDashboard onSelectEvent={setSelectedEventId} onCreateEventTrigger={() => setActiveTab('org-create-event')} />;
+    }
   };
 
   return (
@@ -174,6 +154,35 @@ function AdminDashboard() {
     >
       {renderContent()}
     </AdminShell>
+  );
+}
+
+function AdminDashboard() {
+  const { user, profile, signOut, refreshProfile } = useAuth();
+
+  // Determine role
+  const role: 'super-admin' | 'organizer' | 'unapproved' = profile?.is_super_admin
+    ? 'super-admin'
+    : profile?.org_id
+      ? 'organizer'
+      : 'unapproved';
+
+  // If super-admin, render the complete new SuperAdmin portal
+  if (role === 'super-admin') {
+    return <SuperAdminApp onLogout={signOut} />;
+  }
+
+  // --- Unapproved user view (access request form) ---
+  if (role === 'unapproved') {
+    return <UnapprovedView user={user} signOut={signOut} refreshProfile={refreshProfile} />;
+  }
+
+  return (
+    <OrganizerApp
+      user={user}
+      profile={profile}
+      signOut={signOut}
+    />
   );
 }
 

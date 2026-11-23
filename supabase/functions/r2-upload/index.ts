@@ -36,16 +36,70 @@ interface R2Config {
   secretAccessKey: string;
   bucketName: string;
   publicBaseUrl: string;
+  sessionToken?: string;
 }
 
-function getR2Config(): R2Config | null {
+let cachedR2UploadCreds: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; expiresAt: number } | null = null;
+
+async function getR2Config(): Promise<R2Config | null> {
   const accountId = Deno.env.get("R2_ACCOUNT_ID") || "ebc6930d2f0caf22655c09bd8296e9e1";
-  const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
-  const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
-  const bucketName = Deno.env.get("R2_BUCKET_NAME") || "lpu-events-media";
+  let accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
+  let secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
+  let sessionToken = Deno.env.get("R2_SESSION_TOKEN") || undefined;
+  const bucketName = Deno.env.get("R2_BUCKET_NAME") || "lpu-events-images";
   const publicBaseUrl = (Deno.env.get("R2_PUBLIC_URL") || "https://images.lpuevents.live").replace(/\/+$/, "");
 
-  return { accountId, accessKeyId, secretAccessKey, bucketName, publicBaseUrl };
+  if (!accessKeyId || !secretAccessKey) {
+    if (cachedR2UploadCreds && cachedR2UploadCreds.expiresAt > Date.now() + 60000) {
+      return {
+        accountId,
+        accessKeyId: cachedR2UploadCreds.accessKeyId,
+        secretAccessKey: cachedR2UploadCreds.secretAccessKey,
+        sessionToken: cachedR2UploadCreds.sessionToken,
+        bucketName,
+        publicBaseUrl
+      };
+    }
+
+    const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+    const parentKey = Deno.env.get("R2_PARENT_ACCESS_KEY_ID") || "9ddbe8f5c8ec24091aea4a20691983a2";
+    if (cfToken && parentKey) {
+      try {
+        const resp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/temp-access-credentials`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${cfToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bucket: bucketName,
+            parentAccessKeyId: parentKey,
+            permission: "object-read-write",
+            ttlSeconds: 86400,
+          }),
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.success && json.result) {
+            cachedR2UploadCreds = {
+              accessKeyId: json.result.accessKeyId,
+              secretAccessKey: json.result.secretAccessKey,
+              sessionToken: json.result.sessionToken,
+              expiresAt: Date.now() + 86000 * 1000,
+            };
+            accessKeyId = json.result.accessKeyId;
+            secretAccessKey = json.result.secretAccessKey;
+            sessionToken = json.result.sessionToken;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to dynamically fetch temporary R2 credentials for upload:", e);
+      }
+    }
+  }
+
+  if (!accessKeyId || !secretAccessKey) return null;
+  return { accountId, accessKeyId, secretAccessKey, sessionToken, bucketName, publicBaseUrl };
 }
 
 async function uploadObjectToR2(
@@ -68,6 +122,7 @@ async function uploadObjectToR2(
     const aws = new AwsClient({
       accessKeyId: r2.accessKeyId,
       secretAccessKey: r2.secretAccessKey,
+      sessionToken: r2.sessionToken,
       service: "s3",
       region: "auto",
     });
@@ -791,6 +846,8 @@ function contextToMediaType(context: string): string {
     case "memory":
     case "sponsor-logo":
       return "EVENT_BANNER";
+    case "advertisement":
+      return "ADVERTISEMENT";
     default:
       return "EVENT_BANNER";
   }
@@ -800,6 +857,7 @@ const ALLOWED_CONTEXTS = [
   "hero",
   "event-banner",
   "event-card",
+  "advertisement",
   "thumbnail",
   "admin-preview",
   "memory",
@@ -991,7 +1049,7 @@ serve(async (req: Request) => {
     }
 
     // Role Enforcement for Platform vs Event Contexts
-    const platformContexts = new Set(["hero"]);
+    const platformContexts = new Set(["hero", "advertisement"]);
     const eventContexts = new Set(["event-banner", "event-card", "thumbnail", "admin-preview", "memory", "sponsor-logo"]);
 
     if (platformContexts.has(context) && !isSuperAdmin) {
@@ -1058,7 +1116,7 @@ serve(async (req: Request) => {
         );
       }
 
-      const r2Config = getR2Config();
+      const r2Config = await getR2Config();
       if (!r2Config || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
         captureEdgeException(new Error("Cloudflare R2 is not configured"), {
           function_name: "r2-upload",
@@ -1318,7 +1376,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const r2Config = getR2Config();
+    const r2Config = await getR2Config();
     if (!r2Config || !r2Config.accessKeyId || !r2Config.secretAccessKey || r2Config.accessKeyId === "anonymous") {
       return new Response(
         JSON.stringify({
